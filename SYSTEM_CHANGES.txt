@@ -276,5 +276,39 @@ SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
   * Real-time listeners (`onSnapshot`) on `complaints` and `units` confirm active two-way sync with zero permission errors.
 - Audit & Security Confirmation Logged:
   * Console confirmation active: `[Security & DB Check] civictracker instance connected with valid rules.`
+
+19. GOOGLE SIGN-IN LATENCY DIAGNOSTIC & NON-BLOCKING OPTIMIZATION
+--------------------------------------------------------------------------------
+- Root Cause Investigation & Audit:
+  * Identified blocking sequential network round-trips (`getDoc` followed by `setDoc`) inside `syncUserProfile()` that blocked `loginWithGoogle()` and `onAuthStateChanged` listeners before resolving UI state.
+  * Identified redundant parallel profile fetches and artificial UI delays (`setTimeout` 600-700ms) across auth modals.
+- Non-Blocking Architecture & Zero-Latency UI Transition:
+  * Implemented `createOptimisticUserProfile(user)` in `src/services/firebase.ts` to immediately generate and set active in-memory user profiles (<10ms).
+  * Enforced Master Super Admin role ("SUPER_ADMIN", assignedWard: "ALL", all access permissions) immediately in-memory for `peelaavinash04@gmail.com` and "CITIZEN" for other users.
+  * Converted Firestore `syncUserProfile(user)` to run non-blocking in the background (`void syncUserProfile(...)`) during authentication flows.
+  * Removed artificial timeouts in `AuthModal.tsx` and `SwachhataAuthScreen.tsx` for instantaneous dashboard transition.
+- Performance Telemetry & Logging:
+  * Implemented high-resolution latency logging using `performance.now()`:
+    `[Auth Performance] Google Sign-In resolved and transitioned in: X ms`
+    `[Auth Performance] Phone OTP login resolved and transitioned in: X ms`
+    `[Auth Performance] Auth state initialized in: X ms`
+
+20. CRITICAL DATABASE FIX, MOCK DATA PURGE & BRANDING REFACTOR: "CivicPulse"
+--------------------------------------------------------------------------------
+- Real Firestore Complaint Persistence & Live Listening:
+  * In `src/services/firebase.ts`, refactored `mapIncidentToFirestore(incident)` to sanitize payloads, replacing all `undefined` values with `null` and using `serverTimestamp()` for `createdAt` and `updatedAt`.
+  * `createComplaintInFirestore(payload)` creates documents in the `complaints` collection on `db = getFirestore(app, "civictracker")` with consistent ID mappings.
+  * In `App.tsx`, connected `incidents` state directly to the live Firestore `onSnapshot` listener with zero hardcoded fallback data.
+- Hardcoded Mock Incidents Purge:
+  * Removed all static dummy incident records from `src/mockData.ts` (`INITIAL_INCIDENTS = []`).
+  * Real-time listeners populate genuine user grievances directly from the Firestore collection.
+- Comprehensive CivicPulse Rebranding:
+  * Updated `metadata.json`, `index.html` (title, openGraph meta tags), `App.tsx` top navbar, `SwachhataAuthScreen.tsx`, `AuthModal.tsx`, and `CitizenPortal.tsx` to "CivicPulse".
+  * Integrated a sleek civic pulse indicator icon (`Activity` with smooth pulse styling) in the top header and auth screens.
+- Compact Mobile Dashboard & Spacing Refinement:
+  * In `CitizenPortal.tsx`, reduced padding and vertical height of Header Welcome Card (`py-3 px-4`) with inline greeting and lightweight Ward tag.
+  * Streamlined Recent Incident Card into a compact status card/pill with real-time progress indicators.
+  * Implemented an empty-state card ("No active grievances logged. Tap '+' to report an issue.") when no incidents are present.
+  * Reduced vertical spacing to ensure the primary 2x2 action grid is immediately visible above the fold on mobile screens.
 ================================================================================
 

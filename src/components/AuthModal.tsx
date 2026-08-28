@@ -58,11 +58,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setErrorMessage(null);
     try {
       const { profile } = await loginWithGoogle();
-      setSuccessMessage(`Welcome back, ${profile.name}!`);
-      setTimeout(() => {
-        onSuccess(profile);
-        onClose();
-      }, 700);
+      onSuccess(profile);
+      onClose();
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
@@ -143,11 +140,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
     try {
       const { profile } = await verifyPhoneOtp(confirmationResultRef.current, otpCode.trim());
-      setSuccessMessage(`Phone verified! Welcome, ${profile.name}`);
-      setTimeout(() => {
-        onSuccess(profile);
-        onClose();
-      }, 700);
+      onSuccess(profile);
+      onClose();
     } catch (err: any) {
       console.error('Verify OTP error:', err);
       if (err?.code === 'auth/invalid-verification-code') {
@@ -188,8 +182,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                 <Shield className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-base leading-tight">Swachhata Citizen Account</h3>
-                <p className="text-xs text-teal-100">MoHUA National Grievance Redressal</p>
+                <h3 className="font-bold text-base leading-tight">CivicPulse Citizen Account</h3>
+                <p className="text-xs text-teal-100">Live Civic Grievance Redressal Matrix</p>
               </div>
             </div>
             <button

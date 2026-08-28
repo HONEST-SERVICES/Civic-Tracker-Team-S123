@@ -26,7 +26,8 @@ import {
   Navigation,
   Send,
   Radio,
-  Layers
+  Layers,
+  ClipboardList
 } from 'lucide-react';
 
 export function formatTicketId(id?: string): string {
@@ -175,20 +176,19 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Most recent open or active complaint for the hero banner
-  const activeComplaint = incidents.find(i => i.status !== 'RESOLVED') || incidents[0];
-
   // Strict citizen scoping for "My Complaints"
   const citizenComplaints = useMemo(() => {
     if (!currentUser) return incidents;
-    const matching = incidents.filter(ticket => {
+    return incidents.filter(ticket => {
       if (ticket.citizenUid && currentUser.uid && ticket.citizenUid === currentUser.uid) return true;
-      if (currentUser.name && ticket.reporterName && ticket.reporterName.toLowerCase() === currentUser.name.toLowerCase()) return true;
+      if (currentUser.name && ticket.reporterName && ticket.reporterName.toLowerCase().trim() === currentUser.name.toLowerCase().trim()) return true;
       if (currentUser.phone && ticket.reporterPhone && ticket.reporterPhone.replace(/\s+/g, '') === currentUser.phone.replace(/\s+/g, '')) return true;
       return false;
     });
-    return matching.length > 0 ? matching : incidents;
   }, [incidents, currentUser]);
+
+  // Most recent open or active complaint for the mobile status banner
+  const activeComplaint = citizenComplaints.find(i => i.status !== 'RESOLVED') || citizenComplaints[0] || null;
 
   const handleFileUpload = async (file: File) => {
     setIsCompressing(true);
@@ -360,7 +360,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Swachhata-MoHUA Central Portal • Citizen Redressal & Rapid Field Dispatch Hub
+                CivicPulse Central Portal • Citizen Redressal & Rapid Field Dispatch Hub
               </p>
             </div>
           </div>
@@ -850,76 +850,88 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
         )}
 
-        {/* VIEW 1: AUTHENTIC SWACHHATA CITIZEN HOME */}
+        {/* VIEW 1: AUTHENTIC CIVICPULSE CITIZEN HOME */}
         {currentView === 'HOME' && (
-          <div className="space-y-4">
-            {/* 1. Welcome Card */}
-            <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-full bg-teal-50 border border-[#115e59]/30 flex items-center justify-center flex-shrink-0 shadow-xs">
-                <UserCircle className="w-7 h-7 text-[#115e59]" strokeWidth={1.5} />
+          <div className="space-y-3">
+            {/* 1. Compact Header Welcome Card */}
+            <div className="bg-white rounded-2xl py-3 px-4 shadow-xs border border-slate-200/80 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-teal-50 border border-[#115e59]/30 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <UserCircle className="w-5 h-5 text-[#115e59]" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-slate-800 tracking-tight truncate">
+                    Welcome, {reporterName}
+                  </h2>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Here are today's actions for you
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-base font-bold text-[#115e59] tracking-tight">
-                  Good Afternoon, Welcome {reporterName}
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Here are today's action for you
-                </p>
-              </div>
-              <div className="flex flex-col items-end text-xs text-slate-400">
-                <span className="font-semibold text-slate-700">Ward 4</span>
-                <span>Central Zone</span>
+              <div className="flex-shrink-0">
+                <span className="text-xs px-2 py-0.5 bg-slate-100 rounded-md text-slate-600 font-medium inline-block border border-slate-200/60">
+                  Ward 4
+                </span>
               </div>
             </div>
 
-            {/* 2. Active Complaint Status Banner (Swachhata Teal Gradient) */}
-            {activeComplaint && (
-              <div className="bg-gradient-to-br from-[#24665d] to-[#2d7a70] rounded-2xl p-4 text-white shadow-sm space-y-3 relative overflow-hidden">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5 flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-teal-100 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>{activeComplaint.category === 'DEEP_POTHOLE' ? 'Pothole / Road Void reported' : `${activeComplaint.title} reported`}</span>
-                    </p>
-                    <p className="text-xs font-mono text-teal-200 tracking-wider">
-                      ID: {formatTicketId(activeComplaint.id)}
-                    </p>
+            {/* 2. Compact Incident Card or Clean Empty State */}
+            {activeComplaint ? (
+              <div className="bg-gradient-to-r from-[#115e59] to-[#2d7a70] rounded-2xl p-3.5 text-white shadow-xs space-y-2 relative overflow-hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+                    <span className="text-xs font-bold font-mono text-teal-100 truncate">
+                      {formatTicketId(activeComplaint.id)}
+                    </span>
+                    <span className="text-teal-300">•</span>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                      activeComplaint.status === 'RESOLVED' 
+                        ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' 
+                        : 'bg-amber-400/30 text-amber-200 border border-amber-300/40'
+                    }`}>
+                      {activeComplaint.status === 'RESOLVED' ? 'Resolved' : activeComplaint.assignedUnitName ? 'Assigned' : 'Registered'}
+                    </span>
                   </div>
                   <button
                     onClick={() => setTrackedIncident(activeComplaint)}
-                    className="px-3.5 py-1.5 rounded-full bg-white text-[#115e59] text-xs font-bold shadow-sm hover:bg-teal-50 transition cursor-pointer flex-shrink-0"
+                    className="px-3 py-1 rounded-full bg-white text-[#115e59] text-[11px] font-bold shadow-xs hover:bg-teal-50 transition cursor-pointer flex-shrink-0"
                   >
-                    View Status
+                    Track Status
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-teal-50 bg-black/10 backdrop-blur-xs px-3 py-2 rounded-xl">
-                  <MapPin className="w-4 h-4 text-amber-300 flex-shrink-0" />
-                  <span className="truncate">{activeComplaint.location.address}</span>
+                <div className="flex items-center justify-between text-xs text-teal-50 pt-1 border-t border-white/10">
+                  <p className="text-xs font-semibold text-white truncate max-w-[220px]">
+                    {activeComplaint.title}
+                  </p>
+                  <span className="text-[11px] text-teal-200 font-mono flex-shrink-0">
+                    {activeComplaint.status === 'RESOLVED' ? 'Closed' : `ETA: ~${activeComplaint.etaMinutes || 15}m`}
+                  </span>
                 </div>
-
-                {/* Progress Stepper Mini */}
-                <div className="pt-2 border-t border-teal-600/60 flex items-center justify-between text-[11px] text-teal-100">
-                  <div className="flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Registered</span>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70] flex-shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-[#2d7a70]" />
                   </div>
-                  <span className="text-teal-400">→</span>
-                  <div className="flex items-center gap-1 font-semibold text-white">
-                    <Truck className="w-3.5 h-3.5 text-amber-300" />
-                    <span>{activeComplaint.status === 'RESOLVED' ? 'Resolved' : activeComplaint.assignedUnitName ? 'Crew Assigned' : 'Triage Queue'}</span>
-                  </div>
-                  <span className="text-teal-400">→</span>
-                  <div className="flex items-center gap-1 text-teal-300">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{activeComplaint.status === 'RESOLVED' ? 'Closed' : `ETA: ~${activeComplaint.etaMinutes || 15}m`}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-800 truncate">No active grievances logged</p>
+                    <p className="text-[11px] text-slate-500 truncate">Tap '+' to report an issue in your ward</p>
                   </div>
                 </div>
+                <button
+                  onClick={() => pushView('CATEGORIES')}
+                  className="px-3 py-1 bg-teal-50 hover:bg-teal-100 text-[#115e59] border border-teal-200 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
+                >
+                  + Report
+                </button>
               </div>
             )}
 
             {/* 3. Dashboard Quick Action 2x2 Grid */}
-            <div className="grid grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-2 gap-3">
               {/* Card 1: Post a Complaint (Soft Emerald Gradient) */}
               <div
                 onClick={() => pushView('CATEGORIES')}
@@ -1394,64 +1406,82 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3">
-              {citizenComplaints.map((ticket) => {
-                const isResolved = ticket.status === 'RESOLVED';
-                return (
-                  <div
-                    key={ticket.id}
-                    onClick={() => setTrackedIncident(ticket)}
-                    className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-[#2d7a70] transition-colors cursor-pointer space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xs text-[#115e59]">
-                            {formatTicketId(ticket.id)}
-                          </span>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-xs text-slate-500 font-medium truncate max-w-[160px]">
-                            {ticket.location.address}
-                          </span>
+            {citizenComplaints.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-3 shadow-xs">
+                <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 text-[#2d7a70] flex items-center justify-center mx-auto">
+                  <ClipboardList className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">No active grievances logged</h3>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  Tap '+' or 'Post a Complaint' to report a civic issue in your ward.
+                </p>
+                <button
+                  onClick={() => pushView('CATEGORIES')}
+                  className="px-4 py-2 bg-[#2d7a70] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#23635b] transition cursor-pointer"
+                >
+                  + Report an Issue
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {citizenComplaints.map((ticket) => {
+                  const isResolved = ticket.status === 'RESOLVED';
+                  return (
+                    <div
+                      key={ticket.id}
+                      onClick={() => setTrackedIncident(ticket)}
+                      className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-[#2d7a70] transition-colors cursor-pointer space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-[#115e59]">
+                              {formatTicketId(ticket.id)}
+                            </span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-xs text-slate-500 font-medium truncate max-w-[160px]">
+                              {ticket.location.address}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-900 mt-1">
+                            {ticket.title}
+                          </h4>
                         </div>
-                        <h4 className="text-sm font-bold text-slate-900 mt-1">
-                          {ticket.title}
-                        </h4>
+
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          isResolved
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {isResolved ? 'Resolved' : 'Assigned'}
+                        </span>
                       </div>
 
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                        isResolved
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {isResolved ? 'Resolved' : 'Assigned'}
-                      </span>
+                      {ticket.imageUrl && (
+                        <div className="w-full h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                          <img
+                            src={ticket.imageUrl}
+                            alt={ticket.title}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Truck className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate">Inspector: <strong className="text-slate-800 font-medium">{ticket.assignedUnitName || 'Triage in Queue'}</strong></span>
+                        </div>
+                        <span className="text-[#2d7a70] font-bold text-[11px] flex items-center gap-0.5">
+                          Track <ChevronRight className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
                     </div>
-
-                    {ticket.imageUrl && (
-                      <div className="w-full h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-                        <img
-                          src={ticket.imageUrl}
-                          alt={ticket.title}
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <Truck className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span className="truncate">Inspector: <strong className="text-slate-800 font-medium">{ticket.assignedUnitName || 'Triage in Queue'}</strong></span>
-                      </div>
-                      <span className="text-[#2d7a70] font-bold text-[11px] flex items-center gap-0.5">
-                        Track <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

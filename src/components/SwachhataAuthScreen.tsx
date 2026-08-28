@@ -39,10 +39,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
     setErrorMessage(null);
     try {
       const { profile } = await loginWithGoogle();
-      setSuccessMessage(`Welcome, ${profile.name}! Verifying role permissions...`);
-      setTimeout(() => {
-        onSuccess(profile);
-      }, 600);
+      onSuccess(profile);
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
       if (err?.code === 'auth/popup-closed-by-user') {
@@ -120,10 +117,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
 
     try {
       const { profile } = await verifyPhoneOtp(confirmationResultRef.current, otpCode.trim());
-      setSuccessMessage(`Phone verified! Welcome, ${profile.name}`);
-      setTimeout(() => {
-        onSuccess(profile);
-      }, 600);
+      onSuccess(profile);
     } catch (err: any) {
       console.error('Verify OTP error:', err);
       if (err?.code === 'auth/invalid-verification-code') {
@@ -151,27 +145,27 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       <header className="p-4 sm:p-6 border-b border-white/10 backdrop-blur-md bg-slate-900/60 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/30 flex items-center justify-center text-white shadow-lg">
-              <span className="text-xl">🇮🇳</span>
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300 shadow-lg">
+              <Shield className="w-5 h-5 text-teal-300" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-white text-base sm:text-lg tracking-tight">
-                  Swachhata MoHUA
+                  CivicPulse
                 </span>
                 <span className="text-[10px] bg-teal-500/20 text-teal-300 font-bold px-2 py-0.5 rounded-full border border-teal-500/30">
-                  National Redressal
+                  National Redressal Matrix
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Ministry of Housing and Urban Affairs • Single Sign-On Portal
+                Civic Grievance Redressal & Single Sign-On Portal
               </p>
             </div>
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Municipal Cloud Online</span>
+            <span>Civic Network Online</span>
           </div>
         </div>
       </header>
@@ -184,10 +178,10 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
           <div className="bg-[#115e59] text-white p-6 relative">
             <div>
               <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider">
-                Swachh Bharat Mission (Urban)
+                CivicPulse Redressal Grid
               </span>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5">
-                Sign In to Swachhata
+                Sign In to CivicPulse
               </h1>
               <p className="text-xs text-teal-100 mt-1">
                 Authenticate with your official credentials to access your verified role dashboard.

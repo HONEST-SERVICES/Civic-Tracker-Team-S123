@@ -39,7 +39,8 @@ import {
   updateUnitInFirestore,
   onAuthChange,
   logoutUser,
-  syncUserProfile
+  syncUserProfile,
+  createOptimisticUserProfile
 } from './services/firebase';
 import { 
   Building2, 
@@ -64,7 +65,8 @@ import {
   Truck, 
   Users, 
   Crown,
-  Award
+  Award,
+  Activity
 } from 'lucide-react';
 
 const DEFAULT_CITIZEN_USER: UserProfile = {
@@ -102,7 +104,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(DEFAULT_CITIZEN_USER);
 
   // Application Data State (Subscribed 100% to Firestore)
-  const [incidents, setIncidents] = useState<CrisisIncident[]>(INITIAL_INCIDENTS);
+  const [incidents, setIncidents] = useState<CrisisIncident[]>([]);
   const [units, setUnits] = useState<MunicipalUnit[]>(INITIAL_MUNICIPAL_UNITS);
   const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
 
@@ -154,15 +156,33 @@ export default function App() {
 
   const userRole: UserRole = currentUser?.role || 'CITIZEN';
 
-  // Listen to Firebase Auth state for strict RBAC resolution
+  // Listen to Firebase Auth state for strict RBAC resolution with instant optimistic update
   useEffect(() => {
-    const unsubscribeAuth = onAuthChange(async (firebaseUser) => {
+    let isInitial = true;
+    const unsubscribeAuth = onAuthChange((firebaseUser) => {
       if (firebaseUser) {
-        try {
-          const profile = await syncUserProfile(firebaseUser);
-          setCurrentUser(profile);
-        } catch (e) {
-          console.warn('Error fetching auth user profile:', e);
+        const startTime = performance.now();
+        // 1. Instant optimistic profile update (<10ms)
+        const optimisticProfile = createOptimisticUserProfile(firebaseUser);
+        setCurrentUser((prev) => {
+          // If already enriched with custom fields from Firestore, preserve non-default data
+          if (prev && prev.uid === firebaseUser.uid && prev.role !== 'CITIZEN') {
+            return prev;
+          }
+          return optimisticProfile;
+        });
+
+        // 2. Non-blocking asynchronous Firestore background profile sync
+        syncUserProfile(firebaseUser).then((remoteProfile) => {
+          setCurrentUser(remoteProfile);
+        }).catch((e) => {
+          console.warn('[Firebase Diagnostic] Background profile sync warning:', e);
+        });
+
+        const elapsed = Math.round(performance.now() - startTime);
+        if (isInitial) {
+          console.log(`[Auth Performance] Auth state initialized in: ${elapsed} ms`);
+          isInitial = false;
         }
       }
     });
@@ -178,10 +198,8 @@ export default function App() {
       userRole,
       currentUser,
       (firestoreComplaints) => {
-        if (firestoreComplaints && firestoreComplaints.length > 0) {
-          setIncidents(firestoreComplaints);
-          setIsFirestoreConnected(true);
-        }
+        setIncidents(firestoreComplaints || []);
+        setIsFirestoreConnected(true);
       },
       (error) => {
         console.warn('Firestore complaints subscription warning:', error);
@@ -469,22 +487,22 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen bg-slate-100 flex flex-col font-sans overflow-hidden select-none">
-      {/* 1. TOP HEADER (MoHUA Logo & Title on Left, Single Clean Profile Avatar on Right) */}
+      {/* 1. TOP HEADER (CivicPulse Logo & Title on Left, Single Clean Profile Avatar on Right) */}
       <header className="h-14 bg-[#115e59] text-white px-3 sm:px-5 flex items-center justify-between border-b border-teal-900 shadow-md relative z-40">
-        {/* Left: Swachhata MoHUA Logo & Title */}
+        {/* Left: CivicPulse Logo & Title */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white flex-shrink-0 shadow-xs">
-            <span className="text-sm">🇮🇳</span>
+          <div className="w-8 h-8 rounded-lg bg-teal-500/25 border border-teal-300/40 flex items-center justify-center text-teal-200 flex-shrink-0 shadow-xs">
+            <Activity className="w-4 h-4 text-teal-200 animate-pulse" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate font-bold tracking-tight text-base sm:text-lg">Swachhata</span>
-              <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
-                MoHUA
+            <div className="flex items-center gap-2">
+              <span className="truncate font-bold tracking-tight text-base sm:text-lg">CivicPulse</span>
+              <span className="bg-white/15 text-teal-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
+                Live Matrix
               </span>
             </div>
             <p className="text-[10px] text-teal-100/90 truncate hidden md:block font-normal">
-              Ministry of Housing and Urban Affairs • Real-Time Civic Redressal
+              Civic Grievance Redressal & Field Dispatch Matrix
             </p>
           </div>
         </div>
@@ -493,7 +511,7 @@ export default function App() {
         <div className="hidden lg:flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] px-2.5 py-1 rounded-full font-medium">
             <Radio className="w-3 h-3 text-emerald-300 animate-pulse" strokeWidth={1.75} />
-            <span>Municipal Grid Online</span>
+            <span>Civic Network Online</span>
           </div>
         </div>
 

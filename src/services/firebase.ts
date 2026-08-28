@@ -86,12 +86,55 @@ export function isMasterAdminEmail(email?: string | null): boolean {
 }
 
 /**
- * Sign in with Google Popup
+ * Creates an instantaneous optimistic UserProfile in memory for sub-300ms UI transitions.
+ */
+export function createOptimisticUserProfile(user: User): UserProfile {
+  const isMasterAdmin = isMasterAdminEmail(user.email);
+  if (isMasterAdmin) {
+    return {
+      uid: user.uid,
+      name: user.displayName || "Avinash Peela (Master Super Admin)",
+      phone: user.phoneNumber || "+91 98850 12345",
+      email: user.email || MASTER_ADMIN_EMAIL,
+      role: "SUPER_ADMIN",
+      assignedWard: "ALL",
+      designation: "Master Super Administrator & Apex Inspector",
+      permissions: ["ALL_ACCESS", "MANAGE_WARDS", "MANAGE_STAFF", "OVERRIDE_DISPATCH"],
+      photoURL: user.photoURL || undefined
+    };
+  }
+  return {
+    uid: user.uid,
+    name: user.displayName || (user.phoneNumber ? `Citizen (${user.phoneNumber.slice(-4)})` : "Citizen"),
+    phone: user.phoneNumber || "",
+    email: user.email || "",
+    role: "CITIZEN",
+    assignedWard: null,
+    permissions: [],
+    photoURL: user.photoURL || undefined
+  };
+}
+
+/**
+ * Sign in with Google Popup with optimistic UI resolution and background Firestore sync
  */
 export async function loginWithGoogle(): Promise<{ user: User; profile: UserProfile }> {
+  const startTime = performance.now();
   const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
   const cred = await signInWithPopup(auth, provider);
-  const profile = await syncUserProfile(cred.user);
+  
+  // Instantaneous optimistic profile resolution
+  const profile = createOptimisticUserProfile(cred.user);
+  
+  // Non-blocking background Firestore sync
+  void syncUserProfile(cred.user).catch((err) => {
+    console.warn("[Firebase Diagnostic] Background profile sync warning:", err);
+  });
+
+  const elapsed = Math.round(performance.now() - startTime);
+  console.log(`[Auth Performance] Google Sign-In resolved and transitioned in: ${elapsed} ms`);
+
   return { user: cred.user, profile };
 }
 
@@ -118,14 +161,26 @@ export async function sendPhoneOtp(
 }
 
 /**
- * Verify received Phone OTP Code
+ * Verify received Phone OTP Code with optimistic UI resolution and background Firestore sync
  */
 export async function verifyPhoneOtp(
   confirmationResult: ConfirmationResult, 
   otpCode: string
 ): Promise<{ user: User; profile: UserProfile }> {
+  const startTime = performance.now();
   const cred = await confirmationResult.confirm(otpCode);
-  const profile = await syncUserProfile(cred.user);
+  
+  // Instantaneous optimistic profile resolution
+  const profile = createOptimisticUserProfile(cred.user);
+  
+  // Non-blocking background Firestore sync
+  void syncUserProfile(cred.user).catch((err) => {
+    console.warn("[Firebase Diagnostic] Background profile sync warning:", err);
+  });
+
+  const elapsed = Math.round(performance.now() - startTime);
+  console.log(`[Auth Performance] Phone OTP login resolved and transitioned in: ${elapsed} ms`);
+
   return { user: cred.user, profile };
 }
 
@@ -445,16 +500,16 @@ export function mapIncidentToFirestore(incident: Partial<CrisisIncident>) {
     displayStatus = "Assigned";
   }
 
-  return {
-    id: incident.id,
+  const rawPayload: Record<string, any> = {
+    id: incident.id || null,
     title: incident.title || 'Civic Infrastructure Grievance',
     category: incident.category || 'DEEP_POTHOLE',
     status: displayStatus,
     ward: incident.ward || incident.location?.zone || 'Ward 4 - Central Zone',
     location: {
       address: incident.location?.address || 'Ward 4, G.T. Road',
-      lat: incident.location?.lat || 31.2530,
-      lng: incident.location?.lng || 75.7030,
+      lat: typeof incident.location?.lat === 'number' ? incident.location.lat : 31.2530,
+      lng: typeof incident.location?.lng === 'number' ? incident.location.lng : 75.7030,
       zone: incident.ward || incident.location?.zone || 'Ward 4 - Central Zone'
     },
     citizenName: incident.reporterName || 'Citizen',
@@ -464,18 +519,28 @@ export function mapIncidentToFirestore(incident: Partial<CrisisIncident>) {
     assignedUnitId: incident.assignedUnitId || '',
     priority: incident.priority || 'P2_URGENT',
     department: incident.department || 'PUBLIC_WORKS',
-    riskScore: incident.riskScore || 75,
+    riskScore: typeof incident.riskScore === 'number' ? incident.riskScore : 75,
     imageUrl: incident.imageUrl || '',
     proofOfFixUrl: incident.proofOfFixUrl || '',
     officerNotes: incident.officerNotes || '',
-    etaMinutes: incident.etaMinutes || 15,
+    etaMinutes: typeof incident.etaMinutes === 'number' ? incident.etaMinutes : 15,
     description: incident.description || '',
-    communityUpvotes: incident.communityUpvotes || 0,
-    verifiedByVolunteers: incident.verifiedByVolunteers || [],
+    communityUpvotes: typeof incident.communityUpvotes === 'number' ? incident.communityUpvotes : 0,
+    verifiedByVolunteers: Array.isArray(incident.verifiedByVolunteers) ? incident.verifiedByVolunteers : [],
     auditorNotes: incident.auditorNotes || '',
-    auditorComplianceScore: incident.auditorComplianceScore || null,
-    createdAt: serverTimestamp()
+    auditorComplianceScore: typeof incident.auditorComplianceScore === 'number' ? incident.auditorComplianceScore : null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   };
+
+  // Convert any undefined fields to null or omit to satisfy Firestore constraints
+  const cleanPayload: Record<string, any> = {};
+  for (const [key, value] of Object.entries(rawPayload)) {
+    if (value !== undefined) {
+      cleanPayload[key] = value;
+    }
+  }
+  return cleanPayload;
 }
 
 export enum OperationType {
@@ -624,9 +689,7 @@ export function subscribeToComplaints(
   
   return onSnapshot(q, (snapshot) => {
     if (snapshot.empty) {
-      // Seed initial data if collection is completely fresh
-      seedInitialComplaints();
-      onUpdate(INITIAL_INCIDENTS);
+      onUpdate([]);
       return;
     }
 
@@ -637,15 +700,15 @@ export function subscribeToComplaints(
     onUpdate(items);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'complaints');
-    onUpdate(INITIAL_INCIDENTS);
+    onUpdate([]);
     if (onError) onError(err);
   });
 }
 
 /**
  * Role-scoped real-time Complaints subscription
- * - CITIZEN: filtered where `citizenUid == auth.currentUser.uid`
- * - FIELD_CREW: filtered where `assignedWard == userProfile.assignedWard` AND `status != 'Draft'`
+ * - CITIZEN: filtered where `citizenUid == auth.currentUser.uid` or matching reporter name/phone
+ * - FIELD_CREW: filtered where `assignedWard == userProfile.assignedWard`
  * - WARD_OFFICER: filtered where `ward == userProfile.assignedWard`
  * - SUPER_ADMIN: read all records in `complaints`
  */
@@ -659,8 +722,7 @@ export function subscribeToScopedComplaints(
 
   return onSnapshot(q, (snapshot) => {
     if (snapshot.empty) {
-      seedInitialComplaints();
-      onUpdate(INITIAL_INCIDENTS);
+      onUpdate([]);
       return;
     }
 
@@ -673,11 +735,12 @@ export function subscribeToScopedComplaints(
 
     if (role === 'CITIZEN') {
       const uid = userProfile?.uid || auth.currentUser?.uid;
-      const citizenName = userProfile?.name?.toLowerCase();
+      const citizenName = userProfile?.name?.toLowerCase().trim();
+      const citizenPhone = userProfile?.phone?.replace(/\s+/g, '');
       scopedItems = allItems.filter((inc) => {
-        if (uid && inc.citizenUid === uid) return true;
-        if (citizenName && inc.reporterName && inc.reporterName.toLowerCase() === citizenName) return true;
-        if (userProfile?.phone && inc.reporterPhone && inc.reporterPhone.replace(/\s+/g, '') === userProfile.phone.replace(/\s+/g, '')) return true;
+        if (uid && inc.citizenUid && inc.citizenUid === uid) return true;
+        if (citizenName && inc.reporterName && inc.reporterName.toLowerCase().trim() === citizenName) return true;
+        if (citizenPhone && inc.reporterPhone && inc.reporterPhone.replace(/\s+/g, '') === citizenPhone) return true;
         return false;
       });
     } else if (role === 'FIELD_CREW' || role === 'FIELD_CONTRACTOR') {
@@ -708,35 +771,29 @@ export function subscribeToScopedComplaints(
     onUpdate(scopedItems);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'complaints');
-    onUpdate(INITIAL_INCIDENTS);
+    onUpdate([]);
     if (onError) onError(err);
   });
-}
-
-// Seed initial complaints to Firestore if needed
-async function seedInitialComplaints() {
-  try {
-    for (const inc of INITIAL_INCIDENTS) {
-      const docRef = doc(complaintsCollection, inc.id);
-      await setDoc(docRef, mapIncidentToFirestore(inc));
-    }
-  } catch (err) {
-    console.warn("Could not seed initial complaints:", err);
-  }
 }
 
 // Create a new complaint directly in Firestore with comprehensive persistence & error auditing
 export async function createComplaintInFirestore(incident: Partial<CrisisIncident>): Promise<string> {
   try {
     const payload = mapIncidentToFirestore(incident);
-    if (payload.imageUrl && typeof payload.imageUrl === 'string' && payload.imageUrl.length > 500000) {
-      console.log("[Firebase Diagnostic] Submitting grievance with large photo attachment:", payload.imageUrl.length, "bytes");
+    const targetDocId = incident.id ? incident.id.trim() : null;
+
+    if (targetDocId) {
+      const docRef = doc(complaintsCollection, targetDocId);
+      await setDoc(docRef, payload, { merge: true });
+      console.log(`[Firebase Diagnostic] Connected to civictracker -> Write Successful: Doc ID #${targetDocId}`);
+      return targetDocId;
+    } else {
+      const docRef = await addDoc(complaintsCollection, payload);
+      console.log(`[Firebase Diagnostic] Connected to civictracker -> Write Successful: Doc ID #${docRef.id}`);
+      return docRef.id;
     }
-    const docRef = await addDoc(complaintsCollection, payload);
-    console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Write Successful: Doc ID #${docRef.id}`);
-    return docRef.id;
   } catch (err: any) {
-    console.error(`[Firebase Diagnostic] Error connecting or writing to omnisync-pothole:`, err?.message || err);
+    console.error(`[Firebase Diagnostic] Error connecting or writing to civictracker complaints:`, err?.message || err);
     handleFirestoreError(err, OperationType.CREATE, 'complaints');
     throw err;
   }
