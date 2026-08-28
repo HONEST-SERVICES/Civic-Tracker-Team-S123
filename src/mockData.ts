@@ -168,7 +168,7 @@ export const INITIAL_MUNICIPAL_UNITS: MunicipalUnit[] = [
 
 export const INITIAL_INCIDENTS: CrisisIncident[] = [
   {
-    id: 'W0488610C32040932',
+    id: 'Ticket #5247',
     title: 'Severe Cavity Sinkhole & Road Void',
     description: 'Sub-surface ground collapse exposing drainage conduits near crosswalk. High risk of vehicle axle destruction.',
     category: 'OPEN_MANHOLES',
@@ -198,7 +198,7 @@ export const INITIAL_INCIDENTS: CrisisIncident[] = [
     reporterName: 'Sangit (Citizen Portal)'
   },
   {
-    id: 'W0488610C88194410',
+    id: 'Ticket #8819',
     title: 'Deep Rim-Breaker Pothole on Commercial Spine',
     description: 'Deep rim-breaker pothole in outer lane with jagged aggregate edges causing tire punctures.',
     category: 'DEEP_POTHOLE',
@@ -222,7 +222,7 @@ export const INITIAL_INCIDENTS: CrisisIncident[] = [
     reporterName: 'Amit Patel'
   },
   {
-    id: 'W0488610C99120341',
+    id: 'Ticket #9912',
     title: 'Overflowing Community Dustbin & Garbage Pile',
     description: 'Secondary collection bin overflowing onto pedestrian pathway. Stray cattle hazard.',
     category: 'GARBAGE_DUMP',
@@ -242,7 +242,7 @@ export const INITIAL_INCIDENTS: CrisisIncident[] = [
     reporterName: 'Priya Sharma'
   },
   {
-    id: 'W0488610C11029482',
+    id: 'Ticket #1102',
     title: 'Streetlight Cluster Outage & Dark Spot',
     description: '3 consecutive pole lamps non-functional at highway crossroad causing safety hazard.',
     category: 'STREETLIGHT_OUTAGE',

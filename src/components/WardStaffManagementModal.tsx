@@ -196,29 +196,29 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
     switch (role) {
       case 'SUPER_ADMIN':
         return (
-          <span className="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
-            <Crown className="w-3 h-3 text-purple-600" />
+          <span className="bg-slate-900 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-amber-400/40 flex items-center gap-1">
+            <Crown className="w-3 h-3 text-amber-400" strokeWidth={1.75} />
             SUPER ADMIN
           </span>
         );
       case 'WARD_OFFICER':
         return (
-          <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
-            <Building2 className="w-3 h-3 text-blue-600" />
+          <span className="bg-teal-50 text-[#0d5c52] text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-teal-200 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-[#0d5c52]" strokeWidth={1.75} />
             WARD OFFICER
           </span>
         );
       case 'FIELD_CREW':
         return (
-          <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-            <Truck className="w-3 h-3 text-amber-700" />
+          <span className="bg-amber-50 text-[#d97706] text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
+            <Truck className="w-3 h-3 text-[#d97706]" strokeWidth={1.75} />
             FIELD CREW
           </span>
         );
       default:
         return (
-          <span className="bg-teal-100 text-teal-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-teal-200 flex items-center gap-1">
-            <UserCheck className="w-3 h-3 text-teal-600" />
+          <span className="bg-emerald-50 text-[#15803d] text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+            <UserCheck className="w-3 h-3 text-[#15803d]" strokeWidth={1.75} />
             CITIZEN
           </span>
         );
@@ -227,24 +227,24 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-slate-200 animate-fade-in overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-slate-200/80 animate-fade-in overflow-hidden">
         {/* Modal Header */}
-        <div className="bg-slate-900 p-5 text-white flex items-center justify-between border-b border-slate-800">
+        <div className="bg-[#0d5c52] p-5 text-white flex items-center justify-between border-b border-teal-800/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-600/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
-              <Users className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300">
+              <Users className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-white">
+                <h2 className="text-base sm:text-lg font-bold tracking-tight text-white">
                   Zone & Ward Staff Management
                 </h2>
-                <span className="bg-teal-500/20 text-teal-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-teal-400/30 uppercase">
+                <span className="bg-amber-400 text-slate-950 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
                   RBAC Controls
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Assign Municipal Officers, Field Work Crews, and assign geographic ward boundaries.
+              <p className="text-xs text-teal-100/90 font-normal mt-0.5">
+                Assign Municipal Officers, Field Work Crews, and designate geographic ward boundaries.
               </p>
             </div>
           </div>
@@ -253,7 +253,7 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 

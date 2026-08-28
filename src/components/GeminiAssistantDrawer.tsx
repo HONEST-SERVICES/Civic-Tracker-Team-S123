@@ -155,19 +155,19 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
       {/* Drawer Body */}
       <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250">
         {/* Drawer Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-700/50">
+        <div className="bg-gradient-to-r from-[#0d5c52] via-[#115e59] to-[#042f2e] text-white p-4 sm:p-5 flex items-center justify-between border-b border-teal-700/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-400/20 border border-emerald-300/30 flex items-center justify-center text-emerald-300 shadow-xs">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs">
+              <Sparkles className="w-5 h-5 animate-pulse" strokeWidth={1.75} />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-base text-white">Municipal Operations Assistant</h3>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-400 text-slate-950 px-2 py-0.2 rounded">
+                <h3 className="font-bold text-base text-white tracking-tight">Municipal Operations Assistant</h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md">
                   Active
                 </span>
               </div>
-              <p className="text-xs text-emerald-200/80">Swachhata-MoHUA Intelligent Redressal System</p>
+              <p className="text-xs text-teal-100/90 font-normal">Swachhata-MoHUA Intelligent Redressal System</p>
             </div>
           </div>
 
@@ -175,24 +175,24 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
             <button
               onClick={handleResetChat}
               title="Reset conversation"
-              className="p-2 text-emerald-200 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
+              className="p-2 text-teal-100 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-4 h-4" strokeWidth={1.75} />
             </button>
             <button
               onClick={onClose}
               title="Close drawer"
-              className="p-2 text-emerald-200 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
+              className="p-2 text-teal-100 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>
 
         {/* Persona Mode Switcher */}
         <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
-          <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
-            <Bot className="w-3.5 h-3.5 text-[#2d7a70]" />
+          <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+            <Bot className="w-3.5 h-3.5 text-[#0d5c52]" strokeWidth={1.75} />
             Assistant Mode:
           </span>
           <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1">
@@ -201,7 +201,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
               onClick={() => setSelectedPersona('CITIZEN')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                 selectedPersona === 'CITIZEN'
-                  ? 'bg-white text-[#2d7a70] shadow-xs'
+                  ? 'bg-white text-[#0d5c52] shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -212,7 +212,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
               onClick={() => setSelectedPersona('OFFICER')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                 selectedPersona === 'OFFICER'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-[#0d5c52] shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >

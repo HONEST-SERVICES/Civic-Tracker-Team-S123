@@ -46,26 +46,25 @@ import {
   Building2, 
   Sparkles, 
   RotateCcw, 
-  ChevronDown,
-  Home,
-  Calendar,
-  Plus,
-  ClipboardList,
-  User,
-  Shield,
-  Lock,
-  KeyRound,
-  CheckCircle2,
-  AlertCircle,
-  Radio,
-  Settings,
-  LogIn,
-  LogOut,
-  Truck,
-  Users,
-  Crown,
-  Zap,
-  FlaskConical
+  ChevronDown, 
+  Home, 
+  Calendar, 
+  Plus, 
+  ClipboardList, 
+  User, 
+  UserCircle,
+  Shield, 
+  Lock, 
+  KeyRound, 
+  CheckCircle2, 
+  AlertCircle, 
+  Radio, 
+  Settings, 
+  LogIn, 
+  LogOut, 
+  Truck, 
+  Users, 
+  Crown 
 } from 'lucide-react';
 
 export default function App() {
@@ -121,7 +120,7 @@ export default function App() {
   const [selectedIncident, setSelectedIncident] = useState<CrisisIncident | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<MunicipalUnit | null>(null);
   const [isDispatching, setIsDispatching] = useState<boolean>(false);
-  const [showScenarioMenu, setShowScenarioMenu] = useState<boolean>(false);
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
 
   // Background Agent Thought Logs
   const [thoughtLogs, setThoughtLogs] = useState<AgentThoughtStep[]>([
@@ -218,7 +217,8 @@ export default function App() {
   const handleDispatchIncident = async (incidentData: Partial<CrisisIncident>) => {
     setIsDispatching(true);
 
-    const newTicketId = incidentData.id || `W0488610C${Math.floor(Math.random() * 899999 + 100000)}`;
+    const randomTicketNum = Math.floor(1000 + Math.random() * 9000);
+    const newTicketId = incidentData.id || `Ticket #${randomTicketNum}`;
     const fullIncident: CrisisIncident = {
       id: newTicketId,
       title: incidentData.title || 'Civic Infrastructure Grievance',
@@ -245,22 +245,28 @@ export default function App() {
     setIncidents(prev => [fullIncident, ...prev]);
     setSelectedIncident(fullIncident);
 
-    // 2. Persist to Firestore
+    // 2. Persist to Firestore with 5s timeout
     try {
-      await createComplaintInFirestore(fullIncident);
+      await Promise.race([
+        createComplaintInFirestore(fullIncident),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore write timeout')), 5000))
+      ]);
     } catch (err) {
-      console.warn('Firestore create complaint err:', err);
+      console.warn('Firestore create complaint notice:', err);
     }
 
-    // 3. Autonomous Crew Dispatch Calculation
+    // 3. Autonomous Crew Dispatch Calculation with 5s timeout
     try {
-      const result = await executeAutonomousDispatch(fullIncident, units);
+      const result = await Promise.race([
+        executeAutonomousDispatch(fullIncident, units),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Dispatch calculation timeout')), 5000))
+      ]);
 
-      if (result.thoughtLogs && result.thoughtLogs.length > 0) {
+      if (result && result.thoughtLogs && result.thoughtLogs.length > 0) {
         setThoughtLogs(prev => [...prev, ...result.thoughtLogs]);
       }
 
-      if (result.dispatchedUnit) {
+      if (result && result.dispatchedUnit) {
         const assignedUnit = result.dispatchedUnit;
         const eta = result.dispatchResultPayload?.etaMinutes || 12;
 
@@ -274,12 +280,12 @@ export default function App() {
         };
 
         // Sync dispatch updates to Firestore
-        await updateComplaintInFirestore(newTicketId, updates);
-        await updateUnitInFirestore(assignedUnit.id, {
+        updateComplaintInFirestore(newTicketId, updates).catch(console.warn);
+        updateUnitInFirestore(assignedUnit.id, {
           status: 'EN_ROUTE',
           assignedIncidentId: fullIncident.id,
           currentZone: fullIncident.location.zone
-        });
+        }).catch(console.warn);
 
         // Update local incidents and units
         setIncidents(prev => prev.map(inc => {
@@ -311,7 +317,7 @@ export default function App() {
         });
       }
     } catch (error) {
-      console.error('Redressal dispatch error:', error);
+      console.warn('Redressal dispatch notice:', error);
     } finally {
       setIsDispatching(false);
     }
@@ -470,162 +476,121 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-100 text-slate-900 overflow-hidden font-sans select-none">
-      {/* 1. SWACHHATA RICH TEAL TOP HEADER */}
-      <header className="w-full bg-[#2d7a70] text-white px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 shadow-md z-30 flex-shrink-0">
+    <div className="flex flex-col h-screen w-screen bg-[#f8fafc] text-slate-900 overflow-hidden font-sans select-none">
+      {/* 1. SWACHHATA OFFICIAL DEEP FOREST TEAL TOP HEADER */}
+      <header className="w-full bg-[#115e59] text-white px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 shadow-sm border-b border-teal-800/40 z-30 flex-shrink-0">
         {/* Left: Brand Identity */}
-        <div className="text-base font-bold tracking-tight flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white flex-shrink-0 shadow-xs">
             <span className="text-sm">🇮🇳</span>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="truncate font-extrabold text-sm sm:text-base">Swachhata</span>
+              <span className="truncate font-bold tracking-tight text-base sm:text-lg">Swachhata</span>
               <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
                 MoHUA
               </span>
             </div>
-            <p className="text-[10px] text-teal-100 truncate hidden md:block">
+            <p className="text-[10px] text-teal-100/90 truncate hidden md:block font-normal">
               Ministry of Housing and Urban Affairs • Ward-Scoped Redressal
             </p>
           </div>
         </div>
 
-        {/* Center: Live Firestore Status Badge & Role Indicator */}
+        {/* Center: Live Municipal Sync Status Badge (Desktop) */}
         <div className="hidden lg:flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-black/15 px-3 py-1 rounded-full border border-white/20 text-xs">
-            <span className={`w-2 h-2 rounded-full ${
-              userRole === 'SUPER_ADMIN' ? 'bg-purple-400' :
-              userRole === 'WARD_OFFICER' ? 'bg-blue-400' :
-              userRole === 'SWACHH_SURVEKSHAN_AUDITOR' ? 'bg-indigo-400' :
-              userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT' ? 'bg-emerald-400' :
-              userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR' ? 'bg-amber-400' : 'bg-teal-400'
-            } animate-pulse`} />
-            <span className="font-semibold text-white">
-              {userRole === 'SUPER_ADMIN' ? '👑 Super Admin (All Wards)' :
-               userRole === 'WARD_OFFICER' ? '🏢 Ward Officer (Ward 4)' :
-               userRole === 'SWACHH_SURVEKSHAN_AUDITOR' ? '📋 Swachh Survekshan Inspector' :
-               userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT' ? '🤝 Swachhata Doot (Volunteer)' :
-               userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR' ? '🚛 Field Crew / Contractor (Unit 04)' : '👤 Citizen Mode'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] px-2.5 py-1 rounded-full font-medium">
-            <Radio className="w-3 h-3 text-emerald-300 animate-pulse" />
-            <span>Firestore Live</span>
+          <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] px-2.5 py-1 rounded-full font-medium">
+            <Radio className="w-3 h-3 text-emerald-300 animate-pulse" strokeWidth={1.75} />
+            <span>Municipal Grid Online</span>
           </div>
         </div>
 
-        {/* Right: Quick Actions & Demo Switcher */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* ✨ Gemini AI Copilot Drawer Trigger */}
-          <button
-            onClick={() => setShowGeminiAssistant(true)}
-            title="Open Gemini AI Municipal Assistant (✨)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-400/25 hover:bg-emerald-400/35 text-white border border-emerald-300/40 text-xs font-bold cursor-pointer shadow-xs transition-colors"
-          >
-            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-            <span className="hidden sm:inline">AI Copilot</span>
-          </button>
-
-          {/* 🧪 Evaluator Floating Demo Role Switcher */}
+        {/* Right: Clean Role Pill & Profile Icon */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          {/* Clean Role Pill */}
           <DemoRoleSwitcher
             currentRole={userRole}
             currentUser={currentUser}
             onSwitchRole={handleRolePresetSwitch}
           />
 
-          {/* Quick Scenario Dropdown (⚡ Autonomous Simulation Engine) */}
+          {/* User Profile Menu */}
           <div className="relative">
             <button
-              onClick={() => setShowScenarioMenu(!showScenarioMenu)}
-              disabled={isDispatching}
-              title="Test Autonomous Dispatch Scenarios (⚡)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-300/40 text-xs font-medium cursor-pointer shadow-xs transition-colors"
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              title="User Profile & Settings"
+              className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 border border-white/30 text-white flex items-center justify-center transition cursor-pointer shadow-xs"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-              <span className="hidden sm:inline">Simulate Dispatch</span>
-              <ChevronDown className={`w-3.5 h-3.5 text-amber-200 transition-transform ${showScenarioMenu ? 'rotate-180' : ''}`} />
+              <UserCircle className="w-5 h-5 text-white" strokeWidth={1.75} />
             </button>
 
-            {showScenarioMenu && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-slate-800 animate-in fade-in">
-                <div className="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>Test Autonomous Dispatch Engine</span>
-                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
+                <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-[#115e59] shrink-0 font-bold">
+                    <User className="w-5 h-5 text-[#115e59]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
+                    <p className="text-[11px] text-[#115e59] font-medium truncate">{currentUser.designation}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+                  </div>
                 </div>
-                {CRISIS_SCENARIOS.map((sc, idx) => (
+
+                <div className="py-2 space-y-1">
                   <button
-                    key={sc.id}
                     onClick={() => {
-                      handleSimulateScenario(idx);
-                      setShowScenarioMenu(false);
+                      setShowGeminiAssistant(true);
+                      setShowProfileMenu(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-teal-50 hover:text-[#2d7a70] transition flex flex-col cursor-pointer"
+                    className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-teal-50 hover:text-[#115e59] rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
                   >
-                    <span className="font-bold">{sc.title}</span>
-                    <span className="text-[10px] text-slate-500">{sc.category} • {sc.priority}</span>
+                    <Sparkles className="w-4 h-4 text-teal-600" />
+                    <span>Gemini AI Copilot</span>
                   </button>
-                ))}
+
+                  <button
+                    onClick={() => {
+                      setShowSettingsModal(true);
+                      setShowProfileMenu(false);
+                    }}
+                    className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-slate-500" />
+                    <span>Settings & Cloud Status</span>
+                  </button>
+
+                  {userRole === 'SUPER_ADMIN' && (
+                    <button
+                      onClick={() => {
+                        setShowStaffManagementModal(true);
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                    >
+                      <Users className="w-4 h-4 text-slate-500" />
+                      <span>Staff Delegations</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      handleSignOut();
+                    }}
+                    className="w-full text-left px-2.5 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center gap-2 font-semibold cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
-
-          {/* Settings button */}
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            title="Configure API Keys & Endpoints"
-            className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-white flex items-center justify-center transition cursor-pointer"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          {/* User Sign Out */}
-          <button
-            onClick={handleSignOut}
-            title="Sign Out"
-            className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-white flex items-center justify-center transition cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </header>
-
-      {/* Mobile-Optimized Horizontally Scrolling Role/Workspace Switcher Bar (< 768px) */}
-      <div className="md:hidden bg-slate-900 text-white px-3 py-2 border-b border-slate-800 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none z-20 shrink-0">
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 shrink-0 flex items-center gap-1">
-          <FlaskConical className="w-3 h-3 text-amber-400" />
-          <span>Role:</span>
-        </span>
-        {DEMO_PRESETS.map((preset) => {
-          const isCurrent = preset.role === userRole;
-          return (
-            <button
-              key={preset.uid}
-              type="button"
-              onClick={() => handleRolePresetSwitch({
-                uid: preset.uid,
-                name: preset.name,
-                phone: preset.phone,
-                email: preset.email,
-                role: preset.role,
-                assignedWard: preset.ward,
-                assignedCrew: preset.crew,
-                designation: preset.designation,
-                permissions: preset.permissions || ['ALL_ACCESS']
-              })}
-              className={`px-2.5 py-1 rounded-full text-xs font-bold transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                isCurrent
-                  ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
-                  : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
-              }`}
-            >
-              <span>{preset.name.split(' ')[0]}</span>
-              <span className="text-[10px] opacity-75">({preset.role.replace('_', ' ')})</span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Dynamic Network / Sync Indicator Bar (Active during Firestore read/write & dispatch) */}
       <div className="h-0.5 w-full bg-teal-900/50 relative overflow-hidden flex-shrink-0">

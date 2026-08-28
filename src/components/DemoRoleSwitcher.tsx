@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { 
-  FlaskConical, 
+  UserCheck, 
   User, 
   Truck, 
   Building2, 
   Crown, 
   ChevronDown, 
   Check, 
-  Sparkles,
-  ShieldAlert,
   HeartHandshake,
   ClipboardCheck,
   HardHat
@@ -41,7 +39,7 @@ export const DEMO_PRESETS: {
     designation: 'Resident • Ward 4',
     ward: 'Ward 4 - Central Zone',
     icon: User,
-    color: 'bg-teal-600 text-white',
+    color: 'bg-[#115e59] text-white',
     uid: 'citizen-demo-sangit',
     phone: '+91 98765 43210',
     email: 'sangit.citizen@gmail.com',
@@ -55,7 +53,7 @@ export const DEMO_PRESETS: {
     ward: 'Ward 4 - Central Zone',
     crew: 'UNIT_04',
     icon: HardHat,
-    color: 'bg-amber-600 text-white',
+    color: 'bg-[#d97706] text-white',
     uid: 'crew-demo-ramesh',
     phone: '+91 98111 22334',
     email: 'ramesh.crew04@moh-ua.gov.in',
@@ -68,7 +66,7 @@ export const DEMO_PRESETS: {
     designation: 'Swachhata Doot Community Lead',
     ward: 'Ward 4 - Central Zone',
     icon: HeartHandshake,
-    color: 'bg-emerald-600 text-white',
+    color: 'bg-[#15803d] text-white',
     uid: 'volunteer-demo-ananya',
     phone: '+91 98333 44556',
     email: 'ananya.volunteer@swachhbharat.org',
@@ -81,7 +79,7 @@ export const DEMO_PRESETS: {
     designation: 'MoHUA National Quality Inspector',
     ward: 'ALL',
     icon: ClipboardCheck,
-    color: 'bg-indigo-600 text-white',
+    color: 'bg-[#0f766e] text-white',
     uid: 'auditor-demo-vikram',
     phone: '+91 98444 55667',
     email: 'vikram.auditor@moh-ua.gov.in',
@@ -94,7 +92,7 @@ export const DEMO_PRESETS: {
     designation: 'Assistant Engineer (Ward 4)',
     ward: 'Ward 4 - Central Zone',
     icon: Building2,
-    color: 'bg-blue-600 text-white',
+    color: 'bg-[#0d5c52] text-white',
     uid: 'officer-demo-rajesh',
     phone: '+91 98222 33445',
     email: 'rajesh.ae.ward4@moh-ua.gov.in',
@@ -107,7 +105,7 @@ export const DEMO_PRESETS: {
     designation: 'Municipal Commissioner & SBM Chief Director',
     ward: 'ALL',
     icon: Crown,
-    color: 'bg-purple-700 text-white',
+    color: 'bg-slate-900 text-amber-400 border border-amber-400/40',
     uid: 'master-superadmin-peela',
     phone: '+91 98999 00001',
     email: 'peelaavinash04@gmail.com',
@@ -144,34 +142,38 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
 
   return (
     <div className="relative z-40">
-      {/* Floating Demo Role Trigger Pill */}
+      {/* Clean Civic Role Trigger Pill */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white border border-amber-400/60 rounded-full shadow-md text-xs font-bold transition cursor-pointer group ring-2 ring-amber-400/20"
-        title="Quick Role Switcher for Hackathon Evaluation"
+        className="flex items-center gap-2 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/30 rounded-full text-xs font-semibold transition cursor-pointer shadow-xs"
+        title="Switch Operational Role"
       >
-        <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[11px] shrink-0 animate-pulse">
-          <FlaskConical className="w-3 h-3" />
+        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+          <IconComponent className="w-3.5 h-3.5" strokeWidth={1.75} />
         </div>
-        <div className="text-left hidden sm:block leading-tight">
-          <span className="text-[9px] uppercase tracking-wider text-amber-300 block font-extrabold">Switch Role</span>
-          <span className="text-xs font-bold truncate max-w-[130px] block">{activePreset.name.split(' ')[0]} ({activePreset.role})</span>
+        <div className="text-left leading-tight hidden sm:block">
+          <span className="font-bold tracking-tight text-white block truncate max-w-[130px]">
+            {activePreset.name.split(' ')[0]}
+          </span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-amber-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-normal text-teal-100 hidden md:inline">
+          {activePreset.role.replace(/_/g, ' ')}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-teal-100 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Role Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-sm sm:w-84 bg-white rounded-2xl shadow-2xl border-2 border-amber-400/50 p-2 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2 max-h-[85vh] overflow-y-auto overflow-x-hidden">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-sm sm:w-84 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2 max-h-[85vh] overflow-y-auto overflow-x-hidden">
           <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <FlaskConical className="w-4 h-4 text-amber-600" />
-              <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                RBAC Workspace Switcher
+              <UserCheck className="w-4 h-4 text-[#115e59]" strokeWidth={1.75} />
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Operational Role Selector
               </span>
             </div>
-            <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
-              6 Presets
+            <span className="text-[10px] bg-teal-50 text-teal-800 font-semibold px-2 py-0.5 rounded-full border border-teal-200">
+              6 Roles
             </span>
           </div>
 
@@ -186,12 +188,12 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
                   onClick={() => handleSelect(preset)}
                   className={`w-full text-left p-2.5 rounded-xl transition flex items-start gap-3 cursor-pointer ${
                     isCurrent 
-                      ? 'bg-slate-900 text-white shadow-md' 
-                      : 'hover:bg-slate-100 text-slate-700'
+                      ? 'bg-[#115e59] text-white shadow-xs' 
+                      : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-lg ${preset.color} flex items-center justify-center shrink-0 shadow-xs mt-0.5`}>
-                    <PctIcon className="w-4 h-4" />
+                  <div className={`w-8 h-8 rounded-lg ${isCurrent ? 'bg-white/20 text-white' : preset.color} flex items-center justify-center shrink-0 shadow-xs mt-0.5`}>
+                    <PctIcon className="w-4 h-4" strokeWidth={1.75} />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -199,14 +201,14 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
                       <span className={`text-xs font-bold ${isCurrent ? 'text-white' : 'text-slate-900'}`}>
                         {preset.name}
                       </span>
-                      {isCurrent && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                      {isCurrent && <Check className="w-4 h-4 text-teal-200 shrink-0" strokeWidth={2} />}
                     </div>
 
-                    <p className={`text-[11px] font-semibold ${isCurrent ? 'text-amber-300' : 'text-[#2d7a70]'}`}>
+                    <p className={`text-[11px] font-medium ${isCurrent ? 'text-teal-100' : 'text-[#115e59]'}`}>
                       {preset.designation}
                     </p>
 
-                    <p className={`text-[10px] mt-0.5 line-clamp-1 ${isCurrent ? 'text-slate-300' : 'text-slate-500'}`}>
+                    <p className={`text-[10px] mt-0.5 line-clamp-1 ${isCurrent ? 'text-teal-100/80' : 'text-slate-500'}`}>
                       {preset.description}
                     </p>
                   </div>
@@ -215,8 +217,8 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
             })}
           </div>
 
-          <div className="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 leading-tight">
-            💡 <strong>Live Municipal Sync:</strong> All grievances, repair units, and ward configurations load and save live to the central city database.
+          <div className="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-200/80 text-[10px] text-slate-600 leading-tight">
+            Municipal Grid Sync: Real-time role-based access for Swachhata operations.
           </div>
         </div>
       )}
