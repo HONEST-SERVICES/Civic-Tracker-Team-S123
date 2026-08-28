@@ -8,7 +8,10 @@ import {
   ChevronDown, 
   Check, 
   Sparkles,
-  ShieldAlert
+  ShieldAlert,
+  HeartHandshake,
+  ClipboardCheck,
+  HardHat
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 
@@ -43,21 +46,47 @@ export const DEMO_PRESETS: {
     phone: '+91 98765 43210',
     email: 'sangit.citizen@gmail.com',
     permissions: ['VIEW_COMPLAINTS', 'SUBMIT_COMPLAINTS'],
-    description: 'Post grievances, track live repair progress, rate resolved work.'
+    description: 'Post grievances, track live repair progress, locate & rate SBM facilities.'
   },
   {
     role: 'FIELD_CREW',
     name: 'Ramesh Kumar',
-    designation: 'Unit 04 Lead',
+    designation: 'Unit 04 Lead • Field Contractor',
     ward: 'Ward 4 - Central Zone',
     crew: 'UNIT_04',
-    icon: Truck,
+    icon: HardHat,
     color: 'bg-amber-600 text-white',
     uid: 'crew-demo-ramesh',
     phone: '+91 98111 22334',
     email: 'ramesh.crew04@moh-ua.gov.in',
     permissions: ['VIEW_ASSIGNED_WORK_ORDERS', 'UPDATE_WORK_ORDER_STATUS'],
-    description: 'Ward 4 work orders, status updates, completion photo upload.'
+    description: 'Ward 4 work order queue, 1-tap "Mark In Progress", upload proof-of-fix.'
+  },
+  {
+    role: 'VOLUNTEER',
+    name: 'Ananya Sen',
+    designation: 'Swachhata Doot Community Lead',
+    ward: 'Ward 4 - Central Zone',
+    icon: HeartHandshake,
+    color: 'bg-emerald-600 text-white',
+    uid: 'volunteer-demo-ananya',
+    phone: '+91 98333 44556',
+    email: 'ananya.volunteer@swachhbharat.org',
+    permissions: ['SPOT_CHECK_VERIFICATION', 'UPVOTE_HAZARD', 'AUDIT_FACILITIES'],
+    description: 'Community spot-check verification, upvote hazard urgency, SBM hygiene audits.'
+  },
+  {
+    role: 'SWACHH_SURVEKSHAN_AUDITOR',
+    name: 'Dr. Vikram Malhotra',
+    designation: 'MoHUA National Quality Inspector',
+    ward: 'ALL',
+    icon: ClipboardCheck,
+    color: 'bg-indigo-600 text-white',
+    uid: 'auditor-demo-vikram',
+    phone: '+91 98444 55667',
+    email: 'vikram.auditor@moh-ua.gov.in',
+    permissions: ['INSPECT_COMPLIANCE', 'AUDIT_WARD_SCORES', 'ODF_VERIFICATION'],
+    description: 'Independent inspection scoring desk, verify SOPs without altering dispatch.'
   },
   {
     role: 'WARD_OFFICER',

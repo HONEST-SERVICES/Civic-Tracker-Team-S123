@@ -27,9 +27,10 @@ import {
   Radio,
   Layers
 } from 'lucide-react';
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile } from '../types';
-import { SWACHHATA_CATEGORIES } from '../mockData';
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile, PublicFacility } from '../types';
+import { SWACHHATA_CATEGORIES, INITIAL_PUBLIC_FACILITIES } from '../mockData';
 import { analyzeHazardWithGeminiVision } from '../services/geminiService';
+import { subscribeToPublicFacilities, ratePublicFacility } from '../services/firebase';
 import { GooglePinPickerMap } from './GooglePinPickerMap';
 import { GooglePlacesAutocompleteInput } from './GooglePlacesAutocompleteInput';
 import { GoogleDesktopOverviewMap } from './GoogleDesktopOverviewMap';
@@ -58,6 +59,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>(activeScreen);
   const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>>([activeScreen]);
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
+  const [categoryDomainFilter, setCategoryDomainFilter] = useState<'ALL' | 'URBAN_ROAD' | 'SANITATION_WATER' | 'RURAL_SUBURBAN'>('ALL');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [isAnalyzingVision, setIsAnalyzingVision] = useState<boolean>(false);
@@ -70,6 +72,29 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [trackedIncident, setTrackedIncident] = useState<CrisisIncident | null>(null);
   const [rating, setRating] = useState<number>(5);
   const [ratingSubmitted, setRatingSubmitted] = useState<boolean>(false);
+
+  // SBM Public Facilities State
+  const [publicFacilities, setPublicFacilities] = useState<PublicFacility[]>(INITIAL_PUBLIC_FACILITIES);
+  const [showToiletLocatorModal, setShowToiletLocatorModal] = useState<boolean>(false);
+  const [facilityTypeFilter, setFacilityTypeFilter] = useState<'ALL' | 'TOILET' | 'WASTE_CENTER'>('ALL');
+  const [selectedFacilityForRating, setSelectedFacilityForRating] = useState<PublicFacility | null>(null);
+  const [facilityRatingInput, setFacilityRatingInput] = useState<number>(5);
+  const [isRatingSaving, setIsRatingSaving] = useState<boolean>(false);
+  const [facilityRatingMsg, setFacilityRatingMsg] = useState<string | null>(null);
+
+  // Subscribe to real-time SBM Public Facilities
+  useEffect(() => {
+    const unsub = subscribeToPublicFacilities((facilities) => {
+      setPublicFacilities(facilities);
+    });
+    return () => unsub();
+  }, []);
+
+  // Filtered categories based on domain
+  const filteredCategories = useMemo(() => {
+    if (categoryDomainFilter === 'ALL') return SWACHHATA_CATEGORIES;
+    return SWACHHATA_CATEGORIES.filter(cat => cat.domain === categoryDomainFilter);
+  }, [categoryDomainFilter]);
 
   // Sync user profile if updated
   useEffect(() => {
@@ -236,6 +261,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       case 'ShieldAlert': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">⚠️</div>;
       case 'Droplets': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">💧</div>;
       case 'Lightbulb': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">💡</div>;
+      case 'Radio': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">⚡</div>;
+      case 'Building': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🌾</div>;
       default: return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🏢</div>;
     }
   };
@@ -276,6 +303,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* SBM Public Toilet Locator Button */}
+            <button
+              onClick={() => setShowToiletLocatorModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 font-bold text-xs border border-cyan-200 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <span>🚻</span>
+              <span>SBM Toilet Locator</span>
+              <span className="bg-cyan-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
+                {publicFacilities.length}
+              </span>
+            </button>
+
             <div className="text-right">
               <p className="text-xs font-bold text-slate-800">Ward 4 - Central Zone</p>
               <p className="text-[11px] text-slate-500">{incidents.length} Registered Grievances</p>
@@ -314,11 +353,61 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   <FileText className="w-4 h-4 text-[#2d7a70]" />
                   <span>1. Choose Grievance Category</span>
                 </h3>
-                <span className="text-xs text-slate-500 font-medium">8 Standard MoHUA Types</span>
+                <span className="text-xs text-slate-500 font-medium">
+                  {filteredCategories.length} Categories
+                </span>
+              </div>
+
+              {/* Category Domain Filter Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setCategoryDomainFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                    categoryDomainFilter === 'ALL'
+                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All ({SWACHHATA_CATEGORIES.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryDomainFilter('URBAN_ROAD')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                    categoryDomainFilter === 'URBAN_ROAD'
+                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🛣️ Urban & Roads
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryDomainFilter('SANITATION_WATER')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                    categoryDomainFilter === 'SANITATION_WATER'
+                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  💧 Sanitation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryDomainFilter('RURAL_SUBURBAN')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                    categoryDomainFilter === 'RURAL_SUBURBAN'
+                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🌾 Rural & Suburban
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
-                {SWACHHATA_CATEGORIES.map((cat) => {
+                {filteredCategories.map((cat) => {
                   const isSelected = selectedCategory === cat.id;
                   return (
                     <div
@@ -777,20 +866,23 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
               {/* Card 3: SBM Public Toilet Locator */}
               <div
-                onClick={() => {
-                  alert('SBM Public Toilet Locator: Found 4 operational public toilet facilities within 600 meters of Ward 4.');
-                }}
+                onClick={() => setShowToiletLocatorModal(true)}
                 className="bg-gradient-to-br from-[#fff3e0] to-[#ffe0b2] border border-orange-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-orange-600">
-                  <Compass className="w-5 h-5" />
+                  <span className="text-xl">🚻</span>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-orange-700 transition">
-                    SBM Toilet Locator
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-orange-700 transition">
+                      SBM Toilet Locator
+                    </h3>
+                    <span className="text-[10px] font-extrabold bg-orange-500 text-white px-1.5 py-0.2 rounded-full">
+                      {publicFacilities.length}
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-600 leading-tight mt-0.5">
-                    Find the nearest clean toilet
+                    Find, inspect & rate nearby clean toilets
                   </p>
                 </div>
               </div>
@@ -850,12 +942,60 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </button>
               <div>
                 <h2 className="text-base font-bold tracking-tight">Choose Category</h2>
-                <p className="text-xs text-teal-100">Post a complaint</p>
+                <p className="text-xs text-teal-100">Select standard MoHUA grievance category</p>
               </div>
             </div>
 
+            {/* Domain Filter Tabs */}
+            <div className="p-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setCategoryDomainFilter('ALL')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  categoryDomainFilter === 'ALL'
+                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                All ({SWACHHATA_CATEGORIES.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryDomainFilter('URBAN_ROAD')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  categoryDomainFilter === 'URBAN_ROAD'
+                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                🛣️ Urban & Roads
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryDomainFilter('SANITATION_WATER')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  categoryDomainFilter === 'SANITATION_WATER'
+                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                💧 Sanitation
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryDomainFilter('RURAL_SUBURBAN')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  categoryDomainFilter === 'RURAL_SUBURBAN'
+                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                🌾 Rural & Suburban
+              </button>
+            </div>
+
             <div className="divide-y divide-slate-100">
-              {SWACHHATA_CATEGORIES.map((cat) => (
+              {filteredCategories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => handleSelectCategory(cat.id)}
@@ -1308,6 +1448,229 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   Location: {trackedIncident.location.address} ({trackedIncident.location.lat.toFixed(4)}°, {trackedIncident.location.lng.toFixed(4)}°)
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 
+        ========================================================================
+        SBM PUBLIC TOILET & SANITATION LOCATOR MODAL
+        ========================================================================
+      */}
+      {showToiletLocatorModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="bg-[#2d7a70] text-white p-4.5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-2xl">
+                  🚻
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">SBM Public Sanitation Locator</h3>
+                  <p className="text-xs text-teal-100">Swachh Bharat Mission Community Toilets & Waste Centers</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowToiletLocatorModal(false);
+                  setSelectedFacilityForRating(null);
+                  setFacilityRatingMsg(null);
+                }}
+                className="p-1.5 rounded-lg text-teal-100 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filter & Controls Bar */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1">
+                {(['ALL', 'TOILET', 'WASTE_CENTER'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFacilityTypeFilter(type)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      facilityTypeFilter === type
+                        ? 'bg-[#2d7a70] text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+                    }`}
+                  >
+                    {type === 'ALL' ? 'All Units' : type === 'TOILET' ? '🚻 Public Toilets' : '♻️ Waste Centers'}
+                  </button>
+                ))}
+              </div>
+
+              <span className="text-xs font-semibold text-slate-500">
+                {publicFacilities.filter(f => facilityTypeFilter === 'ALL' || f.type === facilityTypeFilter).length} Verified Facilities
+              </span>
+            </div>
+
+            {/* Facilities List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+              {facilityRatingMsg && (
+                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{facilityRatingMsg}</span>
+                </div>
+              )}
+
+              {publicFacilities
+                .filter(f => facilityTypeFilter === 'ALL' || f.type === facilityTypeFilter)
+                .map((fac) => (
+                  <div
+                    key={fac.id}
+                    className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-2xl p-2 rounded-lg bg-teal-50 dark:bg-slate-700 text-[#2d7a70]">
+                          {fac.type === 'TOILET' ? '🚻' : '♻️'}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 dark:text-white text-sm">{fac.name}</h4>
+                            <span className="text-[10px] font-mono text-slate-400">({fac.id})</span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                            <span>{fac.location.address || fac.ward}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Status badge */}
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
+                        fac.status === 'OPEN'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                      }`}>
+                        {fac.status === 'OPEN' ? '✓ Open Now' : '⚠ Maintenance'}
+                      </span>
+                    </div>
+
+                    {/* Features & Timings */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-100 dark:border-slate-700">
+                      {fac.timings && (
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <Clock className="w-3.5 h-3.5 text-[#2d7a70]" />
+                          <span>{fac.timings}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span>{fac.rating.toFixed(1)} / 5.0</span>
+                        <span className="text-[10px] text-slate-400">({fac.totalRatings || 1} reviews)</span>
+                      </div>
+                    </div>
+
+                    {fac.features && fac.features.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {fac.features.map((feat, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium"
+                          >
+                            ✓ {feat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Rating Section */}
+                    {selectedFacilityForRating?.id === fac.id ? (
+                      <div className="p-3 bg-teal-50/70 dark:bg-slate-700/60 rounded-xl border border-teal-200 dark:border-slate-600 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800 dark:text-white">
+                            Rate cleanliness:
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setFacilityRatingInput(star)}
+                                className="p-1 cursor-pointer hover:scale-125 transition"
+                              >
+                                <Star
+                                  className={`w-4 h-4 ${
+                                    star <= facilityRatingInput
+                                      ? 'fill-amber-400 text-amber-400'
+                                      : 'text-slate-400'
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={isRatingSaving}
+                            onClick={async () => {
+                              setIsRatingSaving(true);
+                              try {
+                                await ratePublicFacility(fac.id, facilityRatingInput);
+                                setFacilityRatingMsg(`Rating (${facilityRatingInput}★) recorded for ${fac.name}. Thank you!`);
+                                setSelectedFacilityForRating(null);
+                                setTimeout(() => setFacilityRatingMsg(null), 4000);
+                              } catch (err) {
+                                console.error('Rating failed:', err);
+                              } finally {
+                                setIsRatingSaving(false);
+                              }
+                            }}
+                            className="flex-1 h-8 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <Star className="w-3.5 h-3.5" />
+                            <span>{isRatingSaving ? 'Saving...' : `Submit ${facilityRatingInput}★ Rating`}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFacilityForRating(null)}
+                            className="px-3 h-8 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFacilityForRating(fac);
+                            setFacilityRatingInput(5);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#2d7a70] text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          <span>Rate Cleanliness</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
+                            setShowToiletLocatorModal(false);
+                          }}
+                          className="text-xs font-semibold text-[#2d7a70] hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <Crosshair className="w-3.5 h-3.5" />
+                          <span>Locate on Map</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
+              Data synchronized live with Swachh Bharat Mission (MoHUA) Municipal Database
             </div>
           </div>
         </div>

@@ -22,6 +22,9 @@ import {
 import { CitizenPortal } from './components/CitizenPortal';
 import { MunicipalOfficerCommandCenter } from './components/MunicipalOfficerCommandCenter';
 import { FieldCrewWorkOrders } from './components/FieldCrewWorkOrders';
+import { VolunteerPortal } from './components/VolunteerPortal';
+import { SwachhSurvekshanAuditorDesk } from './components/SwachhSurvekshanAuditorDesk';
+import { GeminiAssistantDrawer } from './components/GeminiAssistantDrawer';
 import { WardStaffManagementModal } from './components/WardStaffManagementModal';
 import { DemoRoleSwitcher, DEMO_PRESETS } from './components/DemoRoleSwitcher';
 import { SettingsModal } from './components/SettingsModal';
@@ -86,6 +89,7 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showStaffManagementModal, setShowStaffManagementModal] = useState<boolean>(false);
+  const [showGeminiAssistant, setShowGeminiAssistant] = useState<boolean>(false);
 
   // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'
   const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'>('HOME');
@@ -463,12 +467,16 @@ export default function App() {
             <span className={`w-2 h-2 rounded-full ${
               userRole === 'SUPER_ADMIN' ? 'bg-purple-400' :
               userRole === 'WARD_OFFICER' ? 'bg-blue-400' :
-              userRole === 'FIELD_CREW' ? 'bg-amber-400' : 'bg-emerald-400'
+              userRole === 'SWACHH_SURVEKSHAN_AUDITOR' ? 'bg-indigo-400' :
+              userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT' ? 'bg-emerald-400' :
+              userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR' ? 'bg-amber-400' : 'bg-teal-400'
             } animate-pulse`} />
             <span className="font-semibold text-white">
               {userRole === 'SUPER_ADMIN' ? '👑 Super Admin (All Wards)' :
                userRole === 'WARD_OFFICER' ? '🏢 Ward Officer (Ward 4)' :
-               userRole === 'FIELD_CREW' ? '🚛 Field Crew (Unit 04)' : '👤 Citizen Mode'}
+               userRole === 'SWACHH_SURVEKSHAN_AUDITOR' ? '📋 Swachh Survekshan Inspector' :
+               userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT' ? '🤝 Swachhata Doot (Volunteer)' :
+               userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR' ? '🚛 Field Crew / Contractor (Unit 04)' : '👤 Citizen Mode'}
             </span>
           </div>
 
@@ -480,6 +488,16 @@ export default function App() {
 
         {/* Right: Quick Actions & Demo Switcher */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* ✨ Gemini AI Copilot Drawer Trigger */}
+          <button
+            onClick={() => setShowGeminiAssistant(true)}
+            title="Open Gemini AI Municipal Assistant (✨)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-400/25 hover:bg-emerald-400/35 text-white border border-emerald-300/40 text-xs font-bold cursor-pointer shadow-xs transition-colors"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+            <span className="hidden sm:inline">AI Copilot</span>
+          </button>
+
           {/* 🧪 Evaluator Floating Demo Role Switcher */}
           <DemoRoleSwitcher
             currentRole={userRole}
@@ -579,8 +597,8 @@ export default function App() {
           />
         )}
 
-        {/* VIEW B: FIELD CREW WORK ORDERS */}
-        {userRole === 'FIELD_CREW' && (
+        {/* VIEW B: FIELD CREW & FIELD CONTRACTOR WORK ORDERS */}
+        {(userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') && (
           <FieldCrewWorkOrders
             incidents={incidents}
             currentUser={currentUser}
@@ -588,7 +606,27 @@ export default function App() {
           />
         )}
 
-        {/* VIEW C: CITIZEN SWACCHATA PORTAL */}
+        {/* VIEW C: SWACHHATA DOOT & VOLUNTEER HUB */}
+        {(userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT') && (
+          <div className="flex-1 overflow-y-auto">
+            <VolunteerPortal
+              incidents={incidents}
+              currentUser={currentUser}
+            />
+          </div>
+        )}
+
+        {/* VIEW D: SWACHH SURVEKSHAN NATIONAL QUALITY AUDIT DESK */}
+        {userRole === 'SWACHH_SURVEKSHAN_AUDITOR' && (
+          <div className="flex-1 overflow-y-auto">
+            <SwachhSurvekshanAuditorDesk
+              incidents={incidents}
+              currentUser={currentUser}
+            />
+          </div>
+        )}
+
+        {/* VIEW E: CITIZEN SWACHHATA PORTAL */}
         {userRole === 'CITIZEN' && (
           <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
             {citizenTab === 'EVENTS' ? (
@@ -825,6 +863,21 @@ export default function App() {
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+      />
+
+      {/* Interactive Gemini AI Copilot Assistant Drawer */}
+      <GeminiAssistantDrawer
+        isOpen={showGeminiAssistant}
+        onClose={() => setShowGeminiAssistant(false)}
+        userRole={userRole}
+        userWard={currentUser?.assignedWard || 'Ward 4 - Central Zone'}
+        incidents={incidents}
+        availableUnits={units}
+        onApplyDraft={(draft) => {
+          if (userRole === 'CITIZEN') {
+            setCitizenTab('FORM');
+          }
+        }}
       />
     </div>
   );

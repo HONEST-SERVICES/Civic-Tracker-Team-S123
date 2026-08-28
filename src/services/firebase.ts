@@ -27,8 +27,8 @@ import {
   ConfirmationResult,
   ApplicationVerifier
 } from "firebase/auth";
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, UserProfile, UserRole, MunicipalUnit, WardJurisdiction } from "../types";
-import { INITIAL_INCIDENTS, INITIAL_MUNICIPAL_UNITS } from "../mockData";
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, UserProfile, UserRole, MunicipalUnit, WardJurisdiction, PublicFacility } from "../types";
+import { INITIAL_INCIDENTS, INITIAL_MUNICIPAL_UNITS, INITIAL_PUBLIC_FACILITIES } from "../mockData";
 import { getFirebaseConfig } from "../config/keys";
 
 const firebaseConfig = getFirebaseConfig();
@@ -41,6 +41,7 @@ export const complaintsCollection = collection(db, "complaints");
 export const usersCollection = collection(db, "users");
 export const unitsCollection = collection(db, "units");
 export const wardsCollection = collection(db, "wards");
+export const publicFacilitiesCollection = collection(db, "public_facilities");
 
 export const MASTER_ADMIN_EMAIL = "peelaavinash04@gmail.com";
 
@@ -387,6 +388,10 @@ export function mapDocToIncident(id: string, data: any): CrisisIncident {
     ward: data.ward || location.zone,
     rating: data.rating,
     citizenFeedback: data.citizenFeedback,
+    communityUpvotes: data.communityUpvotes || 0,
+    verifiedByVolunteers: data.verifiedByVolunteers || [],
+    auditorNotes: data.auditorNotes || '',
+    auditorComplianceScore: data.auditorComplianceScore,
     actionDirectives: data.actionDirectives || []
   };
 }
@@ -427,6 +432,10 @@ export function mapIncidentToFirestore(incident: Partial<CrisisIncident>) {
     officerNotes: incident.officerNotes || '',
     etaMinutes: incident.etaMinutes || 15,
     description: incident.description || '',
+    communityUpvotes: incident.communityUpvotes || 0,
+    verifiedByVolunteers: incident.verifiedByVolunteers || [],
+    auditorNotes: incident.auditorNotes || '',
+    auditorComplianceScore: incident.auditorComplianceScore || null,
     createdAt: serverTimestamp()
   };
 }
@@ -631,16 +640,25 @@ export function subscribeToScopedComplaints(
         if (userProfile?.phone && inc.reporterPhone && inc.reporterPhone.replace(/\s+/g, '') === userProfile.phone.replace(/\s+/g, '')) return true;
         return false;
       });
-    } else if (role === 'FIELD_CREW') {
+    } else if (role === 'FIELD_CREW' || role === 'FIELD_CONTRACTOR') {
       const ward = userProfile?.assignedWard;
       scopedItems = allItems.filter((inc) => {
         const matchesWard = !ward || inc.ward === ward || inc.location.zone === ward;
         return matchesWard;
       });
+    } else if (role === 'VOLUNTEER' || role === 'SWACHHATA_DOOT') {
+      const ward = userProfile?.assignedWard;
+      scopedItems = allItems.filter((inc) => {
+        if (!ward || ward === 'ALL') return true;
+        return inc.ward === ward || inc.location.zone === ward;
+      });
+    } else if (role === 'SWACHH_SURVEKSHAN_AUDITOR') {
+      // Auditor has oversight over all municipal complaints across wards
+      scopedItems = allItems;
     } else if (role === 'WARD_OFFICER') {
       const ward = userProfile?.assignedWard;
       scopedItems = allItems.filter((inc) => {
-        if (!ward) return true;
+        if (!ward || ward === 'ALL') return true;
         return inc.ward === ward || inc.location.zone === ward;
       });
     } else if (role === 'SUPER_ADMIN') {
@@ -1025,5 +1043,110 @@ export async function pingFirestoreHealthCheck(): Promise<{ ok: boolean; message
       message: "Connected to Municipal Grid ✓",
       latencyMs: Math.max(14, latencyMs)
     };
+  }
+}
+
+/**
+ * Seed SBM Public Facilities if collection is empty
+ */
+export async function seedPublicFacilitiesIfEmpty(): Promise<void> {
+  try {
+    const snap = await getDocs(publicFacilitiesCollection);
+    if (snap.empty) {
+      console.log("Seeding initial SBM Public Facilities into Firestore...");
+      for (const facility of INITIAL_PUBLIC_FACILITIES) {
+        await setDoc(doc(publicFacilitiesCollection, facility.id), facility);
+      }
+      console.log("Seeded SBM Public Facilities successfully.");
+    }
+  } catch (err) {
+    console.warn("Could not seed public facilities (using local fallback):", err);
+  }
+}
+
+/**
+ * Subscribe to real-time SBM Public Facilities updates
+ */
+export function subscribeToPublicFacilities(
+  onUpdate: (facilities: PublicFacility[]) => void
+): () => void {
+  try {
+    seedPublicFacilitiesIfEmpty();
+    return onSnapshot(
+      publicFacilitiesCollection,
+      (snapshot) => {
+        if (snapshot.empty) {
+          onUpdate(INITIAL_PUBLIC_FACILITIES);
+          return;
+        }
+        const list: PublicFacility[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          list.push({
+            id: docSnap.id,
+            name: data.name || "Public Facility",
+            type: data.type || "TOILET",
+            location: data.location || { lat: 31.2530, lng: 75.7030, address: "Ward 4" },
+            ward: data.ward || "Ward 4 - Central Zone",
+            rating: typeof data.rating === "number" ? data.rating : 4.0,
+            totalRatings: data.totalRatings || 1,
+            status: data.status || "OPEN",
+            timings: data.timings || "24/7 Open",
+            features: data.features || []
+          });
+        });
+        onUpdate(list);
+      },
+      (error) => {
+        console.warn("Firestore public facilities listener error (fallback to initial data):", error);
+        onUpdate(INITIAL_PUBLIC_FACILITIES);
+      }
+    );
+  } catch (err) {
+    console.warn("Failed to subscribe to public facilities:", err);
+    onUpdate(INITIAL_PUBLIC_FACILITIES);
+    return () => {};
+  }
+}
+
+/**
+ * Rate Cleanliness for an SBM Public Facility
+ */
+export async function ratePublicFacility(
+  facilityId: string,
+  newStarRating: number
+): Promise<void> {
+  try {
+    const facilityRef = doc(publicFacilitiesCollection, facilityId);
+    const snap = await getDoc(facilityRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const currentRating = typeof data.rating === "number" ? data.rating : 4.0;
+      const currentTotal = typeof data.totalRatings === "number" ? data.totalRatings : 1;
+      const newTotal = currentTotal + 1;
+      const updatedRating = Number(((currentRating * currentTotal + newStarRating) / newTotal).toFixed(1));
+
+      await updateDoc(facilityRef, {
+        rating: updatedRating,
+        totalRatings: newTotal
+      });
+      console.log(`Facility ${facilityId} rated successfully: ${updatedRating} (${newTotal} ratings)`);
+    } else {
+      // If facility not in firestore yet, seed from initial
+      const initial = INITIAL_PUBLIC_FACILITIES.find(f => f.id === facilityId);
+      if (initial) {
+        const newTotal = (initial.totalRatings || 1) + 1;
+        const updatedRating = Number(((initial.rating * (initial.totalRatings || 1) + newStarRating) / newTotal).toFixed(1));
+        await setDoc(facilityRef, {
+          ...initial,
+          rating: updatedRating,
+          totalRatings: newTotal
+        });
+      }
+    }
+  } catch (err) {
+    console.error(`Failed to rate public facility ${facilityId}:`, err);
+    handleFirestoreError(err, OperationType.UPDATE, `public_facilities/${facilityId}`);
+    throw err;
   }
 }

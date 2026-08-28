@@ -10,7 +10,27 @@ export type HazardCategory =
   | 'STRUCTURAL_SINKHOLE'
   | 'FLOODING_WATER_MAIN'
   | 'DOWNED_POWER_LINE'
-  | 'TRAFFIC_SIGNAL_FAILURE';
+  | 'TRAFFIC_SIGNAL_FAILURE'
+  | 'CANAL_IRRIGATION_OVERFLOW'
+  | 'AGRICULTURAL_RUNOFF_BLOCK'
+  | 'RURAL_GARBAGE_DUMP';
+
+export interface PublicFacility {
+  id: string;
+  name: string;
+  type: 'TOILET' | 'WASTE_CENTER';
+  location: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+  ward: string;
+  rating: number;
+  totalRatings?: number;
+  status: 'OPEN' | 'MAINTENANCE';
+  timings?: string;
+  features?: string[];
+}
 
 export type PriorityLevel = 'P1_CRITICAL' | 'P2_URGENT' | 'P3_SCHEDULED';
 
@@ -18,7 +38,15 @@ export type IncidentStatus = 'OPEN' | 'DISPATCHED' | 'IN_PROGRESS' | 'RESOLVED';
 
 export type DepartmentType = 'PUBLIC_WORKS' | 'SANITATION' | 'WATER_SUPPLY' | 'ELECTRICITY' | 'HEALTH_SBM';
 
-export type UserRole = 'CITIZEN' | 'FIELD_CREW' | 'WARD_OFFICER' | 'SUPER_ADMIN';
+export type UserRole = 
+  | 'CITIZEN' 
+  | 'FIELD_CREW' 
+  | 'FIELD_CONTRACTOR'
+  | 'VOLUNTEER'
+  | 'SWACHHATA_DOOT'
+  | 'SWACHH_SURVEKSHAN_AUDITOR'
+  | 'WARD_OFFICER' 
+  | 'SUPER_ADMIN';
 
 export interface UserProfile {
   uid: string;
@@ -124,6 +152,10 @@ export interface CrisisIncident {
   ward?: string;
   rating?: number;
   citizenFeedback?: string;
+  communityUpvotes?: number;
+  verifiedByVolunteers?: string[];
+  auditorNotes?: string;
+  auditorComplianceScore?: number;
 }
 
 export interface MunicipalUnit {

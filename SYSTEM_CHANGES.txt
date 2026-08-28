@@ -81,4 +81,50 @@ SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
     * Mobile (< 768px): Stacked vertical cards with clean spacing and full-width touch targets (≥ 44px min-height).
     * Desktop (md: and above): Centered container (`max-w-2xl mx-auto py-8`) with 2-column grid alignment for profile fields, role badge, assigned ward, and system status indicator.
 
+7. AUDIT BATCH 3: MAP TILE SWITCHER, SBM TOILET LOCATOR & RURAL/SUBURBAN CIVIC TAXONOMY
+--------------------------------------------------------------------------------
+- Interactive Map Tile & Style Switcher (Issue #9):
+  * Added instant Map Style controls in top corner of GIS tactical map:
+    - Standard Street View (Default OSM / Google Vector)
+    - Satellite Imagery Layer (Esri World Imagery High-Res Aerial)
+    - Dark / Tactical Mode (CartoDB Dark Matter)
+  * Seamless tile toggling without unmounting active markers, incident pins, or crew route polylines.
+- SBM Public Toilet & Sanitation Facility Locator (Issue #1):
+  * Firestore collection & real-time sync for `public_facilities` (SBM Public Toilets, Community Sanitation Complexes, Waste Centers):
+    - Name, address, ward, open/maintenance status, 24/7 timings, Divyangjan disability access, and star rating.
+  * In Map View: Added `[ 🚻 SBM Toilet Locator ]` toggle button with popup cards and 1-tap spot review submissions.
+  * In Citizen Portal: Added dedicated SBM Toilets directory modal with search and category filters.
+- Expanded Rural, Suburban & Agricultural Civic Taxonomy (Issue #13):
+  * Organized categories into 3 intuitive domain tabs:
+    1. Urban & Roads (Potholes, Traffic Signals, Footpaths, Open Manholes)
+    2. Sanitation & Water (Garbage Dumps, Drain Overflow, Water Pipe Burst, Public Toilets)
+    3. Rural & Suburban (Panchayat Culvert Choking, Stray Cattle Hazard, Biomass/Crop Burning, Rural Tube-well Contamination)
+
+8. AUDIT BATCH 4: MULTI-TIER ROLES & INTERACTIVE GEMINI STAR ASSISTANT DRAWER
+--------------------------------------------------------------------------------
+- Expanded Multi-Tier Municipal Hierarchy (Issues #3 & #6):
+  * Expanded `UserRole` engine beyond basic citizen/officer to complete municipal structure:
+    - `CITIZEN`: Grievance submission, real-time ticket tracking, SBM facility rating.
+    - `FIELD_CREW` & `FIELD_CONTRACTOR`: Dedicated work-order queue filtered to assigned ward/tasks, 1-tap "Mark In Progress", and upload proof-of-completion photo.
+    - `VOLUNTEER` & `SWACHHATA_DOOT`: Dedicated community spot-check verification hub (`VolunteerPortal.tsx`), upvote urgent neighborhood hazards, review SBM facilities, and earn Karma points on the Leaderboard.
+    - `SWACHH_SURVEKSHAN_AUDITOR`: Dedicated inspection scoring desk (`SwachhSurvekshanAuditorDesk.tsx`) to audit ward cleanliness compliance (0-100 score, SOP validation, before/after photo checks) without altering maintenance dispatch states.
+    - `WARD_OFFICER`: Ward dispatching, crew assignment, and SLA approvals.
+    - `SUPER_ADMIN`: Master Commissioner apex view with all-wards oversight and staff delegation.
+  * Updated evaluator demo role switcher (`DemoRoleSwitcher.tsx`) with 6 authentic presets for instant switching.
+- Interactive Gemini Star Assistant Drawer (Issue #4):
+  * Connected Header Star (✨) button to interactive sliding AI Copilot drawer (`GeminiAssistantDrawer.tsx`).
+  * Powered by Gemini 3.7 Flash / `@google/genai` (backend route `/api/gemini/assistant` with resilient client fallback):
+    - **Citizen Mode**: Helps citizens draft formal MoHUA grievances, recommends categories, explains statutory SLAs (P1 12h, P2 48h, P3 7d), and finds nearest SBM amenities. Includes 1-tap "Use in Grievance Form" action.
+    - **Officer / Auditor Mode**: Real-time incident summaries across assigned ward, crew route optimization suggestions, bottleneck hazard detection, and Swachh Survekshan compliance advisory.
+  * Interactive prompt suggestion chips and copy-to-clipboard actions.
+
+9. GEMINI MODEL RESOLUTION & DEPRECATION FIX
+--------------------------------------------------------------------------------
+- Upgraded all `@google/genai` model endpoints from deprecated `gemini-2.5-flash` to official `gemini-3.7-flash`:
+  * `/api/gemini/analyze-vision` (Hazard vision scanning & classification)
+  * `/api/gemini/dispatch` (Autonomous function-calling tactical dispatch engine)
+  * `/api/gemini/assistant` (Interactive Municipal AI Copilot assistant drawer)
+  * Client-side fallback services in `src/services/geminiService.ts`
+================================================================================
+
 

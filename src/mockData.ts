@@ -1,4 +1,87 @@
-import { CrisisIncident, MunicipalUnit, HazardCategory, PriorityLevel } from './types';
+import { CrisisIncident, MunicipalUnit, HazardCategory, PriorityLevel, DepartmentType, PublicFacility } from './types';
+
+export const INITIAL_PUBLIC_FACILITIES: PublicFacility[] = [
+  {
+    id: 'FAC-SBM-01',
+    name: 'SBM Community Sanitation Complex - Central Market',
+    type: 'TOILET',
+    location: {
+      lat: 31.2538,
+      lng: 75.7022,
+      address: 'Main Market Square, Near Central Clock Tower, Ward 4'
+    },
+    ward: 'Ward 4 - Central Zone',
+    rating: 4.6,
+    totalRatings: 34,
+    status: 'OPEN',
+    timings: '24/7 Open',
+    features: ['Divyangjan Friendly', 'Running Water 24x7', 'Incinerator Available', 'Western & Indian']
+  },
+  {
+    id: 'FAC-SBM-02',
+    name: 'Model Town Swachh Bharat Deluxe Toilet',
+    type: 'TOILET',
+    location: {
+      lat: 31.2575,
+      lng: 75.7080,
+      address: 'Model Town Park Gate 2, Ward 4'
+    },
+    ward: 'Ward 4 - Central Zone',
+    rating: 4.2,
+    totalRatings: 21,
+    status: 'OPEN',
+    timings: '05:00 AM - 11:00 PM',
+    features: ['Solar Water Heating', 'Child Friendly', 'Cleanliness Audited Daily']
+  },
+  {
+    id: 'FAC-SBM-03',
+    name: 'Bus Depot Public Toilet Block',
+    type: 'TOILET',
+    location: {
+      lat: 31.2510,
+      lng: 75.6965,
+      address: 'Intercity Bus Stand Terminal Platform 3, Ward 4'
+    },
+    ward: 'Ward 4 - Central Zone',
+    rating: 3.8,
+    totalRatings: 52,
+    status: 'OPEN',
+    timings: '24/7 Open',
+    features: ['Heavy Footfall Station', 'Automated Sensor Taps', 'Janitor On Duty']
+  },
+  {
+    id: 'FAC-SBM-04',
+    name: 'Verad Gate Sanitation Complex',
+    type: 'TOILET',
+    location: {
+      lat: 31.2550,
+      lng: 75.7048,
+      address: 'Verad Gate Junction, Outside Cinema Road, Ward 4'
+    },
+    ward: 'Ward 4 - Central Zone',
+    rating: 3.5,
+    totalRatings: 18,
+    status: 'MAINTENANCE',
+    timings: 'Under Rapid Disinfection (Opens 4 PM)',
+    features: ['Sanitary Vending Machine', 'Disabled Ramp']
+  },
+  {
+    id: 'FAC-WST-01',
+    name: 'Ward 4 Micro-Solid Waste Segregation & Drop Center',
+    type: 'WASTE_CENTER',
+    location: {
+      lat: 31.2498,
+      lng: 75.7050,
+      address: 'Green Belt Civic Enclave, Ward 4'
+    },
+    ward: 'Ward 4 - Central Zone',
+    rating: 4.8,
+    totalRatings: 40,
+    status: 'OPEN',
+    timings: '06:00 AM - 08:00 PM',
+    features: ['Wet/Dry Segregation', 'E-Waste Drop Bin', 'Compost Dispenser']
+  }
+];
 
 export const INITIAL_MUNICIPAL_UNITS: MunicipalUnit[] = [
   {
@@ -247,61 +330,139 @@ export const ZONES = [
   { id: 'zone-3', name: 'Ward 3 - South Commercial', lat: 31.2485, lng: 75.6980, radius: 750 }
 ];
 
-export const SWACHHATA_CATEGORIES = [
+export interface SwachhataCategoryItem {
+  id: HazardCategory;
+  name: string;
+  subtitle: string;
+  department: DepartmentType;
+  icon: string;
+  domain: 'URBAN_ROAD' | 'SANITATION_WATER' | 'RURAL_SUBURBAN';
+}
+
+export const SWACHHATA_CATEGORIES: SwachhataCategoryItem[] = [
+  // URBAN & ROAD INFRASTRUCTURE
   {
     id: 'DEEP_POTHOLE',
     name: 'Potholes / Road Damage',
-    subtitle: 'Deep cavities, broken pavement, asphalt damage',
-    department: 'PUBLIC_WORKS' as const,
-    icon: 'Road'
+    subtitle: 'Deep asphalt cavities, cracked pavement, crater hazard',
+    department: 'PUBLIC_WORKS',
+    icon: 'Road',
+    domain: 'URBAN_ROAD'
   },
   {
-    id: 'GARBAGE_DUMP',
-    name: 'Garbage dump',
-    subtitle: 'Unattended waste piles & roadside littering',
-    department: 'SANITATION' as const,
-    icon: 'Trash2'
+    id: 'STRUCTURAL_SINKHOLE',
+    name: 'Road Cave-in / Cavity Sinkhole',
+    subtitle: 'Sudden sub-surface ground collapse & road void',
+    department: 'PUBLIC_WORKS',
+    icon: 'ShieldAlert',
+    domain: 'URBAN_ROAD'
   },
   {
-    id: 'GARBAGE_VEHICLE',
-    name: 'Garbage vehicle not arrived',
-    subtitle: 'Missed door-to-door waste collection',
-    department: 'SANITATION' as const,
-    icon: 'Truck'
-  },
-  {
-    id: 'SWEEPING_NOT_DONE',
-    name: 'Sweeping not done',
-    subtitle: 'Street sweeping not completed in area',
-    department: 'SANITATION' as const,
-    icon: 'Sparkles'
-  },
-  {
-    id: 'OPEN_MANHOLES',
-    name: 'Open Manholes Or Drains',
-    subtitle: 'Missing drain covers, cave-ins, open chambers',
-    department: 'PUBLIC_WORKS' as const,
-    icon: 'ShieldAlert'
-  },
-  {
-    id: 'WATERLOGGING',
-    name: 'Waterlogging / Water pipeline leak',
-    subtitle: 'Ponding water, burst supply main, blocked runoff',
-    department: 'WATER_SUPPLY' as const,
-    icon: 'Droplets'
+    id: 'TRAFFIC_SIGNAL_FAILURE',
+    name: 'Traffic Signal Outage',
+    subtitle: 'Non-functional intersection lights or blinking malfunction',
+    department: 'ELECTRICITY',
+    icon: 'Radio',
+    domain: 'URBAN_ROAD'
   },
   {
     id: 'STREETLIGHT_OUTAGE',
-    name: 'Streetlight Outage / Electrical Defect',
-    subtitle: 'Non-functional lamps, dangling cables',
-    department: 'ELECTRICITY' as const,
-    icon: 'Lightbulb'
+    name: 'Streetlight Outage / Dark Spot',
+    subtitle: 'Non-functional street pole lamps, dark corridors',
+    department: 'ELECTRICITY',
+    icon: 'Lightbulb',
+    domain: 'URBAN_ROAD'
+  },
+
+  // SANITATION & WATER SUPPLY
+  {
+    id: 'OPEN_MANHOLES',
+    name: 'Open Manholes / Missing Drain Covers',
+    subtitle: 'Exposed underground sewer chamber or missing grate',
+    department: 'PUBLIC_WORKS',
+    icon: 'ShieldAlert',
+    domain: 'SANITATION_WATER'
+  },
+  {
+    id: 'WATERLOGGING',
+    name: 'Street Waterlogging / Drainage Overflow',
+    subtitle: 'Monsoon water accumulation, blocked storm channels',
+    department: 'WATER_SUPPLY',
+    icon: 'Droplets',
+    domain: 'SANITATION_WATER'
+  },
+  {
+    id: 'FLOODING_WATER_MAIN',
+    name: 'Water Main Pipe Burst',
+    subtitle: 'High-pressure potable water pipeline rupture & flooding',
+    department: 'WATER_SUPPLY',
+    icon: 'Droplets',
+    domain: 'SANITATION_WATER'
   },
   {
     id: 'PUBLIC_TOILET_CLEANING',
-    name: 'Public toilet(s) cleaning / blockage',
-    subtitle: 'SBM community toilet maintenance & sanitation',
-    department: 'HEALTH_SBM' as const,
-    icon: 'Building'
+    name: 'Public Toilet Blockage / Unhygienic Condition',
+    subtitle: 'SBM community toilet sanitation, chocked pipes, odor',
+    department: 'HEALTH_SBM',
+    icon: 'Building',
+    domain: 'SANITATION_WATER'
+  },
+  {
+    id: 'GARBAGE_DUMP',
+    name: 'Garbage Dump / Secondary Overflow',
+    subtitle: 'Unattended municipal waste piles & street littering',
+    department: 'SANITATION',
+    icon: 'Trash2',
+    domain: 'SANITATION_WATER'
+  },
+  {
+    id: 'GARBAGE_VEHICLE',
+    name: 'Garbage Vehicle Not Arrived',
+    subtitle: 'Missed door-to-door waste collection vehicle route',
+    department: 'SANITATION',
+    icon: 'Truck',
+    domain: 'SANITATION_WATER'
+  },
+  {
+    id: 'SWEEPING_NOT_DONE',
+    name: 'Street Sweeping Not Done',
+    subtitle: 'Sanitation road sweeping missed in locality',
+    department: 'SANITATION',
+    icon: 'Sparkles',
+    domain: 'SANITATION_WATER'
+  },
+
+  // RURAL & SUBURBAN CIVIC INFRASTRUCTURE
+  {
+    id: 'CANAL_IRRIGATION_OVERFLOW',
+    name: 'Canal / Irrigation Channel Overflow',
+    subtitle: 'Suburban canal breach, silt block, agricultural inundation',
+    department: 'WATER_SUPPLY',
+    icon: 'Droplets',
+    domain: 'RURAL_SUBURBAN'
+  },
+  {
+    id: 'AGRICULTURAL_RUNOFF_BLOCK',
+    name: 'Agricultural Runoff & Culvert Choke',
+    subtitle: 'Debris/silt blocking peri-urban roadside culvert or bridge',
+    department: 'PUBLIC_WORKS',
+    icon: 'ShieldAlert',
+    domain: 'RURAL_SUBURBAN'
+  },
+  {
+    id: 'RURAL_GARBAGE_DUMP',
+    name: 'Open Rural Waste & Biomass Dumping',
+    subtitle: 'Unregulated dumping on village outskirts or farm borders',
+    department: 'SANITATION',
+    icon: 'Trash2',
+    domain: 'RURAL_SUBURBAN'
+  },
+  {
+    id: 'DOWNED_POWER_LINE',
+    name: 'Downed Rural Power Line / Broken Pole',
+    subtitle: 'Snapped feeder wire, leaning pole in farmland or lane',
+    department: 'ELECTRICITY',
+    icon: 'Lightbulb',
+    domain: 'RURAL_SUBURBAN'
   }
 ];
