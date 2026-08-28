@@ -287,7 +287,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>Protected by Google Identity & Firebase Auth security.</span>
+                <span>Protected by Municipal Single Sign-On & Cloud Identity Standards.</span>
               </div>
             </div>
           )}

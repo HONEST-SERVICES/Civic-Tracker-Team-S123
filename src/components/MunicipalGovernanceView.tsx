@@ -83,7 +83,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
       },
       (err) => {
         console.error("Ward subscription failed:", err);
-        showToast("Error loading wards from Firestore", "error");
+        showToast("Error loading wards from municipal registry", "error");
       }
     );
     return () => {
@@ -132,7 +132,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
         lng: Number(newWardForm.lng) || 75.7030
       });
 
-      showToast(`Ward "${newWardForm.name}" created and synced to Firestore!`, "success");
+      showToast(`Ward "${newWardForm.name}" created and synced to municipal registry!`, "success");
       setIsCreatingWard(false);
       setSelectedWardId(generatedId);
       setNewWardForm({
@@ -184,7 +184,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
     setIsProcessing(true);
     try {
       await deleteWardFromFirestore(wardId);
-      showToast(`Ward "${wardName}" deleted from Firestore.`, "success");
+      showToast(`Ward "${wardName}" removed from municipal registry.`, "success");
       if (selectedWardId === wardId) {
         const remaining = wards.filter(w => w.id !== wardId);
         setSelectedWardId(remaining.length > 0 ? remaining[0].id : null);
@@ -263,7 +263,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Manage territorial ward jurisdictions, sub-sector boundaries, and field officer delegations in Firestore.
+              Manage territorial ward jurisdictions, sub-sector boundaries, and field officer delegations.
             </p>
           </div>
         </div>
@@ -271,7 +271,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-3 py-1.5 rounded-xl font-medium">
             <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span>Firestore /wards ({wards.length} Active)</span>
+            <span>Active Wards ({wards.length} Jurisdictions)</span>
           </div>
 
           <button
@@ -483,7 +483,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                     <Shield className="w-4 h-4 text-[#2d7a70]" />
                     <h3 className="text-sm font-bold text-slate-900">Ward Officer Designation & Personnel Assignment</h3>
                   </div>
-                  <span className="text-xs text-slate-500">Live Firestore RBAC Sync</span>
+                  <span className="text-xs text-slate-500">Live Role Sync</span>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
@@ -508,7 +508,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                   </div>
 
                   <p className="text-[11px] text-slate-500">
-                    Assigning a user updates their Firestore profile (`users/{'{uid}'}`) to <span className="font-semibold text-[#2d7a70]">WARD_OFFICER</span> with jurisdiction over <span className="font-semibold">{activeWard.name}</span>.
+                    Assigning a user promotes their account to <span className="font-semibold text-[#2d7a70]">WARD_OFFICER</span> with jurisdiction over <span className="font-semibold">{activeWard.name}</span>.
                   </p>
                 </div>
               </div>
@@ -533,7 +533,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">Create New Municipal Ward Jurisdiction</h3>
-                  <p className="text-[11px] text-slate-500">Syncs directly to Firestore `wards` collection</p>
+                  <p className="text-[11px] text-slate-500">Persists to the central municipal registry</p>
                 </div>
               </div>
               <button
@@ -631,7 +631,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                   disabled={isProcessing}
                   className="px-4 py-2 bg-[#2d7a70] hover:bg-[#23635b] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                 >
-                  {isProcessing ? 'Saving to Firestore...' : 'Create Ward'}
+                  {isProcessing ? 'Saving Ward...' : 'Create Ward'}
                 </button>
               </div>
             </form>

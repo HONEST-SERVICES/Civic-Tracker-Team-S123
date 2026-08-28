@@ -17,8 +17,48 @@ export interface DispatchResponse {
   error?: string;
 }
 
+// Resilient Client SDK Call with Fallback and Exponential Backoff
+async function callGeminiClientWithFallback(
+  ai: GoogleGenAI,
+  generateParams: any,
+  preferredModel = 'gemini-3.7-flash'
+) {
+  const modelsToTry = [preferredModel, 'gemini-2.5-flash', 'gemini-flash-latest'];
+  let lastErr: any = null;
+
+  for (const model of modelsToTry) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          ...generateParams,
+          model,
+        });
+        return response;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message || '').toLowerCase();
+        const isUnavailable =
+          msg.includes('503') ||
+          msg.includes('unavailable') ||
+          msg.includes('high demand') ||
+          msg.includes('429') ||
+          msg.includes('quota') ||
+          msg.includes('resource_exhausted') ||
+          msg.includes('temporarily');
+
+        if (isUnavailable && attempt === 0) {
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        break;
+      }
+    }
+  }
+  throw lastErr;
+}
+
 /**
- * Execute Gemini 2.5 Flash Vision Analysis on citizen uploaded hazard image
+ * Execute Gemini Vision Analysis on citizen uploaded hazard image
  */
 export async function analyzeHazardWithGeminiVision(
   imageBase64: string,
@@ -46,7 +86,7 @@ export async function analyzeHazardWithGeminiVision(
       return data;
     }
   } catch (err) {
-    console.warn('Server vision endpoint error, attempting client SDK fallback:', err);
+    console.warn('Server vision endpoint notice, attempting client SDK fallback:', err);
   }
 
   // Client-side @google/genai fallback if user provided API key
@@ -87,8 +127,7 @@ export async function analyzeHazardWithGeminiVision(
         ]
       };
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+      const response = await callGeminiClientWithFallback(ai, {
         contents: [
           {
             role: 'user',
@@ -109,7 +148,7 @@ export async function analyzeHazardWithGeminiVision(
           responseMimeType: 'application/json',
           responseSchema: visionSchema
         }
-      });
+      }, 'gemini-3.7-flash');
 
       const parsed = JSON.parse(response.text || '{}');
       return {
@@ -117,7 +156,7 @@ export async function analyzeHazardWithGeminiVision(
         analyzedWithGemini: true
       };
     } catch (sdkErr: any) {
-      console.warn('Client Gemini SDK call failed:', sdkErr);
+      console.warn('Client Gemini SDK call notice:', sdkErr?.message || sdkErr);
     }
   }
 
@@ -328,14 +367,13 @@ Current Context:
 
 Respond concisely with actionable, professional, and empathetic municipal guidance with clear bullet points.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+      const response = await callGeminiClientWithFallback(ai, {
         contents: userQuery,
         config: {
           systemInstruction,
           temperature: 0.7,
         }
-      });
+      }, 'gemini-3.7-flash');
 
       if (response.text) return response.text;
     } catch (sdkErr: any) {

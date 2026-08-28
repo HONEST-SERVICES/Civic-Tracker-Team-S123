@@ -48,8 +48,8 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
     {
       role: 'assistant',
       content: isOfficerPersona 
-        ? `**Namaste Officer.** I am your Swachhata-MoHUA Gemini Copilot. I can synthesize real-time incident reports across ${userWard}, compute optimal crew dispatch routes, and flag high-risk bottleneck areas.`
-        : `**Namaste Citizen.** I am your Swachhata-MoHUA Gemini Civic Assistant. Need help drafting an official grievance, finding the right category, or checking statutory SLAs? Ask me anything!`,
+        ? `**Namaste Officer.** I am your Swachhata-MoHUA Municipal Operations Assistant. I can synthesize real-time incident reports across ${userWard}, compute optimal crew dispatch routes, and flag high-risk bottleneck areas.`
+        : `**Namaste Citizen.** I am your Swachhata-MoHUA Civic Support Assistant. Need help drafting an official grievance, finding the right category, or checking statutory SLAs? Ask me anything!`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -120,7 +120,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
         ...prev,
         {
           role: 'assistant',
-          content: "I encountered a network hiccup connecting to the Gemini reasoning engine. Please try again.",
+          content: "I encountered a temporary communication timeout with the municipal decision engine. Please try again.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -140,7 +140,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
       {
         role: 'assistant',
         content: selectedPersona === 'OFFICER'
-          ? `**Copilot Reset.** Ready to analyze ward operations and routing in ${userWard}.`
+          ? `**Assistant Ready.** Ready to analyze ward operations and routing in ${userWard}.`
           : `**Assistant Ready.** How can I assist you with your municipal grievance today?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
@@ -162,12 +162,12 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-base text-white">Gemini AI Municipal Copilot</h3>
+                <h3 className="font-bold text-base text-white">Municipal Operations Assistant</h3>
                 <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-400 text-slate-950 px-2 py-0.2 rounded">
-                  2.5 Flash
+                  Active
                 </span>
               </div>
-              <p className="text-xs text-emerald-200/80">Swachhata-MoHUA Intelligent Assistant</p>
+              <p className="text-xs text-emerald-200/80">Swachhata-MoHUA Intelligent Redressal System</p>
             </div>
           </div>
 
@@ -238,7 +238,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
                 ) : (
                   <>
                     <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span className="font-bold text-emerald-800">Gemini Copilot</span>
+                    <span className="font-bold text-emerald-800">Municipal Assistant</span>
                     <span>•</span>
                     <span>{msg.timestamp}</span>
                   </>
@@ -302,7 +302,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
           {isLoading && (
             <div className="flex items-center gap-2 text-slate-500 text-xs p-3 bg-white rounded-2xl border border-slate-200 w-fit animate-pulse">
               <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
-              <span>Gemini is analyzing municipal data & reasoning...</span>
+              <span>Analyzing municipal data & ward regulations...</span>
             </div>
           )}
 

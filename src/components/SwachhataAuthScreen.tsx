@@ -342,7 +342,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                 <div className="text-center space-y-1">
                   <p className="text-sm font-bold text-slate-800">1-Click Google Sign-In</p>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Authenticates via Google Identity. Automatically connects your citizen profile to Firestore.
+                    Authenticates via Google Identity. Automatically links your verified citizen profile.
                   </p>
                 </div>
 
@@ -379,7 +379,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
                   <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>Secured by Firebase Authentication & Google Cloud Identity.</span>
+                  <span>Secured by Municipal Single Sign-On & Cloud Identity Standards.</span>
                 </div>
               </div>
             )}

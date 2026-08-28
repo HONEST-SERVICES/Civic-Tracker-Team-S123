@@ -34,6 +34,7 @@ import { subscribeToPublicFacilities, ratePublicFacility } from '../services/fir
 import { GooglePinPickerMap } from './GooglePinPickerMap';
 import { GooglePlacesAutocompleteInput } from './GooglePlacesAutocompleteInput';
 import { GoogleDesktopOverviewMap } from './GoogleDesktopOverviewMap';
+import { compressImage } from '../utils/imageCompressor';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -81,6 +82,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [facilityRatingInput, setFacilityRatingInput] = useState<number>(5);
   const [isRatingSaving, setIsRatingSaving] = useState<boolean>(false);
   const [facilityRatingMsg, setFacilityRatingMsg] = useState<string | null>(null);
+
+  // Compression & Submission Error State
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [compressionStats, setCompressionStats] = useState<{ originalKb: number; compressedKb: number } | null>(null);
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
 
   // Subscribe to real-time SBM Public Facilities
   useEffect(() => {
@@ -162,15 +169,21 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   }, [incidents, currentUser]);
 
   const handleFileUpload = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const result = event.target?.result as string;
-      setPhotoUrl(result);
+    setIsCompressing(true);
+    setSubmitErrorMessage(null);
+    try {
+      // 1. Client-Side Canvas 2D Compression (Throttles 10MB phone camera to ~60-90KB)
+      const compression = await compressImage(file, 800, 800, 0.75);
+      setCompressionStats({
+        originalKb: compression.originalSizeKb,
+        compressedKb: compression.compressedSizeKb
+      });
+      setPhotoUrl(compression.compressedBase64);
       
-      // Auto-trigger Gemini 2.5 Flash Vision Analysis
+      // 2. Auto-trigger Gemini 3.7 Flash Vision Analysis
       setIsAnalyzingVision(true);
       try {
-        const visionData = await analyzeHazardWithGeminiVision(result, file.type || 'image/jpeg');
+        const visionData = await analyzeHazardWithGeminiVision(compression.compressedBase64, compression.mimeType || 'image/jpeg');
         setVisionResult(visionData);
         
         // Auto-select detected category if valid
@@ -182,8 +195,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       } finally {
         setIsAnalyzingVision(false);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error('Image compression pipeline error:', err);
+      setSubmitErrorMessage('Failed to optimize image. Please select a valid photo file.');
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -201,7 +218,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isDispatching) return;
+    if (isDispatching || isSubmittingForm) return;
+    setSubmitErrorMessage(null);
+    setIsSubmittingForm(true);
 
     const catObj = SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory);
     const department: DepartmentType = visionResult?.recommendedDepartment || catObj?.department || 'PUBLIC_WORKS';
@@ -242,14 +261,22 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       } : undefined
     };
 
-    await onSubmitIncident(incidentData);
-    setSubmittedSuccess(true);
-    setLastSubmittedId(uniqueId);
-    setPhotoUrl(null);
-    setVisionResult(null);
-    setCurrentView('HOME');
-    onNavigate?.('HOME');
-    setTimeout(() => setSubmittedSuccess(false), 8000);
+    try {
+      await onSubmitIncident(incidentData);
+      setSubmittedSuccess(true);
+      setLastSubmittedId(uniqueId);
+      setPhotoUrl(null);
+      setVisionResult(null);
+      setCompressionStats(null);
+      setCurrentView('HOME');
+      onNavigate?.('HOME');
+      setTimeout(() => setSubmittedSuccess(false), 8000);
+    } catch (err: any) {
+      console.error('Failed to submit grievance to central database:', err);
+      setSubmitErrorMessage(err?.message || 'Could not record grievance with the municipal registry. Please retry.');
+    } finally {
+      setIsSubmittingForm(false);
+    }
   };
 
   const getCategoryIcon = (iconName: string) => {
@@ -275,7 +302,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         ========================================================================
       */}
       <div className="hidden md:block max-w-7xl mx-auto px-6 py-6">
-        {/* Top Real-time Firestore Sync Badge & Greeting Header */}
+        {/* Top Real-time Municipal Grid Status & Greeting Header */}
         <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200/80 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-slate-100 border-2 border-[#2d7a70]/40 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
@@ -293,7 +320,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </h2>
                 <span className="bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                   <Radio className="w-3 h-3 text-emerald-600 animate-pulse" />
-                  <span>Live Firestore Sync</span>
+                  <span>Municipal Grid Online</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -448,12 +475,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     <label className="block text-xs font-bold text-slate-700">
                       Capture or Attach Photo of Hazard:
                     </label>
-                    {isAnalyzingVision && (
-                      <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Gemini 2.5 Flash Analyzing...
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isCompressing && (
+                        <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Optimizing Payload...
+                        </span>
+                      )}
+                      {isAnalyzingVision && !isCompressing && (
+                        <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Automated Triage In Progress...
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {photoUrl ? (
@@ -468,7 +503,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         {isAnalyzingVision && (
                           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
                             <Sparkles className="w-6 h-6 text-teal-300 animate-spin" />
-                            <p className="text-xs font-bold">Scanning pavement anomalies & hazard severity...</p>
+                            <p className="text-xs font-bold">Evaluating pavement hazard & civic priority...</p>
                           </div>
                         )}
                         <button
@@ -487,10 +522,16 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 font-bold text-teal-900">
                               <Sparkles className="w-3.5 h-3.5 text-teal-700" />
-                              <span>Gemini 2.5 Flash Assessment</span>
+                              <span>Automated Verification & Triage</span>
                             </div>
-                            <span className="bg-teal-700 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                              Risk {visionResult.riskScore}/100
+                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                              visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80
+                                ? 'bg-red-600 text-white'
+                                : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-teal-700 text-white'
+                            }`}>
+                              PRIORITY: {visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80 ? 'CRITICAL' : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60 ? 'HIGH' : 'MEDIUM'}
                             </span>
                           </div>
                           <p className="text-[11px] font-semibold text-slate-900">
@@ -498,13 +539,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           </p>
                           <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
                             <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
-                              Dept: {visionResult.recommendedDepartment}
+                              Department: {visionResult.recommendedDepartment}
                             </span>
                             <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
-                              Crew: {visionResult.recommendedCrew}
+                              Assigned Unit: {visionResult.recommendedCrew}
                             </span>
                             <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
-                              ETA: ~{visionResult.estimatedRepairTimeMinutes}m
+                              Estimated Time: ~{visionResult.estimatedRepairTimeMinutes}m
                             </span>
                           </div>
                         </div>
@@ -522,7 +563,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     >
                       <Camera className="w-5 h-5 text-[#2d7a70] mb-1" />
                       <p className="text-xs font-bold text-slate-800">Click to upload or drag & drop photo</p>
-                      <p className="text-[11px] text-slate-500">Auto-triggers Gemini 2.5 Flash Vision & Geo-tagging</p>
+                      <p className="text-[11px] text-slate-500">Auto-verified for immediate municipal crew routing</p>
                     </div>
                   )}
                   <input
@@ -551,6 +592,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   <GooglePinPickerMap
                     coords={selectedCoords}
                     onCoordsChange={setSelectedCoords}
+                    onAddressDiscovered={(address) => setLandmark(address)}
                     className="w-full h-36 rounded-xl border border-slate-200 overflow-hidden relative z-0"
                   />
                 </div>
@@ -595,16 +637,34 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </div>
                 </div>
 
+                {/* Submission Error Banner */}
+                {submitErrorMessage && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-900 animate-fade-in">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold">Submission Warning</p>
+                      <p className="text-red-700">{submitErrorMessage}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSubmitErrorMessage(null)}
+                      className="text-red-500 hover:text-red-800 text-xs font-bold px-1.5"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* Submit button */}
                 <button
                   type="submit"
-                  disabled={isDispatching}
+                  disabled={isDispatching || isSubmittingForm}
                   className="w-full h-11 rounded-xl bg-[#2d7a70] hover:bg-[#23635b] active:bg-[#1b4b45] text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isDispatching ? (
+                  {(isDispatching || isSubmittingForm) ? (
                     <>
                       <Loader2 className="w-4 h-4 text-white animate-spin" />
-                      <span>Transmitting to Firestore & Auto-Dispatching...</span>
+                      <span>Recording Grievance & Dispatching Ward Crew...</span>
                     </>
                   ) : (
                     <>
@@ -1050,7 +1110,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   {isAnalyzingVision && (
                     <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Gemini 2.5 Flash Analyzing...
+                      Automated Triage In Progress...
                     </span>
                   )}
                 </div>
@@ -1067,7 +1127,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       {isAnalyzingVision ? (
                         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
                           <Sparkles className="w-6 h-6 text-teal-300 animate-spin" />
-                          <p className="text-xs font-bold">Scanning pavement anomalies & hazard severity...</p>
+                          <p className="text-xs font-bold">Evaluating pavement hazard & civic priority...</p>
                         </div>
                       ) : (
                         <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5">
@@ -1092,10 +1152,16 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 font-bold text-teal-900">
                             <Sparkles className="w-3.5 h-3.5 text-teal-700" />
-                            <span>Gemini 2.5 Flash Assessment</span>
+                            <span>Automated Verification & Triage</span>
                           </div>
-                          <span className="bg-teal-700 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                            Risk {visionResult.riskScore}/100
+                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                            visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80
+                              ? 'bg-red-600 text-white'
+                              : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-teal-700 text-white'
+                          }`}>
+                            PRIORITY: {visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80 ? 'CRITICAL' : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60 ? 'HIGH' : 'MEDIUM'}
                           </span>
                         </div>
                         <p className="text-[11px] font-semibold text-slate-900">
@@ -1103,10 +1169,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         </p>
                         <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
                           <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
-                            Dept: {visionResult.recommendedDepartment}
+                            Department: {visionResult.recommendedDepartment}
                           </span>
                           <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
-                            Crew: {visionResult.recommendedCrew}
+                            Assigned Unit: {visionResult.recommendedCrew}
                           </span>
                         </div>
                       </div>
@@ -1126,7 +1192,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       <Camera className="w-6 h-6" />
                     </div>
                     <p className="text-sm font-semibold text-slate-800">Tap to take photo of civic issue</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Auto-triggers Gemini 2.5 Flash Vision Assessment</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Auto-verified for immediate municipal crew routing</p>
                   </div>
                 )}
 

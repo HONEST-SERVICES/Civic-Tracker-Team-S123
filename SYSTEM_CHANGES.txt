@@ -125,6 +125,61 @@ SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
   * `/api/gemini/dispatch` (Autonomous function-calling tactical dispatch engine)
   * `/api/gemini/assistant` (Interactive Municipal AI Copilot assistant drawer)
   * Client-side fallback services in `src/services/geminiService.ts`
+
+10. ARCHITECTURAL & SECURITY AUDIT (DATA BOTTLENECKS, AUTH & IMAGE PERSISTENCE)
+--------------------------------------------------------------------------------
+- Auth Gating & First-Time User Lifecycle:
+  * Audit of session states and unauthenticated gating:
+    - Root early return in `App.tsx` conditionally halts mounting of municipal desks when `currentUser === null`, forcing the dedicated `SwachhataAuthScreen.tsx` splash portal.
+    - Verified `logoutUser()` executes Firebase Auth `signOut(auth)` and resets user profile reference in state.
+- Image Upload & Storage Bottleneck Diagnosis:
+  * Identified 1MB Firestore document hard limit vulnerability when raw camera base64 strings (>5MB) are attached.
+  * Formulated client-side Canvas 2D image compression architecture (max 800px width/height, 0.75 WebP/JPEG quality) to throttle payload sizes to ~60-90KB prior to Gemini Vision & Firestore write operations.
+- Location Capture & Places API Bidirectional Synchronization:
+  * Traced Autocomplete -> Pin and Pin Drag -> Geocode synchronization vectors.
+  * Preserved loop-free updates via discrete event listeners without circular component re-renders.
+- Gemini Multimodal Pipeline & Thinking Stream:
+  * Verified inlineData base64 ingestion, structured JSON response schema, and interactive UI scanning indicators ("Scanning pavement anomalies & hazard severity...").
+  * Confirmed multi-tier fallback architecture (Server API -> Client GenAI SDK -> High-fidelity municipal heuristics).
+- Database Write Reliability & Error Visibility:
+  * Verified serverTimestamp integration and collection schema alignment across `complaints`, `users`, `units`, and `public_facilities`.
+
+11. AUDIT IMPLEMENTATION: SOLUTIONS A, B, C, AND D DEPLOYED
+--------------------------------------------------------------------------------
+- Solution A (Client-Side Canvas 2D Image Compression Pipeline):
+  * Created `src/utils/imageCompressor.ts` implementing `compressImage()` and `compressBase64Image()`.
+  * Automatically resizes raw smartphone captures (4MB-15MB) to max 800x800px, 0.75 JPEG/WebP (~60KB-90KB), eliminating Firestore 1MB document size limit failures.
+  * Integrated into `CitizenPortal.tsx` (hazard photos) and `FieldCrewWorkOrders.tsx` (remediation proof photos).
+  * Added visual compression badge in form UI showing exact size reduction before transmission.
+- Solution B (Bidirectional Location & Reverse-Geocoding Sync):
+  * In `GooglePinPickerMap.tsx`, attached `google.maps.Geocoder` listener on marker `dragend` and map `click` events.
+  * Emits `onAddressDiscovered(formattedAddress)` callback to `CitizenPortal.tsx`, updating the landmark input without feedback loops.
+- Solution C (Complete Session State Flush on Sign-Out):
+  * Updated `handleSignOut` in `App.tsx` to execute `logoutUser()` and cleanly reset all state contexts (`currentUser`, `selectedIncident`, `selectedUnit`, modals, and thought logs).
+  * Confirmed strict auth gating locks unauthenticated users to `SwachhataAuthScreen.tsx`.
+- Solution D (Database Submission Error Handling & Accessible Banners):
+  * Wrapped grievance submission actions in try/catch blocks with `submitErrorMessage` state.
+  * Displays user-facing warning banners with retry options if Firestore writes fail, ensuring transparent operational feedback.
+
+12. SWACHHATA-MoHUA CIVIC STANDARDIZATION & UI SANITIZATION
+--------------------------------------------------------------------------------
+- Complete Elimination of Developer & Technical Branding:
+  * Audited and sanitized all user-facing components (`CitizenPortal.tsx`, `GeminiAssistantDrawer.tsx`, `MunicipalGovernanceView.tsx`, `WardStaffManagementModal.tsx`, `SettingsModal.tsx`, `SwachhataAuthScreen.tsx`, `AuthModal.tsx`, `DemoRoleSwitcher.tsx`, `AgentReasoningStream.tsx`).
+  * Removed visible references to "Gemini", "Gemini 3.7 / 2.5 Flash", "Firestore", "Firebase", and "API SDK" from citizen and officer interfaces.
+  * Replaced technical labels with authentic MoHUA terminology:
+    - "Gemini Copilot" -> "Municipal Operations Assistant" / "Civic Support Assistant"
+    - "Gemini 3.7 Flash Vision" -> "Automated Triage Assessment" / "Automated Vision Triage"
+    - "Firestore /wards" -> "Active Wards (Jurisdictions)"
+    - "Live Firestore Sync" -> "Municipal Grid Online" / "Live Municipal Sync"
+- Qualitative Civic Priority Scoring:
+  * Replaced technical numerical risk metrics (e.g., "Risk Score: 88/100") with standard MoHUA qualitative badges:
+    - Score >= 75: "CRITICAL" priority badge (Red)
+    - Score >= 45: "HIGH" priority badge (Amber)
+    - Score < 45: "MEDIUM" / "LOW" priority badge (Teal/Emerald)
+- Operational Crew & Dispatch Wording:
+  * Replaced AI algorithmic dispatch recommendations with civic operational labels: "Assigned Unit: Ward 4 Rapid Patcher" instead of "AI Recommended Crew Unit".
+- Silent Background Telemetry:
+  * Confirmed that database connection latencies, document IDs, and system health handshakes are logged strictly to the developer browser console and omitted from DOM display elements.
 ================================================================================
 
 

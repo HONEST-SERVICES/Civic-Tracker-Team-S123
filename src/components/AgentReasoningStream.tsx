@@ -64,7 +64,7 @@ export const AgentReasoningStream: React.FC<AgentReasoningStreamProps> = ({
               )}
             </div>
             <div className="text-[11px] text-slate-400">
-              Gemini 3.7 Flash • Function-Calling Audit Trail
+              Automated Dispatch Engine • Operational Audit Trail
             </div>
           </div>
         </div>

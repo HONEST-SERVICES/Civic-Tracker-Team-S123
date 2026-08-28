@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { CrisisIncident, UserProfile, IncidentStatus } from '../types';
+import { compressImage } from '../utils/imageCompressor';
 
 interface FieldCrewWorkOrdersProps {
   incidents: CrisisIncident[];
@@ -100,14 +101,20 @@ export const FieldCrewWorkOrders: React.FC<FieldCrewWorkOrdersProps> = ({
     }, 600);
   };
 
-  const handleCustomFileUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (typeof e.target?.result === 'string') {
-        setProofUrl(e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+  const handleCustomFileUpload = async (file: File) => {
+    try {
+      const result = await compressImage(file, 800, 800, 0.75);
+      setProofUrl(result.compressedBase64);
+    } catch (e) {
+      console.warn('Proof image compression fallback:', e);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (typeof ev.target?.result === 'string') {
+          setProofUrl(ev.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (

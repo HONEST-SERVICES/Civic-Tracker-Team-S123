@@ -173,10 +173,16 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       await logoutUser();
-      setCurrentUser(null);
     } catch (e) {
       console.error('Logout error:', e);
+    } finally {
+      // Complete state & session cache flush
       setCurrentUser(null);
+      setSelectedIncident(null);
+      setSelectedUnit(null);
+      setShowSettingsModal(false);
+      setShowGeminiAssistant(false);
+      setThoughtLogs([]);
     }
   };
 

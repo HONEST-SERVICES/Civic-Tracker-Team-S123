@@ -295,15 +295,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Optional Custom Gemini Vision API Key */}
+          {/* Section 2: Optional Custom Automated Vision Service Key */}
           <div className="space-y-2 pt-2 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                Gemini Vision API Key (Optional)
+                Automated Vision Triage Service Key (Optional)
               </label>
               <span className="text-[11px] text-slate-400 font-medium">
-                {hasKey ? 'Configured ✓' : 'Default Server Key'}
+                {hasKey ? 'Configured ✓' : 'Default Server Engine'}
               </span>
             </div>
             

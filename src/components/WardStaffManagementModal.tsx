@@ -152,7 +152,7 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
         )
       );
 
-      setSaveFeedback('Delegation and permissions updated in Firestore.');
+      setSaveFeedback('Delegation and permissions updated in municipal registry.');
       setTimeout(() => {
         setEditingUserId(null);
         setSaveFeedback(null);
@@ -448,7 +448,7 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
 
         {/* Modal Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>All permission updates persist directly to Firestore collection <code className="font-mono text-slate-700 font-bold">users/&#123;uid&#125;</code></span>
+          <span>All permission updates persist directly to the central municipal staff directory.</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg cursor-pointer"

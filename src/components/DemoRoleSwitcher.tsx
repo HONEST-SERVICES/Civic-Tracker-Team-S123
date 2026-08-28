@@ -216,7 +216,7 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
           </div>
 
           <div className="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 leading-tight">
-            💡 <strong>100% Real Firestore:</strong> All grievances, units, and ward configurations load and save live to Firestore.
+            💡 <strong>Live Municipal Sync:</strong> All grievances, repair units, and ward configurations load and save live to the central city database.
           </div>
         </div>
       )}
