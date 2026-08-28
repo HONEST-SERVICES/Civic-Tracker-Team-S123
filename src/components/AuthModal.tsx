@@ -8,8 +8,8 @@ import {
   CheckCircle2, 
   RotateCcw, 
   ArrowRight,
-  Sparkles,
-  Lock
+  Lock,
+  Building2
 } from 'lucide-react';
 import { 
   loginWithGoogle, 
@@ -19,6 +19,7 @@ import {
 } from '../services/firebase';
 import { UserProfile } from '../types';
 import { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
+import { getCurrentLanguage, t } from '../utils/translations';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -34,13 +35,13 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const currentLang = getCurrentLanguage();
 
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
-      // Reset modal state on close
       setPhoneNumber('');
       setOtpCode('');
       setOtpSent(false);
@@ -85,7 +86,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setErrorMessage(null);
 
     try {
-      // Format number to international E.164 standard (default India +91)
       let formattedPhone = phoneNumber.trim();
       if (!formattedPhone.startsWith('+')) {
         formattedPhone = `+91${formattedPhone.replace(/\D/g, '')}`;
@@ -97,7 +97,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         return;
       }
 
-      // Initialize recaptcha verifier
       if (!recaptchaVerifierRef.current) {
         recaptchaVerifierRef.current = setupRecaptcha('recaptcha-container');
       }
@@ -108,7 +107,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       setSuccessMessage(`OTP sent to ${formattedPhone}`);
     } catch (err: any) {
       console.error('Send OTP error:', err);
-      // Reset reCAPTCHA if it errored out
       recaptchaVerifierRef.current = null;
       if (err?.code === 'auth/invalid-phone-number') {
         setErrorMessage('Invalid phone number format. Please check and retry.');
@@ -165,9 +163,9 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden relative"
+        className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden relative font-sans"
         role="dialog"
         aria-modal="true"
       >
@@ -175,34 +173,34 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         <div id="recaptcha-container"></div>
 
         {/* Modal Header */}
-        <div className="bg-[#2d7a70] text-white p-5 relative">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-xs">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base leading-tight">CivicPulse Citizen Account</h3>
-                <p className="text-xs text-teal-100">Live Civic Grievance Redressal Matrix</p>
-              </div>
+        <div className="p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+              <Building2 className="w-5 h-5" />
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-teal-100 hover:text-white hover:bg-white/10 transition cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 leading-tight">{t('appName', currentLang)}</h3>
+              <p className="text-[11px] text-slate-500">{t('appSubtitle', currentLang)}</p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          {/* Quick Tabs */}
-          <div className="mt-4 grid grid-cols-2 gap-1.5 bg-black/15 p-1 rounded-xl">
+        {/* Auth Mode Toggle Tabs */}
+        <div className="px-6 pt-4">
+          <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
             <button
               type="button"
               onClick={() => { setActiveTab('GOOGLE'); setErrorMessage(null); }}
               className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'GOOGLE' 
-                  ? 'bg-white text-[#2d7a70] shadow-xs' 
-                  : 'text-teal-100 hover:text-white hover:bg-white/5'
+                  ? 'bg-white text-slate-900 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Google Sign-In
@@ -210,29 +208,30 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             <button
               type="button"
               onClick={() => { setActiveTab('PHONE'); setErrorMessage(null); }}
-              className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                 activeTab === 'PHONE' 
-                  ? 'bg-white text-[#2d7a70] shadow-xs' 
-                  : 'text-teal-100 hover:text-white hover:bg-white/5'
+                  ? 'bg-white text-slate-900 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Mobile & OTP
+              <Phone className="w-3.5 h-3.5" />
+              <span>Mobile OTP</span>
             </button>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4">
-          {/* Notification / Error / Success Banners */}
+        <div className="p-6 pt-4 space-y-4">
+          {/* Notification Banners */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2 animate-fade-in">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-600" />
               <div className="leading-snug">{errorMessage}</div>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2 animate-fade-in">
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
               <div className="leading-snug">{successMessage}</div>
             </div>
@@ -240,22 +239,15 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
           {/* TAB 1: GOOGLE SIGN-IN */}
           {activeTab === 'GOOGLE' && (
-            <div className="space-y-4 py-2">
-              <div className="text-center space-y-1">
-                <p className="text-sm font-semibold text-slate-800">Quick 1-Click Authentication</p>
-                <p className="text-xs text-slate-500">
-                  Instant sync with your civic grievances, real-time status updates, and resolution ratings.
-                </p>
-              </div>
-
+            <div className="space-y-4 py-1">
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="w-full h-12 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-300 rounded-xl shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 border border-slate-300 rounded-xl shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-[#2d7a70]" />
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-700" />
                 ) : (
                   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path
@@ -276,12 +268,12 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                     />
                   </svg>
                 )}
-                <span className="text-sm">Continue with Google</span>
+                <span className="text-xs sm:text-sm">{t('continueWithGoogle', currentLang)}</span>
               </button>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>Protected by Municipal Single Sign-On & Cloud Identity Standards.</span>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-500 flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-[#115e59] shrink-0" />
+                <span>{t('govBadge', currentLang)}</span>
               </div>
             </div>
           )}
@@ -290,20 +282,19 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
           {activeTab === 'PHONE' && (
             <div className="space-y-4">
               {!otpSent ? (
-                /* Step A: Phone Input */
                 <form onSubmit={handleSendOtp} className="space-y-3">
                   <div className="text-left space-y-1">
                     <label className="block text-xs font-bold text-slate-700">
-                      Mobile Number
+                      {t('mobileNumber', currentLang)}
                     </label>
                     <p className="text-[11px] text-slate-500">
                       Enter your 10-digit Indian phone number to receive an SMS OTP.
                     </p>
                   </div>
 
-                  <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a70] focus-within:border-transparent transition">
+                  <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-transparent transition">
                     <div className="px-3 py-2.5 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-600 flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-[#2d7a70]" />
+                      <Phone className="w-3.5 h-3.5 text-slate-600" />
                       <span>+91</span>
                     </div>
                     <input
@@ -312,7 +303,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="98765 43210"
                       maxLength={10}
-                      className="w-full px-3 py-2.5 text-sm text-slate-800 focus:outline-hidden"
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-hidden"
                       required
                     />
                   </div>
@@ -320,24 +311,23 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                   <button
                     type="submit"
                     disabled={isLoading || !phoneNumber.trim()}
-                    className="w-full h-11 bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full min-h-[44px] bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Sending SMS OTP...</span>
+                        <span>Sending OTP...</span>
                       </>
                     ) : (
                       <>
-                        <span>Send OTP</span>
+                        <span>{t('sendOtp', currentLang)}</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
                 </form>
               ) : (
-                /* Step B: OTP Input */
-                <form onSubmit={handleVerifyOtp} className="space-y-3 animate-fade-in">
+                <form onSubmit={handleVerifyOtp} className="space-y-3">
                   <div className="text-left space-y-1">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold text-slate-700">
@@ -346,14 +336,14 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        className="text-[11px] font-semibold text-[#2d7a70] hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-[11px] font-semibold text-slate-700 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <RotateCcw className="w-3 h-3" />
-                        <span>Change Number</span>
+                        <span>{t('changeNumber', currentLang)}</span>
                       </button>
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      Enter the 6-digit SMS code sent to your phone.
+                      Enter the 6-digit code sent to your phone.
                     </p>
                   </div>
 
@@ -364,14 +354,14 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                     placeholder="• • • • • •"
                     maxLength={6}
                     autoFocus
-                    className="w-full text-center tracking-[0.4em] text-lg font-mono font-bold px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-[#2d7a70] focus:border-transparent focus:outline-hidden"
+                    className="w-full text-center tracking-[0.4em] text-lg font-mono font-bold px-3 py-2.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-slate-900 focus:border-transparent focus:outline-hidden"
                     required
                   />
 
                   <button
                     type="submit"
                     disabled={isLoading || otpCode.length < 6}
-                    className="w-full h-11 bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full min-h-[44px] bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>
@@ -381,7 +371,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Verify & Login</span>
+                        <span>{t('verifyAndSignIn', currentLang)}</span>
                       </>
                     )}
                   </button>
@@ -392,9 +382,12 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         </div>
 
         {/* Footer Note */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-center">
-          <p className="text-[11px] text-slate-500">
-            By continuing, you agree to MoHUA Swachh Bharat Mission terms of civic engagement.
+        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 text-center space-y-1">
+          <p className="text-[11px] text-slate-500 font-medium leading-tight">
+            {t('termsText', currentLang) || 'By continuing, you agree to the Municipal Service Charter and Grievance Redressal Terms.'}
+          </p>
+          <p className="text-[10px] text-slate-400">
+            MoHUA Swachh Bharat Mission • Official Citizen & Governance Portal
           </p>
         </div>
       </div>

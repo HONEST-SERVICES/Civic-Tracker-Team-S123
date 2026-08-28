@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Shield, 
   Phone, 
@@ -7,7 +7,9 @@ import {
   CheckCircle2, 
   RotateCcw, 
   ArrowRight, 
-  Lock
+  Lock,
+  Building2,
+  Globe
 } from 'lucide-react';
 import { 
   loginWithGoogle, 
@@ -17,6 +19,13 @@ import {
 } from '../services/firebase';
 import { UserProfile } from '../types';
 import { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
+import { 
+  getCurrentLanguage, 
+  setLanguage, 
+  SUPPORTED_LANGUAGES, 
+  LanguageCode, 
+  t 
+} from '../utils/translations';
 
 interface SwachhataAuthScreenProps {
   onSuccess: (profile: UserProfile) => void;
@@ -30,9 +39,23 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [currentLang, setCurrentLang] = useState<LanguageCode>(getCurrentLanguage());
 
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    const handleLangChange = (e: any) => {
+      setCurrentLang(e.detail || getCurrentLanguage());
+    };
+    window.addEventListener('language_changed', handleLangChange);
+    return () => window.removeEventListener('language_changed', handleLangChange);
+  }, []);
+
+  const handleLanguageSelect = (lang: LanguageCode) => {
+    setLanguage(lang);
+    setCurrentLang(lang);
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -133,73 +156,90 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between relative overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col justify-between relative font-sans select-none">
       {/* Invisible reCAPTCHA container */}
       <div id="auth-screen-recaptcha-container"></div>
 
-      {/* Decorative background glows */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#115e59]/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Top Header Bar */}
-      <header className="p-4 sm:p-6 border-b border-white/10 backdrop-blur-md bg-slate-900/60 z-10">
+      {/* Top GovTech Clean Navigation Bar */}
+      <header className="p-4 sm:p-5 border-b border-slate-200/80 bg-white shadow-xs z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300 shadow-lg">
-              <Shield className="w-5 h-5 text-teal-300" />
+            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+              <Building2 className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-white text-base sm:text-lg tracking-tight">
-                  CivicPulse
+                <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">
+                  {t('appName', currentLang)}
                 </span>
-                <span className="text-[10px] bg-teal-500/20 text-teal-300 font-bold px-2 py-0.5 rounded-full border border-teal-500/30">
-                  National Redressal Matrix
+                <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2.5 py-0.5 rounded-full border border-slate-200">
+                  GovTech Standard
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Civic Grievance Redressal & Single Sign-On Portal
+              <p className="text-xs text-slate-500 hidden sm:block">
+                {t('appSubtitle', currentLang)}
               </p>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Civic Network Online</span>
+          {/* Language Selector Dropdown / Toggle */}
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <Globe className="w-3.5 h-3.5 text-slate-500 ml-1.5 hidden sm:block" />
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => handleLanguageSelect(lang.code)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  currentLang === lang.code
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                {lang.nativeLabel}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Centered White Card Area */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 z-10">
-        <div className="w-full max-w-md bg-white text-slate-800 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="w-full max-w-md bg-white text-slate-900 rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
           
-          {/* Card Header Banner */}
-          <div className="bg-[#115e59] text-white p-6 relative">
+          {/* Card Header */}
+          <div className="p-6 sm:p-7 pb-4 text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto shadow-xs">
+              <Shield className="w-6 h-6" />
+            </div>
             <div>
-              <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider">
-                CivicPulse Redressal Grid
-              </span>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5">
-                Sign In to CivicPulse
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+                {t('appName', currentLang)}
               </h1>
-              <p className="text-xs text-teal-100 mt-1">
-                Authenticate with your official credentials to access your verified role dashboard.
+              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                {t('appSubtitle', currentLang)}
               </p>
             </div>
 
-            {/* Auth Mode Tabs */}
-            <div className="mt-5 grid grid-cols-2 gap-1.5 bg-black/20 p-1 rounded-xl">
+            {/* Subtle Civic Trust Badge */}
+            <div className="pt-1">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full">
+                <Lock className="w-3 h-3 text-[#115e59]" />
+                <span>{t('govBadge', currentLang)}</span>
+              </span>
+            </div>
+
+            {/* Auth Mode Toggle Tabs */}
+            <div className="mt-4 grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => { setActiveTab('GOOGLE'); setErrorMessage(null); }}
-                className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   activeTab === 'GOOGLE'
-                    ? 'bg-white text-[#115e59] shadow-sm'
-                    : 'text-teal-100 hover:text-white hover:bg-white/10'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Google Account</span>
+                Google Sign-In
               </button>
 
               <button
@@ -207,8 +247,8 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                 onClick={() => { setActiveTab('PHONE'); setErrorMessage(null); }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'PHONE'
-                    ? 'bg-white text-[#115e59] shadow-sm'
-                    : 'text-teal-100 hover:text-white hover:bg-white/10'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Phone className="w-3.5 h-3.5" />
@@ -217,8 +257,8 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
             </div>
           </div>
 
-          {/* Form / Tab Body */}
-          <div className="p-6 space-y-4">
+          {/* Form & Body */}
+          <div className="p-6 sm:p-7 pt-2 space-y-4">
             
             {/* Status Notifications */}
             {errorMessage && (
@@ -235,24 +275,17 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
               </div>
             )}
 
-            {/* TAB 1: GOOGLE SIGN-IN */}
+            {/* OPTION 1: GOOGLE SIGN-IN */}
             {activeTab === 'GOOGLE' && (
-              <div className="space-y-4 py-2">
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-bold text-slate-800">1-Click Single Sign-On</p>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Sign in with Google. Your verified role (Citizen, Crew, Ward Officer, or Super Admin) will be automatically resolved from the municipal registry.
-                  </p>
-                </div>
-
+              <div className="space-y-4 py-1">
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
-                  className="w-full h-12 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-300 rounded-2xl shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 border border-slate-300 rounded-xl shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-[#115e59]" />
+                    <Loader2 className="w-5 h-5 animate-spin text-slate-700" />
                   ) : (
                     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                       <path
@@ -273,33 +306,32 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                       />
                     </svg>
                   )}
-                  <span className="text-sm">Continue with Google</span>
+                  <span className="text-xs sm:text-sm">{t('continueWithGoogle', currentLang)}</span>
                 </button>
 
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>Secured by Firebase Authentication & MoHUA Role Registry.</span>
-                </div>
+                <p className="text-center text-[11px] text-slate-500">
+                  Instant sign-in for Citizens, Field Crews, and Municipal Officers.
+                </p>
               </div>
             )}
 
-            {/* TAB 2: MOBILE NUMBER & OTP */}
+            {/* OPTION 2: MOBILE NUMBER & OTP */}
             {activeTab === 'PHONE' && (
               <div className="space-y-4">
                 {!otpSent ? (
                   <form onSubmit={handleSendOtp} className="space-y-3">
                     <div className="text-left space-y-1">
                       <label className="block text-xs font-bold text-slate-700">
-                        Enter 10-Digit Mobile Number
+                        {t('mobileNumber', currentLang)}
                       </label>
                       <p className="text-[11px] text-slate-500">
-                        An SMS OTP will be dispatched to verify your identity.
+                        Enter your 10-digit mobile number for instant SMS verification.
                       </p>
                     </div>
 
-                    <div className="flex items-center rounded-2xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-[#115e59] focus-within:border-transparent transition">
-                      <div className="px-3.5 py-3 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#115e59]" />
+                    <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-transparent transition">
+                      <div className="px-3 py-2.5 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-600" />
                         <span>+91</span>
                       </div>
                       <input
@@ -308,7 +340,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         placeholder="98765 43210"
                         maxLength={10}
-                        className="w-full px-3.5 py-3 text-sm text-slate-800 focus:outline-hidden"
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-hidden"
                         required
                       />
                     </div>
@@ -316,16 +348,16 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                     <button
                       type="submit"
                       disabled={isLoading || !phoneNumber.trim()}
-                      className="w-full h-12 bg-[#115e59] hover:bg-[#0f4f4b] text-white font-bold text-xs rounded-2xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[44px] bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Sending SMS OTP...</span>
+                          <span>Sending OTP...</span>
                         </>
                       ) : (
                         <>
-                          <span>Send Verification OTP</span>
+                          <span>{t('sendOtp', currentLang)}</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
@@ -336,15 +368,15 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                     <div className="text-left space-y-1">
                       <div className="flex items-center justify-between">
                         <label className="block text-xs font-bold text-slate-700">
-                          6-Digit SMS Verification Code
+                          6-Digit Verification Code
                         </label>
                         <button
                           type="button"
                           onClick={() => { setOtpSent(false); setOtpCode(''); }}
-                          className="text-[11px] font-semibold text-[#115e59] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[11px] font-semibold text-slate-700 hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
-                          <span>Change Number</span>
+                          <span>{t('changeNumber', currentLang)}</span>
                         </button>
                       </div>
                       <p className="text-[11px] text-slate-500">
@@ -357,7 +389,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="• • • • • •"
-                      className="w-full px-4 py-3 text-center text-lg font-mono tracking-widest text-slate-900 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-[#115e59] focus:outline-hidden"
+                      className="w-full px-4 py-2.5 text-center text-lg font-mono tracking-widest text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
                       maxLength={6}
                       autoFocus
                       required
@@ -366,7 +398,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                     <button
                       type="submit"
                       disabled={isLoading || otpCode.length < 6}
-                      className="w-full h-12 bg-[#115e59] hover:bg-[#0f4f4b] text-white font-bold text-xs rounded-2xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[44px] bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isLoading ? (
                         <>
@@ -376,7 +408,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Verify & Sign In</span>
+                          <span>{t('verifyAndSignIn', currentLang)}</span>
                         </>
                       )}
                     </button>
@@ -388,8 +420,11 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
           </div>
 
           {/* Card Footer */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-500">
+          <div className="p-4 bg-slate-50 border-t border-slate-100 text-center space-y-1">
+            <p className="text-[11px] text-slate-500 font-medium leading-tight">
+              {t('termsText', currentLang) || 'By continuing, you agree to the Municipal Service Charter and Grievance Redressal Terms.'}
+            </p>
+            <p className="text-[10px] text-slate-400">
               Swachh Bharat Mission (Urban) • Official Citizen & Governance Portal
             </p>
           </div>
@@ -398,7 +433,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       </main>
 
       {/* Bottom Footer */}
-      <footer className="p-4 text-center text-xs text-slate-500 border-t border-white/5 backdrop-blur-md bg-slate-900/40 z-10">
+      <footer className="p-4 text-center text-xs text-slate-500 border-t border-slate-200 bg-white">
         Ministry of Housing and Urban Affairs (MoHUA), Government of India
       </footer>
     </div>

@@ -3,7 +3,7 @@ import { CrisisIncident, PublicFacility } from '../types';
 import { loadGoogleMapsApi } from '../services/googleMapsLoader';
 import { subscribeToPublicFacilities } from '../services/firebase';
 import { INITIAL_PUBLIC_FACILITIES } from '../mockData';
-import { Sun, Moon, Globe, Star } from 'lucide-react';
+import { Sun, Globe } from 'lucide-react';
 
 interface GoogleDesktopOverviewMapProps {
   incidents: CrisisIncident[];
@@ -14,21 +14,24 @@ interface GoogleDesktopOverviewMapProps {
   theme?: 'light' | 'dark';
 }
 
-const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+const LIGHT_STREET_STYLES: google.maps.MapTypeStyle[] = [
+  {
+    featureType: "poi.business",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "transit",
+    elementType: "labels.icon",
+    stylers: [{ visibility: "off" }]
+  }
 ];
 
 export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> = ({
   incidents,
   onSelectIncident,
-  className = "w-full h-full rounded-2xl overflow-hidden shadow-inner relative",
+  className = "w-full h-full rounded-2xl overflow-hidden shadow-xs relative bg-slate-100",
   focusedLocation,
-  focusedFacility,
-  theme = 'light'
+  focusedFacility
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -36,24 +39,15 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
   const markersRef = useRef<google.maps.Marker[]>([]);
   const facilityMarkersRef = useRef<{ marker: google.maps.Marker; facility: PublicFacility }[]>([]);
 
-  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'DARK_GIS'>(
-    theme === 'dark' ? 'DARK_GIS' : 'STREET'
-  );
+  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE'>('STREET');
   const [showSbmFacilities, setShowSbmFacilities] = useState<boolean>(true);
   const [facilities, setFacilities] = useState<PublicFacility[]>(INITIAL_PUBLIC_FACILITIES);
 
-  // Sync theme
-  useEffect(() => {
-    if (theme === 'dark') {
-      setMapStyle('DARK_GIS');
-    } else {
-      setMapStyle('STREET');
-    }
-  }, [theme]);
-
   useEffect(() => {
     const unsub = subscribeToPublicFacilities((list) => {
-      setFacilities(list);
+      if (list && list.length > 0) {
+        setFacilities(list);
+      }
     });
     return () => unsub();
   }, []);
@@ -78,7 +72,7 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
           mapTypeId: mapStyle === 'SATELLITE' ? 'hybrid' : 'roadmap',
           disableDefaultUI: true,
           zoomControl: true,
-          styles: mapStyle === 'DARK_GIS' ? DARK_MAP_STYLES : []
+          styles: LIGHT_STREET_STYLES
         });
 
         infoWindowRef.current = new maps.InfoWindow();
@@ -114,10 +108,10 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
 
       if (infoWindowRef.current) {
         infoWindowRef.current.setContent(`
-          <div style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 6px; max-width: 220px; color: #0f172a;">
+          <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; max-width: 220px; color: #0f172a;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
               <span style="font-size: 16px;">${focusedFacility.type === 'TOILET' ? '🚻' : '♻️'}</span>
-              <strong style="font-size: 13px; color: #0d5c52;">${focusedFacility.name}</strong>
+              <strong style="font-size: 13px; color: #115e59;">${focusedFacility.name}</strong>
             </div>
             <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
               ${focusedFacility.location.address || focusedFacility.ward}
@@ -148,12 +142,9 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
     if (mapStyle === 'SATELLITE') {
       map.setMapTypeId('hybrid');
       map.setOptions({ styles: [] });
-    } else if (mapStyle === 'DARK_GIS') {
-      map.setMapTypeId('roadmap');
-      map.setOptions({ styles: DARK_MAP_STYLES });
     } else {
       map.setMapTypeId('roadmap');
-      map.setOptions({ styles: [] });
+      map.setOptions({ styles: LIGHT_STREET_STYLES });
     }
   }, [mapStyle]);
 
@@ -168,8 +159,9 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
     incidents.forEach((inc) => {
       const isResolved = inc.status === 'RESOLVED';
       const isCritical = inc.priority === 'P1_CRITICAL';
+      const isUrgent = inc.priority === 'P2_URGENT';
 
-      const color = isResolved ? '#10b981' : isCritical ? '#ef4444' : '#2d7a70';
+      const color = isResolved ? '#10b981' : isCritical ? '#ef4444' : isUrgent ? '#f59e0b' : '#3b82f6';
 
       const marker = new google.maps.Marker({
         position: { lat: inc.location.lat, lng: inc.location.lng },
@@ -229,10 +221,10 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
 
         if (infoWindowRef.current) {
           infoWindowRef.current.setContent(`
-            <div style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 6px; max-width: 220px; color: #0f172a;">
+            <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; max-width: 220px; color: #0f172a;">
               <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                 <span style="font-size: 16px;">${fac.type === 'TOILET' ? '🚻' : '♻️'}</span>
-                <strong style="font-size: 13px; color: #0d5c52;">${fac.name}</strong>
+                <strong style="font-size: 13px; color: #115e59;">${fac.name}</strong>
               </div>
               <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
                 ${fac.location.address || fac.ward}
@@ -258,13 +250,13 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
   return (
     <div className={className}>
       {/* Controls Overlay */}
-      <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md p-1 rounded-xl shadow-md border border-slate-200 dark:border-slate-800">
+      <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-xs border border-slate-200">
         <button
           onClick={() => setShowSbmFacilities(!showSbmFacilities)}
           className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
             showSbmFacilities
-              ? 'bg-cyan-600 text-white'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-cyan-700 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
           }`}
           title="Toggle SBM Toilets Layer"
         >
@@ -272,40 +264,31 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
           <span className="text-[11px]">SBM</span>
         </button>
 
-        <div className="flex items-center gap-0.5 border-l border-slate-200 dark:border-slate-800 pl-1">
+        <div className="flex items-center gap-0.5 border-l border-slate-200 pl-1">
           <button
             onClick={() => setMapStyle('STREET')}
             className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-              mapStyle === 'STREET' ? 'bg-slate-200 dark:bg-slate-800 text-teal-700 dark:text-teal-300' : 'text-slate-500'
+              mapStyle === 'STREET' ? 'bg-slate-100 text-teal-800' : 'text-slate-500'
             }`}
             title="Street Map View"
           >
-            <Sun className="w-3.5 h-3.5" />
+            <Sun className="w-3.5 h-3.5 text-amber-500" />
           </button>
           <button
             onClick={() => setMapStyle('SATELLITE')}
             className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-              mapStyle === 'SATELLITE' ? 'bg-slate-200 dark:bg-slate-800 text-teal-700 dark:text-teal-300' : 'text-slate-500'
+              mapStyle === 'SATELLITE' ? 'bg-slate-100 text-teal-800' : 'text-slate-500'
             }`}
             title="Satellite Imagery"
           >
-            <Globe className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setMapStyle('DARK_GIS')}
-            className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-              mapStyle === 'DARK_GIS' ? 'bg-slate-200 dark:bg-slate-800 text-teal-700 dark:text-teal-300' : 'text-slate-500'
-            }`}
-            title="Dark GIS Mode"
-          >
-            <Moon className="w-3.5 h-3.5" />
+            <Globe className="w-3.5 h-3.5 text-blue-500" />
           </button>
         </div>
       </div>
 
       <div
         ref={mapContainerRef}
-        className="w-full h-full"
+        className="w-full h-full bg-slate-100"
       />
     </div>
   );

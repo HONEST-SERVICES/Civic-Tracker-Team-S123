@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, 
   CheckCircle2, 
@@ -27,7 +28,13 @@ import {
   Send,
   Radio,
   Layers,
-  ClipboardList
+  ClipboardList,
+  Search,
+  Filter,
+  ExternalLink,
+  Navigation2,
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 export function formatTicketId(id?: string): string {
@@ -56,8 +63,8 @@ interface CitizenPortalProps {
   onSubmitIncident: (incidentData: Partial<CrisisIncident>) => Promise<void>;
   isDispatching: boolean;
   onOpenOfficerLogin?: () => void;
-  activeScreen?: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS';
-  onNavigate?: (screen: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS') => void;
+  activeScreen?: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES';
+  onNavigate?: (screen: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES') => void;
   currentUser?: UserProfile | null;
   onOpenAuth?: () => void;
 }
@@ -72,8 +79,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   currentUser,
   onOpenAuth
 }) => {
-  const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>(activeScreen);
-  const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>>([activeScreen]);
+  const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>(activeScreen);
+  const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>>([activeScreen]);
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
   const [categoryDomainFilter, setCategoryDomainFilter] = useState<'ALL' | 'URBAN_ROAD' | 'SANITATION_WATER' | 'RURAL_SUBURBAN'>('ALL');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -89,11 +96,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [rating, setRating] = useState<number>(5);
   const [ratingSubmitted, setRatingSubmitted] = useState<boolean>(false);
 
-  // SBM Public Facilities State
+  // SBM Public Facilities State & Filters
   const [publicFacilities, setPublicFacilities] = useState<PublicFacility[]>(INITIAL_PUBLIC_FACILITIES);
-  const [showToiletLocatorModal, setShowToiletLocatorModal] = useState<boolean>(false);
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState<string>('');
+  const [facilityFilterState, setFacilityFilterState] = useState<'ALL' | 'TOILET' | 'WASTE_CENTER' | 'OPEN_NOW' | 'TOP_RATED'>('ALL');
   const [focusedFacility, setFocusedFacility] = useState<PublicFacility | null>(null);
-  const [facilityTypeFilter, setFacilityTypeFilter] = useState<'ALL' | 'TOILET' | 'WASTE_CENTER'>('ALL');
   const [selectedFacilityForRating, setSelectedFacilityForRating] = useState<PublicFacility | null>(null);
   const [facilityRatingInput, setFacilityRatingInput] = useState<number>(5);
   const [isRatingSaving, setIsRatingSaving] = useState<boolean>(false);
@@ -111,6 +118,53 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [compressionStats, setCompressionStats] = useState<{ originalKb: number; compressedKb: number } | null>(null);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
+
+  // Selected Pin Coordinates on Map
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
+    lat: 31.2530,
+    lng: 75.7030
+  });
+
+  // Calculate real-time distance from user's current pin in km
+  const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Filtered public facilities for the dedicated locator view
+  const filteredFacilities = useMemo(() => {
+    return publicFacilities.filter(fac => {
+      // Type / Feature filter
+      if (facilityFilterState === 'TOILET' && fac.type !== 'TOILET') return false;
+      if (facilityFilterState === 'WASTE_CENTER' && fac.type !== 'WASTE_CENTER') return false;
+      if (facilityFilterState === 'OPEN_NOW' && fac.status !== 'OPEN') return false;
+      if (facilityFilterState === 'TOP_RATED' && fac.rating < 4.0) return false;
+
+      // Search Query
+      if (facilitySearchQuery.trim()) {
+        const q = facilitySearchQuery.toLowerCase().trim();
+        const matchName = fac.name.toLowerCase().includes(q);
+        const matchAddr = fac.location.address.toLowerCase().includes(q);
+        const matchWard = (fac.ward || '').toLowerCase().includes(q);
+        const matchFeat = (fac.features || []).some(f => f.toLowerCase().includes(q));
+        if (!matchName && !matchAddr && !matchWard && !matchFeat) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      // Sort nearest first
+      const distA = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, a.location.lat, a.location.lng);
+      const distB = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, b.location.lat, b.location.lng);
+      return distA - distB;
+    });
+  }, [publicFacilities, facilityFilterState, facilitySearchQuery, selectedCoords]);
 
   // Subscribe to real-time SBM Public Facilities
   useEffect(() => {
@@ -143,7 +197,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   }, [activeScreen, currentView]);
 
   // Structured client-side routing & view history manager
-  const pushView = (view: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS') => {
+  const pushView = (view: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES') => {
     setViewHistory((prev) => (prev[prev.length - 1] === view ? prev : [...prev, view]));
     setCurrentView(view);
     onNavigate?.(view);
@@ -167,12 +221,6 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       onNavigate?.('HOME');
     }
   };
-
-  // Selected Pin Coordinates on Map
-  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
-    lat: 31.2530,
-    lng: 75.7030
-  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,7 +384,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   return (
-    <div className="w-full flex-1 bg-slate-100 overflow-y-auto pb-24 md:pb-8 font-sans">
+    <div className="w-full flex-1 bg-slate-100 overflow-y-auto pb-28 sm:pb-32 md:pb-8 overflow-x-hidden font-sans">
       {/* 
         ========================================================================
         DESKTOP LAYOUT (md and above) -> 2-COLUMN FULL-WIDTH DASHBOARD 
@@ -368,12 +416,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           <div className="flex items-center gap-3">
             {/* SBM Public Toilet Locator Button */}
             <button
-              onClick={() => setShowToiletLocatorModal(true)}
-              className="px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 font-bold text-xs border border-cyan-200 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+              onClick={() => pushView('FACILITIES')}
+              className={`px-3.5 py-2 rounded-xl font-bold text-xs border transition cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                currentView === 'FACILITIES'
+                  ? 'bg-[#2d7a70] text-white border-[#2d7a70]'
+                  : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-200'
+              }`}
             >
               <span>🚻</span>
               <span>SBM Toilet Locator</span>
-              <span className="bg-cyan-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                currentView === 'FACILITIES' ? 'bg-white/20 text-white' : 'bg-cyan-600 text-white'
+              }`}>
                 {publicFacilities.length}
               </span>
             </button>
@@ -405,7 +459,268 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
         )}
 
-        {/* 2-Column Grid */}
+        {/* DEDICATED FACILITIES DESKTOP VIEW */}
+        {currentView === 'FACILITIES' ? (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={popView}
+                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                  title="Back to Dashboard"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🚻</span>
+                    <h3 className="text-lg font-bold text-slate-900">SBM Public Sanitation & Toilet Locator</h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live Verified Community Toilets, Urinals & Waste Centers • Swachh Bharat Mission (MoHUA)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-teal-50 text-[#115e59] border border-teal-200">
+                  {filteredFacilities.length} Verified Facilities in Ward 4
+                </span>
+                <button
+                  onClick={() => pushView('HOME')}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+                >
+                  Close View
+                </button>
+              </div>
+            </div>
+
+            {/* Controls Bar */}
+            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between gap-4 flex-wrap">
+              <div className="relative flex-1 min-w-[280px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={facilitySearchQuery}
+                  onChange={(e) => setFacilitySearchQuery(e.target.value)}
+                  placeholder="Search by facility name, street, ward, or amenity features..."
+                  className="w-full h-11 pl-10 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:bg-white focus:border-[#2d7a70]"
+                />
+                {facilitySearchQuery && (
+                  <button
+                    onClick={() => setFacilitySearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {[
+                  { id: 'ALL', label: 'All Facilities' },
+                  { id: 'TOILET', label: '🚻 Public Toilets' },
+                  { id: 'WASTE_CENTER', label: '♻️ Waste Centers' },
+                  { id: 'OPEN_NOW', label: '🟢 Open Now' },
+                  { id: 'TOP_RATED', label: '⭐ Top Rated (4.0+)' },
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    onClick={() => setFacilityFilterState(chip.id as any)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      facilityFilterState === chip.id
+                        ? 'bg-[#2d7a70] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Rating Notification */}
+            {facilityRatingMsg && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 text-emerald-900 border border-emerald-300 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{facilityRatingMsg}</span>
+              </div>
+            )}
+
+            {/* 2-Column Grid of Facilities */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredFacilities.map((fac) => {
+                const distKm = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, fac.location.lat, fac.location.lng);
+                const walkMins = Math.max(2, Math.round(distKm * 12));
+
+                return (
+                  <div
+                    key={fac.id}
+                    className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3.5 hover:border-[#2d7a70] transition"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="text-2xl p-2.5 rounded-xl bg-teal-50 text-[#2d7a70] flex-shrink-0">
+                          {fac.type === 'TOILET' ? '🚻' : '♻️'}
+                        </span>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 text-sm truncate">{fac.name}</h4>
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                            <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                            <span className="truncate">{fac.location.address || fac.ward}</span>
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-[#115e59] border border-teal-200">
+                              📍 {distKm.toFixed(1)} km away • ~{walkMins} min walk
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                        fac.status === 'OPEN'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                      }`}>
+                        {fac.status === 'OPEN' ? '✓ Open Now' : '⚠ Maintenance'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                      {fac.timings && (
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <Clock className="w-3.5 h-3.5 text-[#2d7a70]" />
+                          <span>{fac.timings}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span>{fac.rating.toFixed(1)} / 5.0</span>
+                        <span className="text-[10px] text-slate-400">({fac.totalRatings || 1} ratings)</span>
+                      </div>
+                    </div>
+
+                    {fac.features && fac.features.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {fac.features.map((feat, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium border border-slate-200/60"
+                          >
+                            ✓ {feat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedFacilityForRating?.id === fac.id ? (
+                      <div className="p-3 bg-teal-50/80 rounded-xl border border-teal-200 space-y-2.5 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800">
+                            Rate Cleanliness & Sanitation:
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setFacilityRatingInput(star)}
+                                className="p-1 cursor-pointer hover:scale-125 transition"
+                              >
+                                <Star
+                                  className={`w-4 h-4 ${
+                                    star <= facilityRatingInput
+                                      ? 'fill-amber-400 text-amber-400'
+                                      : 'text-slate-400'
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={isRatingSaving}
+                            onClick={async () => {
+                              setIsRatingSaving(true);
+                              try {
+                                await ratePublicFacility(fac.id, facilityRatingInput);
+                                setFacilityRatingMsg(`Rating (${facilityRatingInput}★) recorded for ${fac.name}. Thank you!`);
+                                setSelectedFacilityForRating(null);
+                                setTimeout(() => setFacilityRatingMsg(null), 4000);
+                              } catch (err) {
+                                console.error('Rating failed:', err);
+                              } finally {
+                                setIsRatingSaving(false);
+                              }
+                            }}
+                            className="flex-1 h-8 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <Star className="w-3.5 h-3.5" />
+                            <span>{isRatingSaving ? 'Saving...' : `Submit ${facilityRatingInput}★ Rating`}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFacilityForRating(null)}
+                            className="px-3 h-8 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFacilityForRating(fac);
+                            setFacilityRatingInput(5);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#2d7a70] text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          <span>Rate Cleanliness</span>
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
+                              setFocusedFacility(fac);
+                              pushView('HOME');
+                              setTimeout(() => {
+                                document.getElementById('ward-overview-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }, 100);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+                          >
+                            <Crosshair className="w-3.5 h-3.5 text-[#2d7a70]" />
+                            <span>Locate on Map</span>
+                          </button>
+
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location.lat},${fac.location.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+                          >
+                            <Navigation className="w-3.5 h-3.5" />
+                            <span>Directions</span>
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+        /* 2-Column Grid */
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* LEFT COLUMN (Col 6/12): Report Issue Form & Category Selector */}
           <div className="md:col-span-6 space-y-6">
@@ -829,6 +1144,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* 
@@ -932,37 +1248,37 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
             {/* 3. Dashboard Quick Action 2x2 Grid */}
             <div className="grid grid-cols-2 gap-3">
-              {/* Card 1: Post a Complaint (Soft Emerald Gradient) */}
+              {/* Card 1: Post a Complaint */}
               <div
                 onClick={() => pushView('CATEGORIES')}
-                className="bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] border border-emerald-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-[#2d7a70]">
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#2d7a70] transition">
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
                     Post a Complaint
                   </h3>
-                  <p className="text-[11px] text-slate-600 leading-tight mt-0.5">
+                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
                     We are committed to receiving your complaint
                   </p>
                 </div>
               </div>
 
-              {/* Card 2: My Active Complaints (Soft Amber Gradient) */}
+              {/* Card 2: My Active Complaints */}
               <div
                 onClick={() => pushView('COMPLAINTS')}
-                className="bg-gradient-to-br from-[#fff8e1] to-[#ffe0b2] border border-amber-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-amber-700">
+                <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition">
-                    My Complaints ({incidents.length})
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition">
+                    My Complaints ({citizenComplaints.length})
                   </h3>
-                  <p className="text-[11px] text-slate-600 leading-tight mt-0.5">
+                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
                     Track live resolution & field work orders
                   </p>
                 </div>
@@ -970,22 +1286,22 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
               {/* Card 3: SBM Public Toilet Locator */}
               <div
-                onClick={() => setShowToiletLocatorModal(true)}
-                className="bg-gradient-to-br from-[#fff3e0] to-[#ffe0b2] border border-orange-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
+                onClick={() => pushView('FACILITIES')}
+                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-orange-600">
+                <div className="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
                   <span className="text-xl">🚻</span>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-orange-700 transition">
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition">
                       SBM Toilet Locator
                     </h3>
-                    <span className="text-[10px] font-extrabold bg-orange-500 text-white px-1.5 py-0.2 rounded-full">
+                    <span className="text-[10px] font-extrabold bg-cyan-600 text-white px-1.5 py-0.2 rounded-full">
                       {publicFacilities.length}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-600 leading-tight mt-0.5">
+                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
                     Find, inspect & rate nearby clean toilets
                   </p>
                 </div>
@@ -996,16 +1312,16 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => {
                   setShowSurvekshanModal(true);
                 }}
-                className="bg-gradient-to-br from-[#e0f2f1] to-[#b2dfdb] border border-teal-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-[#2d7a70]">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#2d7a70] transition">
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">
                     Swachh Survekshan
                   </h3>
-                  <p className="text-[11px] text-slate-600 leading-tight mt-0.5">
+                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
                     Answer simple questions & feedback
                   </p>
                 </div>
@@ -1484,6 +1800,295 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             )}
           </div>
         )}
+
+        {/* VIEW 5: DEDICATED FULL-SCREEN SBM SANITATION & TOILET LOCATOR */}
+        {currentView === 'FACILITIES' && (
+          <div className="space-y-4">
+            {/* Top Navigation & Header Bar */}
+            <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={popView}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer flex-shrink-0"
+                  title="Go back"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🚻</span>
+                    <h2 className="text-base font-bold text-slate-900 truncate">
+                      SBM Toilet & Sanitation Locator
+                    </h2>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Swachh Bharat Mission (MoHUA) Verified Municipal Facilities
+                  </p>
+                </div>
+              </div>
+
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-[#115e59] border border-teal-200 flex-shrink-0">
+                {filteredFacilities.length} Units
+              </span>
+            </div>
+
+            {/* Live Search & Filter Bar */}
+            <div className="space-y-2.5">
+              {/* Search input with clear button */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={facilitySearchQuery}
+                  onChange={(e) => setFacilitySearchQuery(e.target.value)}
+                  placeholder="Search by facility name, street, ward, or amenities..."
+                  className="w-full h-11 pl-10 pr-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#2d7a70] shadow-xs"
+                />
+                {facilitySearchQuery && (
+                  <button
+                    onClick={() => setFacilitySearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Horizontally scrollable filter chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { id: 'ALL', label: 'All Units' },
+                  { id: 'TOILET', label: '🚻 Public Toilets' },
+                  { id: 'WASTE_CENTER', label: '♻️ Waste Centers' },
+                  { id: 'OPEN_NOW', label: '🟢 Open Now' },
+                  { id: 'TOP_RATED', label: '⭐ Top Rated (4.0+)' },
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    onClick={() => setFacilityFilterState(chip.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                      facilityFilterState === chip.id
+                        ? 'bg-[#2d7a70] text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Rating Success Alert */}
+            {facilityRatingMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{facilityRatingMsg}</span>
+              </div>
+            )}
+
+            {/* Facilities List Edge-to-Edge Cards */}
+            {filteredFacilities.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-2 shadow-xs">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto text-xl">
+                  🔍
+                </div>
+                <h3 className="text-sm font-bold text-slate-800">No matching facilities found</h3>
+                <p className="text-xs text-slate-500">Try clearing filters or search terms</p>
+                <button
+                  onClick={() => {
+                    setFacilitySearchQuery('');
+                    setFacilityFilterState('ALL');
+                  }}
+                  className="mt-2 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredFacilities.map((fac) => {
+                  const distKm = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, fac.location.lat, fac.location.lng);
+                  const walkMins = Math.max(2, Math.round(distKm * 12));
+
+                  return (
+                    <div
+                      key={fac.id}
+                      className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3 hover:border-[#2d7a70] transition"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <span className="text-2xl p-2.5 rounded-xl bg-teal-50 text-[#2d7a70] flex-shrink-0">
+                            {fac.type === 'TOILET' ? '🚻' : '♻️'}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-slate-900 text-sm truncate">{fac.name}</h4>
+                            </div>
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                              <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                              <span className="truncate">{fac.location.address || fac.ward}</span>
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-[#115e59] border border-teal-200">
+                                📍 {distKm.toFixed(1)} km away • ~{walkMins} min walk
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                          fac.status === 'OPEN'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-amber-100 text-amber-800 border border-amber-300'
+                        }`}>
+                          {fac.status === 'OPEN' ? '✓ Open Now' : '⚠ Maintenance'}
+                        </span>
+                      </div>
+
+                      {/* Timings and Ratings Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                        {fac.timings && (
+                          <div className="flex items-center gap-1 text-[11px]">
+                            <Clock className="w-3.5 h-3.5 text-[#2d7a70]" />
+                            <span>{fac.timings}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                          <Star className="w-3.5 h-3.5 fill-amber-400" />
+                          <span>{fac.rating.toFixed(1)} / 5.0</span>
+                          <span className="text-[10px] text-slate-400">({fac.totalRatings || 1} ratings)</span>
+                        </div>
+                      </div>
+
+                      {/* Features / Amenities */}
+                      {fac.features && fac.features.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {fac.features.map((feat, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium border border-slate-200/60"
+                            >
+                              ✓ {feat}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Cleanliness Rating Section / Actions */}
+                      {selectedFacilityForRating?.id === fac.id ? (
+                        <div className="p-3 bg-teal-50/80 rounded-xl border border-teal-200 space-y-2.5 animate-in fade-in">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800">
+                              Rate Cleanliness & Sanitation:
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setFacilityRatingInput(star)}
+                                  className="p-1 cursor-pointer hover:scale-125 transition"
+                                >
+                                  <Star
+                                    className={`w-4 h-4 ${
+                                      star <= facilityRatingInput
+                                        ? 'fill-amber-400 text-amber-400'
+                                        : 'text-slate-400'
+                                    }`}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={isRatingSaving}
+                              onClick={async () => {
+                                setIsRatingSaving(true);
+                                try {
+                                  await ratePublicFacility(fac.id, facilityRatingInput);
+                                  setFacilityRatingMsg(`Rating (${facilityRatingInput}★) recorded for ${fac.name}. Thank you!`);
+                                  setSelectedFacilityForRating(null);
+                                  setTimeout(() => setFacilityRatingMsg(null), 4000);
+                                } catch (err) {
+                                  console.error('Rating failed:', err);
+                                } finally {
+                                  setIsRatingSaving(false);
+                                }
+                              }}
+                              className="flex-1 h-8 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                              <Star className="w-3.5 h-3.5" />
+                              <span>{isRatingSaving ? 'Saving...' : `Submit ${facilityRatingInput}★ Rating`}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedFacilityForRating(null)}
+                              className="px-3 h-8 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300 transition cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFacilityForRating(fac);
+                              setFacilityRatingInput(5);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#2d7a70] text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Star className="w-3.5 h-3.5" />
+                            <span>Rate Cleanliness</span>
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
+                                setFocusedFacility(fac);
+                                setCurrentView('HOME');
+                                if (onNavigate) onNavigate('HOME');
+                                setTimeout(() => {
+                                  document.getElementById('ward-overview-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 100);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+                            >
+                              <Crosshair className="w-3.5 h-3.5 text-[#2d7a70]" />
+                              <span>Locate</span>
+                            </button>
+
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location.lat},${fac.location.lng}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+                            >
+                              <Navigation className="w-3.5 h-3.5" />
+                              <span>Directions</span>
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Footer notice */}
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+              Data synchronized live with Swachh Bharat Mission (MoHUA) Municipal Database
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL: COMPLAINT STATUS TRACKING & RATING DRAWER (Shared by Mobile & Desktop) */}
@@ -1627,235 +2232,6 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   Location: {trackedIncident.location.address} ({trackedIncident.location.lat.toFixed(4)}°, {trackedIncident.location.lng.toFixed(4)}°)
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 
-        ========================================================================
-        SBM PUBLIC TOILET & SANITATION LOCATOR MODAL
-        ========================================================================
-      */}
-      {showToiletLocatorModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="bg-[#2d7a70] text-white p-4.5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-2xl">
-                  🚻
-                </div>
-                <div>
-                  <h3 className="text-base font-bold">SBM Public Sanitation Locator</h3>
-                  <p className="text-xs text-teal-100">Swachh Bharat Mission Community Toilets & Waste Centers</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowToiletLocatorModal(false);
-                  setSelectedFacilityForRating(null);
-                  setFacilityRatingMsg(null);
-                }}
-                className="p-1.5 rounded-lg text-teal-100 hover:text-white hover:bg-white/10 transition cursor-pointer"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Filter & Controls Bar */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                {(['ALL', 'TOILET', 'WASTE_CENTER'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setFacilityTypeFilter(type)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      facilityTypeFilter === type
-                        ? 'bg-[#2d7a70] text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
-                    }`}
-                  >
-                    {type === 'ALL' ? 'All Units' : type === 'TOILET' ? '🚻 Public Toilets' : '♻️ Waste Centers'}
-                  </button>
-                ))}
-              </div>
-
-              <span className="text-xs font-semibold text-slate-500">
-                {publicFacilities.filter(f => facilityTypeFilter === 'ALL' || f.type === facilityTypeFilter).length} Verified Facilities
-              </span>
-            </div>
-
-            {/* Facilities List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
-              {facilityRatingMsg && (
-                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{facilityRatingMsg}</span>
-                </div>
-              )}
-
-              {publicFacilities
-                .filter(f => facilityTypeFilter === 'ALL' || f.type === facilityTypeFilter)
-                .map((fac) => (
-                  <div
-                    key={fac.id}
-                    className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs space-y-2.5"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2.5">
-                        <span className="text-2xl p-2 rounded-lg bg-teal-50 dark:bg-slate-700 text-[#2d7a70]">
-                          {fac.type === 'TOILET' ? '🚻' : '♻️'}
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-slate-900 dark:text-white text-sm">{fac.name}</h4>
-                            <span className="text-[10px] font-mono text-slate-400">({fac.id})</span>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
-                            <span>{fac.location.address || fac.ward}</span>
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Status badge */}
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
-                        fac.status === 'OPEN'
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          : 'bg-amber-100 text-amber-800 border border-amber-300'
-                      }`}>
-                        {fac.status === 'OPEN' ? '✓ Open Now' : '⚠ Maintenance'}
-                      </span>
-                    </div>
-
-                    {/* Features & Timings */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-100 dark:border-slate-700">
-                      {fac.timings && (
-                        <div className="flex items-center gap-1 text-[11px]">
-                          <Clock className="w-3.5 h-3.5 text-[#2d7a70]" />
-                          <span>{fac.timings}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-                        <Star className="w-3.5 h-3.5 fill-amber-400" />
-                        <span>{fac.rating.toFixed(1)} / 5.0</span>
-                        <span className="text-[10px] text-slate-400">({fac.totalRatings || 1} reviews)</span>
-                      </div>
-                    </div>
-
-                    {fac.features && fac.features.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-0.5">
-                        {fac.features.map((feat, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium"
-                          >
-                            ✓ {feat}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Rating Section */}
-                    {selectedFacilityForRating?.id === fac.id ? (
-                      <div className="p-3 bg-teal-50/70 dark:bg-slate-700/60 rounded-xl border border-teal-200 dark:border-slate-600 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-800 dark:text-white">
-                            Rate cleanliness:
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() => setFacilityRatingInput(star)}
-                                className="p-1 cursor-pointer hover:scale-125 transition"
-                              >
-                                <Star
-                                  className={`w-4 h-4 ${
-                                    star <= facilityRatingInput
-                                      ? 'fill-amber-400 text-amber-400'
-                                      : 'text-slate-400'
-                                  }`}
-                                />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={isRatingSaving}
-                            onClick={async () => {
-                              setIsRatingSaving(true);
-                              try {
-                                await ratePublicFacility(fac.id, facilityRatingInput);
-                                setFacilityRatingMsg(`Rating (${facilityRatingInput}★) recorded for ${fac.name}. Thank you!`);
-                                setSelectedFacilityForRating(null);
-                                setTimeout(() => setFacilityRatingMsg(null), 4000);
-                              } catch (err) {
-                                console.error('Rating failed:', err);
-                              } finally {
-                                setIsRatingSaving(false);
-                              }
-                            }}
-                            className="flex-1 h-8 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                          >
-                            <Star className="w-3.5 h-3.5" />
-                            <span>{isRatingSaving ? 'Saving...' : `Submit ${facilityRatingInput}★ Rating`}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedFacilityForRating(null)}
-                            className="px-3 h-8 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300 transition cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedFacilityForRating(fac);
-                            setFacilityRatingInput(5);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#2d7a70] text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Star className="w-3.5 h-3.5" />
-                          <span>Rate Cleanliness</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
-                            setFocusedFacility(fac);
-                            setShowToiletLocatorModal(false);
-                            setCurrentView('HOME');
-                            if (onNavigate) onNavigate('HOME');
-                            setTimeout(() => {
-                              document.getElementById('ward-overview-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 100);
-                          }}
-                          className="text-xs font-semibold text-[#2d7a70] hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <Crosshair className="w-3.5 h-3.5" />
-                          <span>Locate on Map</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
-              Data synchronized live with Swachh Bharat Mission (MoHUA) Municipal Database
             </div>
           </div>
         </div>

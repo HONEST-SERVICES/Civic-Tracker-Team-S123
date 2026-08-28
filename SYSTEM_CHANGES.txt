@@ -1,314 +1,53 @@
-================================================================================
-SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
-================================================================================
+=======================================================
+SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
+=======================================================
 
-1. ZERO HARDCODED MOCKS & 100% REAL FIRESTORE FLOW
---------------------------------------------------------------------------------
-- Real-time Database Collections:
-  * `complaints`: Scoped queries (`onSnapshot`) with role-based filtering:
-    - `CITIZEN`: Filtered to grievances filed by current user (`citizenUid == auth.currentUser.uid` or reporter match).
-    - `FIELD_CREW`: Filtered to grievances in crew's assigned ward (`assignedWard == userProfile.assignedWard`).
-    - `WARD_OFFICER`: Filtered strictly to complaints in `userProfile.assignedWard`.
-    - `SUPER_ADMIN`: Unrestricted apex access across all wards and national municipal jurisdictions.
-  * `units`: Live municipal crew and repair vehicle fleet records:
-    - Real-time `onSnapshot` tracking of crew location, status (`AVAILABLE`, `EN_ROUTE`, `MAINTENANCE`), equipment, and active assignments.
-  * `users`: User profiles with hierarchical RBAC roles: `CITIZEN`, `FIELD_CREW`, `WARD_OFFICER`, `SUPER_ADMIN`.
-- Firestore Writes:
-  * Citizen Grievance Submission: Creates records with `serverTimestamp()`, AI Vision diagnostics, and geospatial coordinates.
-  * Officer Crew Dispatch & Work Order Allocation: Atomic updates to `complaints` and `units`.
-  * Status Transitions & Proof-of-Fix: Uploads remediation photo URLs, inspector closure notes, and resolution timestamps.
+1. HARD LOCK TO CLEAN GOVTECH LIGHT MODE:
+- Stripped all accidental `dark` class toggles from `<html>` and `<body>`.
+- Default UI theme locked to GovTech standard:
+  * Canvas: #f8fafc (Slate-50)
+  * Surface Cards: #ffffff (Pure White) with crisp borders (`border-slate-200/80`) and subtle shadows (`shadow-sm`)
+  * Primary Navigation & Action Buttons: Deep Civic Slate / Navy (`#0f172a` / `#1e293b`)
+  * Typography: High-contrast charcoal/slate (`text-slate-900` for titles, `text-slate-600` for subtitles)
+- Removed all dark hacker console backgrounds, glow effects, or forced inverted palettes across Citizen Portal, Auditor Desk, Map, and Inspector views.
 
-2. GOOGLE MAPS JAVASCRIPT & PLACES API INTEGRATION
---------------------------------------------------------------------------------
-- Maps JS API Loader (`src/services/googleMapsLoader.ts`):
-  * Asynchronous singleton loader using `@googlemaps/js-api-loader` v2 `setOptions` and `importLibrary`.
-  * Automatically resolves API keys with fallback to standard demo key for immediate preview.
-- Google Places Autocomplete (`src/components/GooglePlacesAutocompleteInput.tsx`):
-  * Real-time location search powered by `google.maps.places.AutocompleteService` and `PlacesService`.
-  * Geocoding support and reverse-geocoding coordinates back to street addresses.
-- Interactive Pin Picker Map (`src/components/GooglePinPickerMap.tsx`):
-  * Draggable Google Maps marker with reverse-geocoding on drag end (`google.maps.Geocoder`).
-  * Smooth pan/zoom and custom pin styling.
-- Desktop Overview Map (`src/components/GoogleDesktopOverviewMap.tsx`):
-  * Live GIS dashboard mapping grievances, priority color-coding (P1 Critical Red, P2 Urgent Teal, Resolved Green), and interactive InfoWindows.
-- Officer Tactical GIS Map (`src/components/GoogleTacticalMap.tsx`):
-  * Comprehensive command map rendering ward sector boundary circles, active grievance markers, field crew vehicle markers, and dispatch route polylines.
+2. MULTILINGUAL CITIZEN & OFFICER SUPPORT:
+- Integrated zero-dependency localization engine in `src/utils/translations.ts` supporting:
+  * English (`en`)
+  * हिन्दी (Hindi - `hi`)
+  * తెలుగు (Telugu - `te`)
+- Seamless language toggle accessible across Citizen Portal, Auth Screens, and Settings Dialog.
 
-3. SWACHHATA AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
---------------------------------------------------------------------------------
-- Swachhata Authentication Screen (`src/components/SwachhataAuthScreen.tsx`):
-  * Authentic Swachhata-MoHUA design with rich teal aesthetics (`#2d7a70`).
-  * Method 1: 1-Click "Continue with Google" popup authentication.
-  * Method 2: Mobile Number & SMS OTP login with invisible reCAPTCHA container.
-  * Method 3: 1-Click Evaluator Demo Personas for instant switching between Citizen, Field Crew, Ward Officer, and Super Admin.
-- Route Lifecycle & Access Enforcements:
-  * Unauthenticated sessions immediately show the clean Swachhata login portal.
-  * `CITIZEN` -> Swachhata Citizen App (Grievance submission, AI Vision detection, My Complaints tracking).
-  * `FIELD_CREW` -> Ward-scoped Field Work Orders (Assigned tickets, status updates, proof photo uploads).
-  * `WARD_OFFICER` & `SUPER_ADMIN` -> Ward Inspection & GIS Remediation Command Center.
+3. GOOGLE MAPS PLATFORM & SBM TOILET GIS INTEGRATION:
+- Standardized pin styling across GIS maps:
+  * Red Pin (#ef4444): Critical / P1 Potholes & Road Damage
+  * Amber Pin (#f59e0b): In Progress / Dispatched Work Orders
+  * Green Pin (#10b981): Resolved & Verified / Fleet Units
+  * Blue / Cyan Pin (#0891b2): SBM Public Toilet & Sanitation Facilities
+- Clean map style switcher (Standard Street vs. Satellite) positioned in top-right control deck.
+- Integrated Swachh Bharat Mission (SBM) Public Toilet locator with citizen star-rating synchronization and live review submissions.
 
-4. GEMINI 2.5 FLASH VISION & GEMINI 3.7 DISPATCH ENGINE
---------------------------------------------------------------------------------
-- Multimodal Vision: Auto-classifies civic defects (potholes, garbage dumps, broken streetlights, waterlogging) directly from photo uploads and pre-populates category and severity scores.
-- Autonomous Dispatch: Chain-of-thought multi-criteria dispatch optimization for rapid response crews.
+4. CITIZEN ACTION CARD REFINEMENT & MOBILE BOTTOM NAVIGATION:
+- Refactored the 4 main Citizen Action Cards ("Post a Complaint", "My Complaints", "SBM Toilet Locator", "Swachh Survekshan") to pure white cards (`bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md`) with dedicated 44x44px square icon containers in soft pastel tints (`bg-blue-50 text-blue-600`, `bg-amber-50 text-amber-600`, `bg-cyan-50 text-cyan-600`, `bg-emerald-50 text-emerald-600`).
+- Upgraded Mobile Bottom Navigation Bar to crisp `bg-white/95 backdrop-blur-md border-t border-slate-200/80` with elevated dark-slate circular center action button (`bg-slate-900 text-white shadow-md hover:bg-slate-800`) and clean `text-xs font-medium` typography.
+- Maintained `pb-28` safe bottom scroll padding for all citizen view flows.
 
-5. AUDIT BATCH 1: SECURITY CLEANUP, UI SANITIZATION & BUTTON HANDLERS
---------------------------------------------------------------------------------
-- Purged Raw Metadata & Sensitive Key Dumps (Issues #5 & #7):
-  * Cleaned Settings Modal: Removed raw Firebase configuration blocks, socket parameters, and database internal objects. Replaced with clean user toggles (Push Notifications, Light/Dark GIS Map Theme, Location Precision GPS, Sound Alerts) and an optional Gemini Key input.
-  * Sanitized Profile View: Removed raw JSON dumps, complaints-in-grid strings, and database internals. Profile displays strictly clean citizen/officer info (Name, Phone/Email, Role Badge, Assigned Ward, Account Created date) and a single "System Status: Online ✓" badge.
-- Form Handlers & Submission Toast (Issue #8):
-  * Audited and verified `e.preventDefault()` across all form submit triggers.
-  * Verified no unintended `useEffect` hooks auto-submit tickets or dump raw database objects.
-  * Standardized grievance submission success alert/toast across desktop and mobile views: "Grievance submitted successfully. Tracking ID: #{lastSubmittedId}".
-- Real-time Connection Test & Dynamic Sync Loading Bar (Issues #10 & #12):
-  * Wired "Test Connection" button in Settings to a lightweight real Firestore ping (`pingFirestoreHealthCheck()` via `getDoc`). Displays green "Connected to Municipal Grid ✓" (with ping latency in ms) or red "Sync Offline ⚠️".
-  * Replaced static navbar decoration with a dynamic real-time network/sync loading bar with `animate-pulse` active during Firestore dispatches, reads, and writes.
+5. PRODUCTION CIVIC AUTH & ONBOARDING PORTAL:
+- Standardized onboarding card centered on clean `#f8fafc` canvas with "CivicPulse" title and "Autonomous Municipal Redressal & Smart Governance" subtitle.
+- Implemented Google SSO (`bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 border border-slate-300 rounded-xl`) and Mobile OTP authentication with +91 country prefix.
+- Integrated "MoHUA Civic Tech Standard • Role-Protected & Encrypted" security badge and explicit terms agreement statement.
+- Removed all debug metadata, raw key outputs, or dark console blocks from the auth screen.
 
-6. AUDIT BATCH 2: NAVIGATION ROUTING, PROFILE RESPONSIVENESS & 3-COLUMN DESKTOP WORKSPACE
---------------------------------------------------------------------------------
-- Navigation Routing & State Preservation (Issue #2):
-  * Replaced rigid state reset navigation with a structured view history/tab stack manager (`pushView` and `popView`).
-  * Switching between sub-views (Complaint Details -> Active Map -> Report Form -> Categories -> Home) preserves form state, attached photo previews, and selected coordinates without clearing form entries or resetting to the home screen.
-  * Added back-action navigation (`popView`) on all sub-screen headers, preserving user context and navigation history.
-- Balanced 3-Column Desktop Command Center (Issue #14):
-  * Refactored the desktop officer/admin workspace (`MunicipalOfficerCommandCenter.tsx`) from a single vertical scroll into a balanced 3-column layout:
-    * Column 1 / Left (25% width): Navigation, Ward/Zone selector, Status filters (All, Open, Dispatched, Resolved), Civic Department selector, and Live Ward Telemetry KPI counters.
-    * Column 2 / Center (45% width): Interactive Geospatial Map (`GoogleTacticalMap` / GIS layer) spanning full container height with live incident markers and fleet positions.
-    * Column 3 / Right (30% width): Live Incident Action Desk & Queue with rapid ticket selector carousel, incident inspection details, photo attachment, AI assessment notes, field crew dispatching, and proof-of-fix resolution workflow.
-- Responsive Profile View (Issue #11):
-  * Refactored the Profile tab to scale seamlessly across viewports:
-    * Mobile (< 768px): Stacked vertical cards with clean spacing and full-width touch targets (≥ 44px min-height).
-    * Desktop (md: and above): Centered container (`max-w-2xl mx-auto py-8`) with 2-column grid alignment for profile fields, role badge, assigned ward, and system status indicator.
+6. BALANCED 3-COLUMN MUNICIPAL OFFICER COMMAND CENTER (PHASE 4 POLISH):
+- Left Column (25% width / w-72 xl:w-80): Ward Telemetry & Status Filters. Pure white card container with clean slate counters and live KPI sync.
+- Center Column (45% width / flex-1): Tactical GIS Map spanning full viewport height with live pin clustering, street/satellite switcher, and SBM facility overlay.
+- Right Column (30% width / w-96 xl:w-[420px]): Live Incident Queue & Action Desk with quick "Assign Crew Unit", SLA countdown, status transitions, and photo inspection modal.
+- Zero horizontal scrollbars or cramped layout overlap across 1080p and 1440p displays.
 
-7. AUDIT BATCH 3: MAP TILE SWITCHER, SBM TOILET LOCATOR & RURAL/SUBURBAN CIVIC TAXONOMY
---------------------------------------------------------------------------------
-- Interactive Map Tile & Style Switcher (Issue #9):
-  * Added instant Map Style controls in top corner of GIS tactical map:
-    - Standard Street View (Default OSM / Google Vector)
-    - Satellite Imagery Layer (Esri World Imagery High-Res Aerial)
-    - Dark / Tactical Mode (CartoDB Dark Matter)
-  * Seamless tile toggling without unmounting active markers, incident pins, or crew route polylines.
-- SBM Public Toilet & Sanitation Facility Locator (Issue #1):
-  * Firestore collection & real-time sync for `public_facilities` (SBM Public Toilets, Community Sanitation Complexes, Waste Centers):
-    - Name, address, ward, open/maintenance status, 24/7 timings, Divyangjan disability access, and star rating.
-  * In Map View: Added `[ 🚻 SBM Toilet Locator ]` toggle button with popup cards and 1-tap spot review submissions.
-  * In Citizen Portal: Added dedicated SBM Toilets directory modal with search and category filters.
-- Expanded Rural, Suburban & Agricultural Civic Taxonomy (Issue #13):
-  * Organized categories into 3 intuitive domain tabs:
-    1. Urban & Roads (Potholes, Traffic Signals, Footpaths, Open Manholes)
-    2. Sanitation & Water (Garbage Dumps, Drain Overflow, Water Pipe Burst, Public Toilets)
-    3. Rural & Suburban (Panchayat Culvert Choking, Stray Cattle Hazard, Biomass/Crop Burning, Rural Tube-well Contamination)
+7. END-TO-END DATA INTEGRITY & PRODUCTION STATE:
+- Verified real-time synchronization with Firestore on project `omnisync-pothole` (database `civictracker`).
+- Validated TypeScript compilation (`tsc --noEmit`) and production builds with zero errors or warnings.
 
-8. AUDIT BATCH 4: MULTI-TIER ROLES & INTERACTIVE GEMINI STAR ASSISTANT DRAWER
---------------------------------------------------------------------------------
-- Expanded Multi-Tier Municipal Hierarchy (Issues #3 & #6):
-  * Expanded `UserRole` engine beyond basic citizen/officer to complete municipal structure:
-    - `CITIZEN`: Grievance submission, real-time ticket tracking, SBM facility rating.
-    - `FIELD_CREW` & `FIELD_CONTRACTOR`: Dedicated work-order queue filtered to assigned ward/tasks, 1-tap "Mark In Progress", and upload proof-of-completion photo.
-    - `VOLUNTEER` & `SWACHHATA_DOOT`: Dedicated community spot-check verification hub (`VolunteerPortal.tsx`), upvote urgent neighborhood hazards, review SBM facilities, and earn Karma points on the Leaderboard.
-    - `SWACHH_SURVEKSHAN_AUDITOR`: Dedicated inspection scoring desk (`SwachhSurvekshanAuditorDesk.tsx`) to audit ward cleanliness compliance (0-100 score, SOP validation, before/after photo checks) without altering maintenance dispatch states.
-    - `WARD_OFFICER`: Ward dispatching, crew assignment, and SLA approvals.
-    - `SUPER_ADMIN`: Master Commissioner apex view with all-wards oversight and staff delegation.
-  * Updated evaluator demo role switcher (`DemoRoleSwitcher.tsx`) with 6 authentic presets for instant switching.
-- Interactive Gemini Star Assistant Drawer (Issue #4):
-  * Connected Header Star (✨) button to interactive sliding AI Copilot drawer (`GeminiAssistantDrawer.tsx`).
-  * Powered by Gemini 3.7 Flash / `@google/genai` (backend route `/api/gemini/assistant` with resilient client fallback):
-    - **Citizen Mode**: Helps citizens draft formal MoHUA grievances, recommends categories, explains statutory SLAs (P1 12h, P2 48h, P3 7d), and finds nearest SBM amenities. Includes 1-tap "Use in Grievance Form" action.
-    - **Officer / Auditor Mode**: Real-time incident summaries across assigned ward, crew route optimization suggestions, bottleneck hazard detection, and Swachh Survekshan compliance advisory.
-  * Interactive prompt suggestion chips and copy-to-clipboard actions.
-
-9. GEMINI MODEL RESOLUTION & DEPRECATION FIX
---------------------------------------------------------------------------------
-- Upgraded all `@google/genai` model endpoints from deprecated `gemini-2.5-flash` to official `gemini-3.7-flash`:
-  * `/api/gemini/analyze-vision` (Hazard vision scanning & classification)
-  * `/api/gemini/dispatch` (Autonomous function-calling tactical dispatch engine)
-  * `/api/gemini/assistant` (Interactive Municipal AI Copilot assistant drawer)
-  * Client-side fallback services in `src/services/geminiService.ts`
-
-10. ARCHITECTURAL & SECURITY AUDIT (DATA BOTTLENECKS, AUTH & IMAGE PERSISTENCE)
---------------------------------------------------------------------------------
-- Auth Gating & First-Time User Lifecycle:
-  * Audit of session states and unauthenticated gating:
-    - Root early return in `App.tsx` conditionally halts mounting of municipal desks when `currentUser === null`, forcing the dedicated `SwachhataAuthScreen.tsx` splash portal.
-    - Verified `logoutUser()` executes Firebase Auth `signOut(auth)` and resets user profile reference in state.
-- Image Upload & Storage Bottleneck Diagnosis:
-  * Identified 1MB Firestore document hard limit vulnerability when raw camera base64 strings (>5MB) are attached.
-  * Formulated client-side Canvas 2D image compression architecture (max 800px width/height, 0.75 WebP/JPEG quality) to throttle payload sizes to ~60-90KB prior to Gemini Vision & Firestore write operations.
-- Location Capture & Places API Bidirectional Synchronization:
-  * Traced Autocomplete -> Pin and Pin Drag -> Geocode synchronization vectors.
-  * Preserved loop-free updates via discrete event listeners without circular component re-renders.
-- Gemini Multimodal Pipeline & Thinking Stream:
-  * Verified inlineData base64 ingestion, structured JSON response schema, and interactive UI scanning indicators ("Scanning pavement anomalies & hazard severity...").
-  * Confirmed multi-tier fallback architecture (Server API -> Client GenAI SDK -> High-fidelity municipal heuristics).
-- Database Write Reliability & Error Visibility:
-  * Verified serverTimestamp integration and collection schema alignment across `complaints`, `users`, `units`, and `public_facilities`.
-
-11. AUDIT IMPLEMENTATION: SOLUTIONS A, B, C, AND D DEPLOYED
---------------------------------------------------------------------------------
-- Solution A (Client-Side Canvas 2D Image Compression Pipeline):
-  * Created `src/utils/imageCompressor.ts` implementing `compressImage()` and `compressBase64Image()`.
-  * Automatically resizes raw smartphone captures (4MB-15MB) to max 800x800px, 0.75 JPEG/WebP (~60KB-90KB), eliminating Firestore 1MB document size limit failures.
-  * Integrated into `CitizenPortal.tsx` (hazard photos) and `FieldCrewWorkOrders.tsx` (remediation proof photos).
-  * Added visual compression badge in form UI showing exact size reduction before transmission.
-- Solution B (Bidirectional Location & Reverse-Geocoding Sync):
-  * In `GooglePinPickerMap.tsx`, attached `google.maps.Geocoder` listener on marker `dragend` and map `click` events.
-  * Emits `onAddressDiscovered(formattedAddress)` callback to `CitizenPortal.tsx`, updating the landmark input without feedback loops.
-- Solution C (Complete Session State Flush on Sign-Out):
-  * Updated `handleSignOut` in `App.tsx` to execute `logoutUser()` and cleanly reset all state contexts (`currentUser`, `selectedIncident`, `selectedUnit`, modals, and thought logs).
-  * Confirmed strict auth gating locks unauthenticated users to `SwachhataAuthScreen.tsx`.
-- Solution D (Database Submission Error Handling & Accessible Banners):
-  * Wrapped grievance submission actions in try/catch blocks with `submitErrorMessage` state.
-  * Displays user-facing warning banners with retry options if Firestore writes fail, ensuring transparent operational feedback.
-
-12. SWACHHATA-MoHUA CIVIC STANDARDIZATION & UI SANITIZATION
---------------------------------------------------------------------------------
-- Complete Elimination of Developer & Technical Branding:
-  * Audited and sanitized all user-facing components (`CitizenPortal.tsx`, `GeminiAssistantDrawer.tsx`, `MunicipalGovernanceView.tsx`, `WardStaffManagementModal.tsx`, `SettingsModal.tsx`, `SwachhataAuthScreen.tsx`, `AuthModal.tsx`, `DemoRoleSwitcher.tsx`, `AgentReasoningStream.tsx`).
-  * Removed visible references to "Gemini", "Gemini 3.7 / 2.5 Flash", "Firestore", "Firebase", and "API SDK" from citizen and officer interfaces.
-  * Replaced technical labels with authentic MoHUA terminology:
-    - "Gemini Copilot" -> "Municipal Operations Assistant" / "Civic Support Assistant"
-    - "Gemini 3.7 Flash Vision" -> "Automated Triage Assessment" / "Automated Vision Triage"
-    - "Firestore /wards" -> "Active Wards (Jurisdictions)"
-    - "Live Firestore Sync" -> "Municipal Grid Online" / "Live Municipal Sync"
-- Qualitative Civic Priority Scoring:
-  * Replaced technical numerical risk metrics (e.g., "Risk Score: 88/100") with standard MoHUA qualitative badges:
-    - Score >= 75: "CRITICAL" priority badge (Red)
-    - Score >= 45: "HIGH" priority badge (Amber)
-    - Score < 45: "MEDIUM" / "LOW" priority badge (Teal/Emerald)
-- Operational Crew & Dispatch Wording:
-  * Replaced AI algorithmic dispatch recommendations with civic operational labels: "Assigned Unit: Ward 4 Rapid Patcher" instead of "AI Recommended Crew Unit".
-- Silent Background Telemetry:
-  * Confirmed that database connection latencies, document IDs, and system health handshakes are logged strictly to the developer browser console and omitted from DOM display elements.
-13. SWACHHATA-MoHUA CIVIC DESIGN SYSTEM OVERHAUL & VISUAL STANDARDIZATION
---------------------------------------------------------------------------------
-- MoHUA Civic Color Palette Refinement:
-  * Primary Civic Green/Teal: `#115e59` (Teal-800) / `#0d5c52` (Deep Forest Teal) standardized across all top headers, navbars, and dominant primary action buttons.
-  * Secondary Civic Saffron/Amber: `#d97706` (Amber-600) for pending alerts, CTU drive tags, and priority markers.
-  * Accents & Verification: `#15803d` (Emerald-700) for resolved states, MoHUA compliance tags, and positive audit scores.
-  * Backgrounds & Canvas: `#f8fafc` (Slate-50) and `#f0fdfa` (Teal-50/20) for crisp, clean contrast.
-  * Cards & Surfaces: Pure white (`#ffffff`) with subtle slate borders (`border border-slate-200/80`) and clean shadow elevations (`shadow-xs` / `shadow-sm`).
-- Civic Typography & Hierarchy:
-  * Font Family: `Plus Jakarta Sans` imported and standardized across all views with fallback to `Inter, sans-serif`.
-  * Hierarchy: Section titles (`font-bold tracking-tight text-slate-900`), sub-headers (`font-semibold text-slate-700`), and meta labels (`font-mono font-medium text-xs text-slate-500 uppercase tracking-wider`).
-- Icon Consistency:
-  * Audited and standardized all Lucide React icons with uniform `strokeWidth={1.75}` for a refined, balanced appearance.
-- Component-by-Component Overhaul:
-  * `SwachhSurvekshanAuditorDesk.tsx`: Upgraded KPI summary cards, inspector verification checklists, national audit scores, and modal surfaces to the MoHUA Civic theme.
-  * `CitizenPortal.tsx`: Redesigned grievance submission form, category pickers, SBM facility locator cards, and tracking views with crisp civic borders, clean elevation, and `#115e59` action controls.
-  * `MunicipalGovernanceView.tsx`: Refined ward analytics, budget allocations, telemetry cards, and CTU cleanliness drives with executive teal/slate palette.
-  * `MunicipalOfficerCommandCenter.tsx`: Standardized 3-column command center, incident queue, GIS controls, and unit dispatch cards.
-  * `SwachhataAuthScreen.tsx`: Applied official MoHUA branding, Deep Forest Teal hero styling, and clean OTP/demo access cards.
-  * `SettingsModal.tsx`: Polished municipal settings, toggle switches, and connection diagnostics.
-  * `GeminiAssistantDrawer.tsx`: Updated header gradients, persona switcher, and prompt suggestions to MoHUA Civic theme.
-  * `DemoRoleSwitcher.tsx` & `WardStaffManagementModal.tsx`: Aligned RBAC badges and modal controls to official civic role designations.
-14. SUBMISSION UNBLOCKING, TIMEOUT GUARDS & HEADER UI SANITIZATION
---------------------------------------------------------------------------------
-- Infinite Submission Spinner Bug Resolution:
-  * Added strict 5-second Promise.race timeout guard to image vision scan in CitizenPortal.tsx (handleFileUpload). Automatically falls back to standard rule-based heuristics if the AI scan is slow or unreached.
-  * Added strict 6-second Promise.race timeout guard with guaranteed finally { setIsSubmittingForm(false) } to handleSubmit in CitizenPortal.tsx and handleDispatchIncident in App.tsx. Form never hangs or freezes.
-- Top Header UI Sanitization & Modernization:
-  * Overhauled App.tsx header: Removed dark/neon styling and developer gadget controls. Replaced with an official MoHUA Deep Forest Teal banner (#115e59) with the official Swachhata emblem, citizen greeting, and live municipal sync indicators.
-  * Added clean civic role pill and accessible profile menu popup (UserCircle) with instant one-click persona switching and settings access.
-- Avatar & Ticket Numbering Standardization:
-  * Replaced synthetic 3D avatar photos in CitizenPortal.tsx with clean, authentic UserCircle vector avatars inside #f0fdfa rounded containers across desktop and mobile.
-  * Standardized ticket tracking numbering from legacy raw strings (W0488610C...) to clean, official municipal tracking format (Ticket #XXXX) with universal formatTicketId helper.
-
-15. FINAL PRODUCTION CLEANUP: API KEY ENCAPSULATION & STRICT RBAC ENFORCEMENT
---------------------------------------------------------------------------------
-- API Key Inputs Removal:
-  * Completely purged "Automated Vision Triage Service Key" and any user-facing API key fields from SettingsModal.tsx.
-  * Secure background resolution: Keys are handled via server-side endpoints and client environment variables (import.meta.env) with zero exposure in citizen/officer preference dialogs.
-  * Streamlined Settings view strictly for clean citizen preferences: Map Style (Light/Dark), High Precision GPS, Push Notifications, Sound Alerts, and App Language (English/Hindi).
-- Dummy Role Selector Dropdown Removal:
-  * Completely removed the DemoRoleSwitcher component and manual override dropdown from the top navigation header in App.tsx.
-  * Header now features only:
-    - Left: Authentic Swachhata MoHUA Logo, Title & Subtitle.
-    - Center: Live Municipal Sync Status Badge (Desktop).
-    - Right: Single clean Profile Avatar / Account Action button.
-- Strict Real RBAC Enforcement:
-  * Role resolution is strictly driven by authenticated Firebase identity (auth.currentUser) and Firestore record (users/{uid}.role).
-  * peelaavinash04@gmail.com is verified and granted master SUPER_ADMIN privileges.
-  * Routing automatically maps users based on their official verified role:
-    - CITIZEN -> Swachhata Citizen Grievance Portal & Community Drives.
-    - FIELD_CREW / FIELD_CONTRACTOR -> Field Work Orders & Proof-of-Fix Upload Desk.
-    - WARD_OFFICER -> Ward-Scoped GIS Command & Dispatch Desk.
-    - SUPER_ADMIN -> Full Municipal Governance & All Wards Command Center.
-  * Profile view and profile menu render verified roles as clean static badges with no manual override dropdowns.
-
-16. FIREBASE AUDIT & "civictracker" NAMED FIRESTORE INSTANCE TARGETING
---------------------------------------------------------------------------------
-- Active Credentials Direct Binding:
-  * Verified and bound the exact required Firebase configuration keys directly across `src/services/firebase.ts`, `src/config/keys.ts`, and `firebase-applet-config.json`:
-    - apiKey: "AIzaSyBTEeCUBJOGkeQBYrcunJR8JFMiWOJrNXs"
-    - authDomain: "omnisync-pothole.firebaseapp.com"
-    - projectId: "omnisync-pothole"
-    - storageBucket: "omnisync-pothole.firebasestorage.app"
-    - messagingSenderId: "375848058708"
-    - appId: "1:375848058708:web:efe864b4152e76d3f7d2c1"
-    - measurementId: "G-X0BKP2X3RF"
-- Named Firestore Database Targeting:
-  * Updated Firestore initialization in `src/services/firebase.ts`:
-    `export const db = getFirestore(app, "civictracker");`
-    Targeting the explicit "civictracker" database instance on project `omnisync-pothole`.
-  * Initialized app with `const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);`.
-- Real-Time Diagnostic Logging:
-  * Implemented explicit console diagnostic logging for all writes, reads, and auth events:
-    `[Firebase Diagnostic] Connected to omnisync-pothole (civictracker) -> Write Successful: Doc ID #...`
-  * Error auditing configured via `handleFirestoreError` with comprehensive payload inspection.
-
-17. RESOLUTION OF FIRESTORE PERMISSIONS & RULES DEPLOYMENT
---------------------------------------------------------------------------------
-- Deployed Security Rules to Firebase Project:
-  * Diagnosed root cause of "Missing or insufficient permissions" on `users`, `units`, and `complaints`: uninitialized / default restrictive security rules on the Firebase project for incoming database operations.
-  * Created and deployed comprehensive `firestore.rules` allowing read/write access for `complaints`, `users`, `units`, `wards`, `public_facilities`, and subcollections across all matched database instances.
-  * Executed `deploy_firebase` to compile and publish active rules directly to the `omnisync-pothole` backend.
-- Verified Master Admin & Scoped Listeners:
-  * Confirmed that `peelaavinash04@gmail.com` profile sync, `units` real-time streaming, and `complaints` subscriptions now establish clean connections with zero permission denial errors.
-
-18. FIRESTORE SECURITY RULES AUDIT & "civictracker" HEALTH-CHECK CONFIRMATION
---------------------------------------------------------------------------------
-- Active Database & Credentials Verification:
-  * Verified target project: `omnisync-pothole` with named Firestore database instance `civictracker`.
-  * Verified SDK initialization: `db = getFirestore(app, "civictracker")` in `src/services/firebase.ts`.
-- Persistence Health-Check Execution:
-  * Implemented `runPersistenceHealthCheck()` writing a verified health check payload to `complaints/healthcheck_ping`.
-  * Real-time listeners (`onSnapshot`) on `complaints` and `units` confirm active two-way sync with zero permission errors.
-- Audit & Security Confirmation Logged:
-  * Console confirmation active: `[Security & DB Check] civictracker instance connected with valid rules.`
-
-19. GOOGLE SIGN-IN LATENCY DIAGNOSTIC & NON-BLOCKING OPTIMIZATION
---------------------------------------------------------------------------------
-- Root Cause Investigation & Audit:
-  * Identified blocking sequential network round-trips (`getDoc` followed by `setDoc`) inside `syncUserProfile()` that blocked `loginWithGoogle()` and `onAuthStateChanged` listeners before resolving UI state.
-  * Identified redundant parallel profile fetches and artificial UI delays (`setTimeout` 600-700ms) across auth modals.
-- Non-Blocking Architecture & Zero-Latency UI Transition:
-  * Implemented `createOptimisticUserProfile(user)` in `src/services/firebase.ts` to immediately generate and set active in-memory user profiles (<10ms).
-  * Enforced Master Super Admin role ("SUPER_ADMIN", assignedWard: "ALL", all access permissions) immediately in-memory for `peelaavinash04@gmail.com` and "CITIZEN" for other users.
-  * Converted Firestore `syncUserProfile(user)` to run non-blocking in the background (`void syncUserProfile(...)`) during authentication flows.
-  * Removed artificial timeouts in `AuthModal.tsx` and `SwachhataAuthScreen.tsx` for instantaneous dashboard transition.
-- Performance Telemetry & Logging:
-  * Implemented high-resolution latency logging using `performance.now()`:
-    `[Auth Performance] Google Sign-In resolved and transitioned in: X ms`
-    `[Auth Performance] Phone OTP login resolved and transitioned in: X ms`
-    `[Auth Performance] Auth state initialized in: X ms`
-
-20. CRITICAL DATABASE FIX, MOCK DATA PURGE & BRANDING REFACTOR: "CivicPulse"
---------------------------------------------------------------------------------
-- Real Firestore Complaint Persistence & Live Listening:
-  * In `src/services/firebase.ts`, refactored `mapIncidentToFirestore(incident)` to sanitize payloads, replacing all `undefined` values with `null` and using `serverTimestamp()` for `createdAt` and `updatedAt`.
-  * `createComplaintInFirestore(payload)` creates documents in the `complaints` collection on `db = getFirestore(app, "civictracker")` with consistent ID mappings.
-  * In `App.tsx`, connected `incidents` state directly to the live Firestore `onSnapshot` listener with zero hardcoded fallback data.
-- Hardcoded Mock Incidents Purge:
-  * Removed all static dummy incident records from `src/mockData.ts` (`INITIAL_INCIDENTS = []`).
-  * Real-time listeners populate genuine user grievances directly from the Firestore collection.
-- Comprehensive CivicPulse Rebranding:
-  * Updated `metadata.json`, `index.html` (title, openGraph meta tags), `App.tsx` top navbar, `SwachhataAuthScreen.tsx`, `AuthModal.tsx`, and `CitizenPortal.tsx` to "CivicPulse".
-  * Integrated a sleek civic pulse indicator icon (`Activity` with smooth pulse styling) in the top header and auth screens.
-- Compact Mobile Dashboard & Spacing Refinement:
-  * In `CitizenPortal.tsx`, reduced padding and vertical height of Header Welcome Card (`py-3 px-4`) with inline greeting and lightweight Ward tag.
-  * Streamlined Recent Incident Card into a compact status card/pill with real-time progress indicators.
-  * Implemented an empty-state card ("No active grievances logged. Tap '+' to report an issue.") when no incidents are present.
-  * Reduced vertical spacing to ensure the primary 2x2 action grid is immediately visible above the fold on mobile screens.
-================================================================================
-
+=======================================================
+Status: Production-Ready GovTech Release
+=======================================================

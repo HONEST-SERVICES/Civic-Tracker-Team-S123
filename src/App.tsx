@@ -135,8 +135,8 @@ export default function App() {
     }
   }, []);
 
-  // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'
-  const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'>('HOME');
+  // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE' | 'FACILITIES'
+  const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE' | 'FACILITIES'>('HOME');
 
   const [selectedIncident, setSelectedIncident] = useState<CrisisIncident | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<MunicipalUnit | null>(null);
@@ -836,7 +836,7 @@ export default function App() {
                 incidents={incidents}
                 onSubmitIncident={handleDispatchIncident}
                 isDispatching={isDispatching}
-                activeScreen={citizenTab === 'FORM' ? 'FORM' : citizenTab === 'CATEGORIES' ? 'CATEGORIES' : citizenTab === 'COMPLAINTS' ? 'COMPLAINTS' : 'HOME'}
+                activeScreen={citizenTab === 'FORM' ? 'FORM' : citizenTab === 'CATEGORIES' ? 'CATEGORIES' : citizenTab === 'COMPLAINTS' ? 'COMPLAINTS' : citizenTab === 'FACILITIES' ? 'FACILITIES' : 'HOME'}
                 onNavigate={(scr) => setCitizenTab(scr)}
                 currentUser={currentUser}
                 onOpenAuth={() => setShowAuthModal(true)}
@@ -848,12 +848,12 @@ export default function App() {
 
       {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Visible in Citizen Mode on mobile screens) */}
       {userRole === 'CITIZEN' && (
-        <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2">
+        <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2">
           {/* Tab 1: Home */}
           <button
             onClick={() => setCitizenTab('HOME')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-[11px] transition-colors cursor-pointer ${
-              citizenTab === 'HOME' ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
+              citizenTab === 'HOME' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Home className="w-5 h-5" />
@@ -863,8 +863,8 @@ export default function App() {
           {/* Tab 2: Events / Activity */}
           <button
             onClick={() => setCitizenTab('EVENTS')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-[11px] transition-colors cursor-pointer ${
-              citizenTab === 'EVENTS' ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
+              citizenTab === 'EVENTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Calendar className="w-5 h-5" />
@@ -876,7 +876,7 @@ export default function App() {
             <button
               onClick={() => setCitizenTab('CATEGORIES')}
               title="Post a Complaint"
-              className="w-13 h-13 rounded-full bg-[#115e59] hover:bg-[#0f4f4b] active:scale-95 text-white flex items-center justify-center shadow-lg border-4 border-slate-100 transition-all cursor-pointer"
+              className="w-13 h-13 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-100 transition-all cursor-pointer"
             >
               <Plus className="w-6 h-6 stroke-[3]" />
             </button>
@@ -885,8 +885,8 @@ export default function App() {
           {/* Tab 3: Complaints */}
           <button
             onClick={() => setCitizenTab('COMPLAINTS')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-[11px] transition-colors cursor-pointer ${
-              citizenTab === 'COMPLAINTS' ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
+              citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <ClipboardList className="w-5 h-5" />
@@ -896,8 +896,8 @@ export default function App() {
           {/* Tab 4: Profile */}
           <button
             onClick={() => setCitizenTab('PROFILE')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-[11px] transition-colors cursor-pointer ${
-              citizenTab === 'PROFILE' ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
+              citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <User className="w-5 h-5" />
