@@ -9,6 +9,9 @@ interface GoogleDesktopOverviewMapProps {
   incidents: CrisisIncident[];
   onSelectIncident: (incident: CrisisIncident) => void;
   className?: string;
+  focusedLocation?: { lat: number; lng: number } | null;
+  focusedFacility?: PublicFacility | null;
+  theme?: 'light' | 'dark';
 }
 
 const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
@@ -22,16 +25,31 @@ const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
 export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> = ({
   incidents,
   onSelectIncident,
-  className = "w-full h-full rounded-2xl overflow-hidden shadow-inner relative"
+  className = "w-full h-full rounded-2xl overflow-hidden shadow-inner relative",
+  focusedLocation,
+  focusedFacility,
+  theme = 'light'
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
-  const facilityMarkersRef = useRef<google.maps.Marker[]>([]);
+  const facilityMarkersRef = useRef<{ marker: google.maps.Marker; facility: PublicFacility }[]>([]);
 
-  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'DARK_GIS'>('STREET');
+  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'DARK_GIS'>(
+    theme === 'dark' ? 'DARK_GIS' : 'STREET'
+  );
   const [showSbmFacilities, setShowSbmFacilities] = useState<boolean>(true);
   const [facilities, setFacilities] = useState<PublicFacility[]>(INITIAL_PUBLIC_FACILITIES);
+
+  // Sync theme
+  useEffect(() => {
+    if (theme === 'dark') {
+      setMapStyle('DARK_GIS');
+    } else {
+      setMapStyle('STREET');
+    }
+  }, [theme]);
 
   useEffect(() => {
     const unsub = subscribeToPublicFacilities((list) => {
@@ -48,15 +66,22 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
         if (!isMounted || !mapContainerRef.current) return;
         if (mapInstanceRef.current) return;
 
+        const initialCenter = focusedLocation 
+          ? focusedLocation 
+          : focusedFacility 
+          ? { lat: focusedFacility.location.lat, lng: focusedFacility.location.lng }
+          : { lat: 31.2530, lng: 75.7030 };
+
         const map = new maps.Map(mapContainerRef.current, {
-          center: { lat: 31.2530, lng: 75.7030 },
-          zoom: 14,
+          center: initialCenter,
+          zoom: focusedFacility || focusedLocation ? 16 : 14,
           mapTypeId: mapStyle === 'SATELLITE' ? 'hybrid' : 'roadmap',
           disableDefaultUI: true,
           zoomControl: true,
           styles: mapStyle === 'DARK_GIS' ? DARK_MAP_STYLES : []
         });
 
+        infoWindowRef.current = new maps.InfoWindow();
         mapInstanceRef.current = map;
       })
       .catch((err) => {
@@ -66,12 +91,54 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
     return () => {
       isMounted = false;
       markersRef.current.forEach((m) => m.setMap(null));
-      facilityMarkersRef.current.forEach((m) => m.setMap(null));
+      facilityMarkersRef.current.forEach(({ marker }) => marker.setMap(null));
       markersRef.current = [];
       facilityMarkersRef.current = [];
+      if (infoWindowRef.current) {
+        infoWindowRef.current.close();
+      }
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Pan to focused location or facility
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (focusedFacility) {
+      setShowSbmFacilities(true);
+      const pos = { lat: focusedFacility.location.lat, lng: focusedFacility.location.lng };
+      map.panTo(pos);
+      map.setZoom(16);
+
+      if (infoWindowRef.current) {
+        infoWindowRef.current.setContent(`
+          <div style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 6px; max-width: 220px; color: #0f172a;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+              <span style="font-size: 16px;">${focusedFacility.type === 'TOILET' ? '🚻' : '♻️'}</span>
+              <strong style="font-size: 13px; color: #0d5c52;">${focusedFacility.name}</strong>
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+              ${focusedFacility.location.address || focusedFacility.ward}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; color: #d97706;">
+              <span>⭐ ${focusedFacility.rating.toFixed(1)} / 5.0</span>
+              <span style="color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${focusedFacility.status}</span>
+            </div>
+            <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
+              Timings: ${focusedFacility.timings || '24/7 Open'}
+            </div>
+          </div>
+        `);
+        infoWindowRef.current.setPosition(pos);
+        infoWindowRef.current.open(map);
+      }
+    } else if (focusedLocation) {
+      map.panTo(focusedLocation);
+      map.setZoom(16);
+    }
+  }, [focusedFacility, focusedLocation]);
 
   // Update map style
   useEffect(() => {
@@ -155,7 +222,36 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
         }
       });
 
-      facilityMarkersRef.current.push(marker);
+      marker.addListener('click', () => {
+        const pos = { lat: fac.location.lat, lng: fac.location.lng };
+        map.panTo(pos);
+        map.setZoom(16);
+
+        if (infoWindowRef.current) {
+          infoWindowRef.current.setContent(`
+            <div style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 6px; max-width: 220px; color: #0f172a;">
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                <span style="font-size: 16px;">${fac.type === 'TOILET' ? '🚻' : '♻️'}</span>
+                <strong style="font-size: 13px; color: #0d5c52;">${fac.name}</strong>
+              </div>
+              <div style="font-size: 11px; color: #475569; margin-bottom: 4px;">
+                ${fac.location.address || fac.ward}
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; color: #d97706;">
+                <span>⭐ ${fac.rating.toFixed(1)} / 5.0</span>
+                <span style="color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${fac.status}</span>
+              </div>
+              <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
+                Timings: ${fac.timings || '24/7 Open'}
+              </div>
+            </div>
+          `);
+          infoWindowRef.current.setPosition(pos);
+          infoWindowRef.current.open(map);
+        }
+      });
+
+      facilityMarkersRef.current.push({ marker, facility: fac });
     });
   }, [facilities, showSbmFacilities]);
 

@@ -14,7 +14,9 @@ import {
   Map,
   Compass,
   Volume2,
-  Radio
+  Radio,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { 
   getGeminiApiKey, 
@@ -31,6 +33,7 @@ interface SettingsModalProps {
 }
 
 export interface AppPreferences {
+  theme: 'light' | 'dark';
   pushNotifications: boolean;
   mapTheme: 'light' | 'dark';
   locationPrecision: 'high' | 'standard';
@@ -38,6 +41,7 @@ export interface AppPreferences {
 }
 
 const DEFAULT_PREFERENCES: AppPreferences = {
+  theme: 'light',
   pushNotifications: true,
   mapTheme: 'light',
   locationPrecision: 'high',
@@ -81,8 +85,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    const updated = { ...preferences, theme: newTheme, mapTheme: newTheme };
+    setPreferences(updated);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    try {
+      localStorage.setItem('swachhata_user_preferences', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Could not persist preferences:', e);
+    }
+    if (onConfigUpdated) {
+      onConfigUpdated();
+    }
+  };
+
   const handleSave = () => {
     setGeminiApiKey(geminiKey.trim());
+    document.documentElement.classList.toggle('dark', preferences.theme === 'dark');
     try {
       localStorage.setItem('swachhata_user_preferences', JSON.stringify(preferences));
     } catch (e) {
@@ -196,7 +215,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               App Preferences
             </h3>
 
-            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+              {/* Interface Theme Mode (Light / Dark) */}
+              <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Sun className="w-4 h-4 dark:hidden" />
+                    <Moon className="w-4 h-4 hidden dark:block" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Interface Theme</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Currently using <strong className="capitalize">{preferences.theme} Mode</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange('light')}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
+                      preferences.theme === 'light'
+                        ? 'bg-white text-[#0d5c52] shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    Light
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange('dark')}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
+                      preferences.theme === 'dark'
+                        ? 'bg-slate-900 text-teal-300 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-100'
+                    }`}
+                  >
+                    Dark
+                  </button>
+                </div>
+              </div>
+
               {/* Push Notifications Toggle */}
               <div className="p-3.5 flex items-center justify-between hover:bg-slate-50/60 transition">
                 <div className="flex items-center gap-3 min-w-0">

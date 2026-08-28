@@ -12,7 +12,8 @@ import {
   PlusCircle,
   ShieldAlert,
   SlidersHorizontal,
-  Compass
+  Compass,
+  Zap
 } from 'lucide-react';
 import { TelemetryStats } from '../types';
 import { CRISIS_SCENARIOS } from '../mockData';
@@ -172,11 +173,12 @@ export const TopTelemetryBar: React.FC<TopTelemetryBarProps> = ({
             id="simulate-crisis-btn"
             disabled={isDispatching}
             onClick={() => setShowScenarioMenu(!showScenarioMenu)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition-colors text-xs font-medium cursor-pointer disabled:opacity-50"
+            title="Test Autonomous Dispatch Engine (⚡)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400/15 hover:bg-amber-400/25 text-amber-200 border border-amber-400/40 transition-colors text-xs font-medium cursor-pointer disabled:opacity-50"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
             <span>Simulate Scenarios</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showScenarioMenu ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-3.5 h-3.5 text-amber-300 transition-transform ${showScenarioMenu ? 'rotate-180' : ''}`} />
           </button>
 
           {showScenarioMenu && (

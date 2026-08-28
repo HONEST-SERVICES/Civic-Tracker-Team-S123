@@ -1,5 +1,5 @@
 import React from 'react';
-import { CrisisIncident, MunicipalUnit } from '../types';
+import { CrisisIncident, MunicipalUnit, PublicFacility } from '../types';
 import { GoogleTacticalMap } from './GoogleTacticalMap';
 
 interface TacticalGeospatialMapProps {
@@ -10,6 +10,8 @@ interface TacticalGeospatialMapProps {
   onSelectUnit: (unit: MunicipalUnit | null) => void;
   onUpdateIncidentStatus: (incidentId: string, newStatus: CrisisIncident['status']) => void;
   activeZoneCenter?: { lat: number; lng: number } | null;
+  focusedFacility?: PublicFacility | null;
+  theme?: 'light' | 'dark';
 }
 
 /**
@@ -18,3 +20,4 @@ interface TacticalGeospatialMapProps {
 export const TacticalGeospatialMap: React.FC<TacticalGeospatialMapProps> = (props) => {
   return <GoogleTacticalMap {...props} />;
 };
+

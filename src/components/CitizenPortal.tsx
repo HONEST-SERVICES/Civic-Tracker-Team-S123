@@ -35,6 +35,7 @@ import { GooglePinPickerMap } from './GooglePinPickerMap';
 import { GooglePlacesAutocompleteInput } from './GooglePlacesAutocompleteInput';
 import { GoogleDesktopOverviewMap } from './GoogleDesktopOverviewMap';
 import { compressImage } from '../utils/imageCompressor';
+import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './SwachhataDriveModal';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -77,11 +78,19 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   // SBM Public Facilities State
   const [publicFacilities, setPublicFacilities] = useState<PublicFacility[]>(INITIAL_PUBLIC_FACILITIES);
   const [showToiletLocatorModal, setShowToiletLocatorModal] = useState<boolean>(false);
+  const [focusedFacility, setFocusedFacility] = useState<PublicFacility | null>(null);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<'ALL' | 'TOILET' | 'WASTE_CENTER'>('ALL');
   const [selectedFacilityForRating, setSelectedFacilityForRating] = useState<PublicFacility | null>(null);
   const [facilityRatingInput, setFacilityRatingInput] = useState<number>(5);
   const [isRatingSaving, setIsRatingSaving] = useState<boolean>(false);
   const [facilityRatingMsg, setFacilityRatingMsg] = useState<string | null>(null);
+
+  // Cleanliness Drive Campaign State
+  const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
+  const [selectedDriveCampaign, setSelectedDriveCampaign] = useState<CleanlinessCampaign>(SAMPLE_CAMPAIGNS[0]);
+  const [showSurvekshanModal, setShowSurvekshanModal] = useState<boolean>(false);
+  const [survekshanRating, setSurvekshanRating] = useState<number>(5);
+  const [survekshanFeedbackSubmitted, setSurvekshanFeedbackSubmitted] = useState<boolean>(false);
 
   // Compression & Submission Error State
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
@@ -729,7 +738,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             )}
 
             {/* 2. Ward 4 Live Grievance Map */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+            <div id="ward-overview-map" className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-[#2d7a70]" />
@@ -743,6 +752,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               <GoogleDesktopOverviewMap
                 incidents={incidents}
                 onSelectIncident={(inc) => setTrackedIncident(inc)}
+                focusedFacility={focusedFacility}
                 className="w-full h-56 rounded-xl border border-slate-200 overflow-hidden relative z-0"
               />
               <p className="text-[11px] text-slate-500">
@@ -950,7 +960,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 4: Swachh Survekshan & Citizen Feedback */}
               <div
                 onClick={() => {
-                  alert('Swachh Survekshan 2026: Ward 4 Citizen Satisfaction Rating is 94.2%. Thank you for keeping your city clean!');
+                  setShowSurvekshanModal(true);
                 }}
                 className="bg-gradient-to-br from-[#e0f2f1] to-[#b2dfdb] border border-teal-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
               >
@@ -965,6 +975,57 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     Answer simple questions & feedback
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* 4. Active Swachhata Cleanliness Drives & CTU Campaigns */}
+            <div className="bg-white rounded-2xl p-4 border border-teal-200/90 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#2d7a70] flex items-center justify-center font-bold">
+                    🌿
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Ward 4 Cleanliness Drives & SBM Campaigns</h3>
+                    <p className="text-[11px] text-slate-500">Citizen volunteer drives & spot cleanups</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                  Active Drives
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {SAMPLE_CAMPAIGNS.map((camp) => (
+                  <div
+                    key={camp.id}
+                    onClick={() => {
+                      setSelectedDriveCampaign(camp);
+                      setShowDriveModal(true);
+                    }}
+                    className="p-3 rounded-xl border border-teal-100 bg-teal-50/50 hover:bg-teal-50 hover:border-teal-300 transition flex items-center justify-between gap-3 cursor-pointer group"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-teal-950 group-hover:text-[#2d7a70] truncate">
+                          {camp.title}
+                        </span>
+                        <span className="text-[9px] font-extrabold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded shrink-0">
+                          {camp.dateStr.split(',')[0]}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {camp.locationName} • {camp.timeStr}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 bg-[#2d7a70] group-hover:bg-[#23635b] text-white text-xs font-bold rounded-lg shrink-0 shadow-xs transition"
+                    >
+                      Join Drive
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1721,7 +1782,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           type="button"
                           onClick={() => {
                             setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
+                            setFocusedFacility(fac);
                             setShowToiletLocatorModal(false);
+                            setCurrentView('HOME');
+                            if (onNavigate) onNavigate('HOME');
+                            setTimeout(() => {
+                              document.getElementById('ward-overview-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 100);
                           }}
                           className="text-xs font-semibold text-[#2d7a70] hover:underline cursor-pointer flex items-center gap-1"
                         >
@@ -1738,6 +1805,97 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <div className="p-3 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
               Data synchronized live with Swachh Bharat Mission (MoHUA) Municipal Database
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swachhata Cleanliness Drive Campaign Modal */}
+      <SwachhataDriveModal
+        isOpen={showDriveModal}
+        onClose={() => setShowDriveModal(false)}
+        campaign={selectedDriveCampaign}
+      />
+
+      {/* Swachh Survekshan Citizen Feedback Modal */}
+      {showSurvekshanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in zoom-in-95 text-slate-800 dark:text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-[#2d7a70] dark:text-teal-400 flex items-center justify-center font-bold">
+                  ✨
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Swachh Survekshan 2026</h3>
+                  <p className="text-[11px] text-slate-500">Ward 4 Citizen Quality Feedback</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSurvekshanModal(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {survekshanFeedbackSubmitted ? (
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 rounded-2xl text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                <h4 className="font-bold text-sm text-emerald-900 dark:text-emerald-200">Feedback Recorded!</h4>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  Thank you! Your rating directly contributes to Ward 4's Swachh Survekshan National Cleanliness Ranking.
+                </p>
+                <button
+                  onClick={() => {
+                    setSurvekshanFeedbackSubmitted(false);
+                    setShowSurvekshanModal(false);
+                  }}
+                  className="mt-2 px-4 py-2 bg-[#2d7a70] text-white text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  How satisfied are you with overall municipal sanitation, waste collection, and road maintenance in Ward 4?
+                </p>
+
+                <div className="flex items-center justify-center gap-2 py-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setSurvekshanRating(star)}
+                      className={`text-2xl transition hover:scale-110 cursor-pointer ${
+                        star <= survekshanRating ? 'text-amber-400' : 'text-slate-300 dark:text-slate-700'
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                  <div className="flex justify-between font-semibold">
+                    <span>Ward 4 Cleanliness Index</span>
+                    <span className="text-[#2d7a70] dark:text-teal-400 font-bold">94.2% (Grade A+)</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                    <span>Avg Resolution Time</span>
+                    <span>14.2 Hours</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSurvekshanFeedbackSubmitted(true)}
+                  className="w-full py-2.5 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs"
+                >
+                  Submit Citizen Feedback
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

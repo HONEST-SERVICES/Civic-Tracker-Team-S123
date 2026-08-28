@@ -162,7 +162,7 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
 
       {/* Role Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-amber-400/40 p-2 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-sm sm:w-84 bg-white rounded-2xl shadow-2xl border-2 border-amber-400/50 p-2 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2 max-h-[85vh] overflow-y-auto overflow-x-hidden">
           <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <FlaskConical className="w-4 h-4 text-amber-600" />
@@ -171,11 +171,11 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
               </span>
             </div>
             <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
-              4 Roles
+              6 Presets
             </span>
           </div>
 
-          <div className="p-1 space-y-1 mt-1">
+          <div className="p-1 space-y-1 mt-1 overflow-x-auto">
             {DEMO_PRESETS.map((preset) => {
               const isCurrent = preset.role === currentRole;
               const PctIcon = preset.icon;

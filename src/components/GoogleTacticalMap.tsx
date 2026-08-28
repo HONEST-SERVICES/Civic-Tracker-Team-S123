@@ -35,6 +35,8 @@ interface GoogleTacticalMapProps {
   onSelectUnit: (unit: MunicipalUnit | null) => void;
   onUpdateIncidentStatus: (incidentId: string, newStatus: CrisisIncident['status']) => void;
   activeZoneCenter?: { lat: number; lng: number } | null;
+  focusedFacility?: PublicFacility | null;
+  theme?: 'light' | 'dark';
 }
 
 const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
@@ -132,7 +134,9 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
   onSelectIncident,
   onSelectUnit,
   onUpdateIncidentStatus,
-  activeZoneCenter
+  activeZoneCenter,
+  focusedFacility,
+  theme = 'light'
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -142,10 +146,31 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
   const circlesRef = useRef<google.maps.Circle[]>([]);
 
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'P1' | 'P2' | 'P3' | 'CREWS'>('ALL');
-  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'DARK_GIS'>('STREET');
+  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'DARK_GIS'>(
+    theme === 'dark' ? 'DARK_GIS' : 'STREET'
+  );
   const [showSbmFacilities, setShowSbmFacilities] = useState<boolean>(true);
   const [publicFacilities, setPublicFacilities] = useState<PublicFacility[]>(INITIAL_PUBLIC_FACILITIES);
   const [selectedFacility, setSelectedFacility] = useState<PublicFacility | null>(null);
+
+  // Sync theme
+  useEffect(() => {
+    if (theme === 'dark') {
+      setMapStyle('DARK_GIS');
+    } else {
+      setMapStyle('STREET');
+    }
+  }, [theme]);
+
+  // Sync focused facility
+  useEffect(() => {
+    if (focusedFacility && mapInstanceRef.current) {
+      setShowSbmFacilities(true);
+      setSelectedFacility(focusedFacility);
+      mapInstanceRef.current.panTo({ lat: focusedFacility.location.lat, lng: focusedFacility.location.lng });
+      mapInstanceRef.current.setZoom(16);
+    }
+  }, [focusedFacility]);
   const [ratingInput, setRatingInput] = useState<number>(5);
   const [isRatingSaving, setIsRatingSaving] = useState<boolean>(false);
   const [ratingSuccessMsg, setRatingSuccessMsg] = useState<string | null>(null);

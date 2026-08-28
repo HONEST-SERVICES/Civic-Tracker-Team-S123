@@ -30,6 +30,7 @@ import { DemoRoleSwitcher, DEMO_PRESETS } from './components/DemoRoleSwitcher';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { SwachhataAuthScreen } from './components/SwachhataAuthScreen';
+import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './components/SwachhataDriveModal';
 import { executeAutonomousDispatch } from './services/geminiService';
 import { 
   subscribeToScopedComplaints,
@@ -62,7 +63,9 @@ import {
   LogOut,
   Truck,
   Users,
-  Crown
+  Crown,
+  Zap,
+  FlaskConical
 } from 'lucide-react';
 
 export default function App() {
@@ -90,6 +93,27 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showStaffManagementModal, setShowStaffManagementModal] = useState<boolean>(false);
   const [showGeminiAssistant, setShowGeminiAssistant] = useState<boolean>(false);
+
+  // Cleanliness Drive Campaign State
+  const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
+  const [selectedDriveCampaign, setSelectedDriveCampaign] = useState<CleanlinessCampaign>(SAMPLE_CAMPAIGNS[0]);
+
+  // Synchronize Interface Theme from Local Storage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('swachhata_user_preferences');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    } catch (e) {
+      console.warn('Theme init notice:', e);
+    }
+  }, []);
 
   // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'
   const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'>('HOME');
@@ -511,22 +535,24 @@ export default function App() {
             onSwitchRole={handleRolePresetSwitch}
           />
 
-          {/* Quick Scenario Dropdown */}
+          {/* Quick Scenario Dropdown (⚡ Autonomous Simulation Engine) */}
           <div className="relative">
             <button
               onClick={() => setShowScenarioMenu(!showScenarioMenu)}
               disabled={isDispatching}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/30 text-xs font-medium cursor-pointer shadow-xs transition-colors"
+              title="Test Autonomous Dispatch Scenarios (⚡)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-300/40 text-xs font-medium cursor-pointer shadow-xs transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span className="hidden sm:inline">Simulate Issue</span>
-              <ChevronDown className={`w-3.5 h-3.5 text-teal-100 transition-transform ${showScenarioMenu ? 'rotate-180' : ''}`} />
+              <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span className="hidden sm:inline">Simulate Dispatch</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-amber-200 transition-transform ${showScenarioMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showScenarioMenu && (
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-slate-800 animate-in fade-in">
-                <div className="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Test Autonomous Dispatch Scenarios
+                <div className="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>Test Autonomous Dispatch Engine</span>
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
                 </div>
                 {CRISIS_SCENARIOS.map((sc, idx) => (
                   <button
@@ -564,6 +590,42 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* Mobile-Optimized Horizontally Scrolling Role/Workspace Switcher Bar (< 768px) */}
+      <div className="md:hidden bg-slate-900 text-white px-3 py-2 border-b border-slate-800 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none z-20 shrink-0">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 shrink-0 flex items-center gap-1">
+          <FlaskConical className="w-3 h-3 text-amber-400" />
+          <span>Role:</span>
+        </span>
+        {DEMO_PRESETS.map((preset) => {
+          const isCurrent = preset.role === userRole;
+          return (
+            <button
+              key={preset.uid}
+              type="button"
+              onClick={() => handleRolePresetSwitch({
+                uid: preset.uid,
+                name: preset.name,
+                phone: preset.phone,
+                email: preset.email,
+                role: preset.role,
+                assignedWard: preset.ward,
+                assignedCrew: preset.crew,
+                designation: preset.designation,
+                permissions: preset.permissions || ['ALL_ACCESS']
+              })}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                isCurrent
+                  ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
+                  : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+              }`}
+            >
+              <span>{preset.name.split(' ')[0]}</span>
+              <span className="text-[10px] opacity-75">({preset.role.replace('_', ' ')})</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Dynamic Network / Sync Indicator Bar (Active during Firestore read/write & dispatch) */}
       <div className="h-0.5 w-full bg-teal-900/50 relative overflow-hidden flex-shrink-0">
@@ -649,20 +711,32 @@ export default function App() {
                   </div>
 
                   <div className="space-y-2.5 pt-2">
-                    <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 flex items-center justify-between">
+                    <div 
+                      onClick={() => {
+                        setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[0]);
+                        setShowDriveModal(true);
+                      }}
+                      className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-50 flex items-center justify-between transition cursor-pointer group"
+                    >
                       <div>
-                        <p className="font-bold text-xs text-teal-900">Sunday Mega Plastic-Free Market Drive</p>
-                        <p className="text-[11px] text-teal-700">Verad Gate Market • Sunday 07:00 AM • 45 Registered</p>
+                        <p className="font-bold text-xs text-teal-900 group-hover:text-[#2d7a70]">Sunday Mega Plastic-Free Market Drive</p>
+                        <p className="text-[11px] text-teal-700">Verad Gate Market • Sunday 07:00 AM • 48 Registered</p>
                       </div>
-                      <span className="text-xs font-bold text-white bg-[#2d7a70] px-2.5 py-1 rounded-lg">Join Drive</span>
+                      <span className="text-xs font-bold text-white bg-[#2d7a70] group-hover:bg-[#23635b] px-2.5 py-1 rounded-lg transition shadow-xs">Join Drive</span>
                     </div>
 
-                    <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div 
+                      onClick={() => {
+                        setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[1]);
+                        setShowDriveModal(true);
+                      }}
+                      className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition cursor-pointer group"
+                    >
                       <div>
-                        <p className="font-bold text-xs text-slate-800">Ward 4 Stormwater Drain Awareness Campaign</p>
-                        <p className="text-[11px] text-slate-500">Community Hall, Sector 3 • Friday 05:00 PM</p>
+                        <p className="font-bold text-xs text-slate-800 group-hover:text-slate-900">Ward 4 Stormwater Drain Awareness Campaign</p>
+                        <p className="text-[11px] text-slate-500">Community Hall, Sector 3 • Friday 05:00 PM • 32 Registered</p>
                       </div>
-                      <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">Attending</span>
+                      <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">View Campaign</span>
                     </div>
                   </div>
                 </div>
@@ -884,6 +958,13 @@ export default function App() {
             setCitizenTab('FORM');
           }
         }}
+      />
+
+      {/* Swachhata Cleanliness Drive Campaign Modal */}
+      <SwachhataDriveModal
+        isOpen={showDriveModal}
+        onClose={() => setShowDriveModal(false)}
+        campaign={selectedDriveCampaign}
       />
     </div>
   );
