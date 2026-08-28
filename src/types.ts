@@ -135,7 +135,9 @@ export interface CrisisIncident {
   };
   imageUrl?: string;
   proofOfFixUrl?: string;
+  resolutionProofUrl?: string;
   officerNotes?: string;
+  resolutionNotes?: string;
   scannerData?: ScannerData;
   assignedUnitId?: string;
   assignedUnitName?: string;

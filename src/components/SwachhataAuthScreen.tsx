@@ -7,13 +7,7 @@ import {
   CheckCircle2, 
   RotateCcw, 
   ArrowRight, 
-  Sparkles, 
-  Lock, 
-  Users, 
-  UserCheck, 
-  HardHat, 
-  Award,
-  Radio
+  Lock
 } from 'lucide-react';
 import { 
   loginWithGoogle, 
@@ -21,8 +15,7 @@ import {
   sendPhoneOtp, 
   verifyPhoneOtp 
 } from '../services/firebase';
-import { UserProfile, UserRole } from '../types';
-import { DEMO_PRESETS } from './DemoRoleSwitcher';
+import { UserProfile } from '../types';
 import { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 interface SwachhataAuthScreenProps {
@@ -30,7 +23,7 @@ interface SwachhataAuthScreenProps {
 }
 
 export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSuccess }) => {
-  const [activeTab, setActiveTab] = useState<'GOOGLE' | 'PHONE' | 'PRESETS'>('PRESETS');
+  const [activeTab, setActiveTab] = useState<'GOOGLE' | 'PHONE'>('GOOGLE');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [otpCode, setOtpCode] = useState<string>('');
   const [otpSent, setOtpSent] = useState<boolean>(false);
@@ -46,7 +39,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
     setErrorMessage(null);
     try {
       const { profile } = await loginWithGoogle();
-      setSuccessMessage(`Welcome, ${profile.name}! Logging you in...`);
+      setSuccessMessage(`Welcome, ${profile.name}! Verifying role permissions...`);
       setTimeout(() => {
         onSuccess(profile);
       }, 600);
@@ -57,7 +50,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       } else if (err?.code === 'auth/popup-blocked') {
         setErrorMessage('Sign-in popup blocked by browser. Please allow popups.');
       } else {
-        setErrorMessage(err?.message || 'Failed to sign in with Google. You can also use Quick Personas or Phone OTP.');
+        setErrorMessage(err?.message || 'Failed to sign in with Google. Please check your connection or use Mobile OTP.');
       }
     } finally {
       setIsLoading(false);
@@ -100,9 +93,9 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       if (err?.code === 'auth/invalid-phone-number') {
         setErrorMessage('Invalid phone number format. Please check and retry.');
       } else if (err?.code === 'auth/quota-exceeded') {
-        setErrorMessage('SMS verification quota exceeded. Please try Google Sign-In or Quick Demo Personas.');
+        setErrorMessage('SMS verification quota exceeded. Please use Google Sign-In.');
       } else {
-        setErrorMessage(err?.message || 'Failed to send OTP. Please try Quick Demo Personas.');
+        setErrorMessage(err?.message || 'Failed to send OTP. Please try Google Sign-In.');
       }
     } finally {
       setIsLoading(false);
@@ -145,102 +138,74 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
     }
   };
 
-  const handleSelectPreset = (preset: typeof DEMO_PRESETS[0]) => {
-    const profile: UserProfile = {
-      uid: preset.uid,
-      name: preset.name,
-      phone: preset.phone,
-      email: preset.email,
-      role: preset.role,
-      assignedWard: preset.ward,
-      designation: preset.designation
-    };
-    onSuccess(profile);
-  };
-
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between relative overflow-hidden">
       {/* Invisible reCAPTCHA container */}
       <div id="auth-screen-recaptcha-container"></div>
 
       {/* Decorative background glows */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#2d7a70]/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#115e59]/30 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header Bar */}
       <header className="p-4 sm:p-6 border-b border-white/10 backdrop-blur-md bg-slate-900/60 z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2d7a70] to-[#1f564f] border border-teal-400/30 flex items-center justify-center text-white shadow-lg font-bold">
-              <Shield className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/30 flex items-center justify-center text-white shadow-lg">
+              <span className="text-xl">🇮🇳</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-white text-base sm:text-lg tracking-tight">
-                  Swachhata Dispatch Engine
+                  Swachhata MoHUA
                 </span>
                 <span className="text-[10px] bg-teal-500/20 text-teal-300 font-bold px-2 py-0.5 rounded-full border border-teal-500/30">
-                  MoHUA National
+                  National Redressal
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Ministry of Housing and Urban Affairs • Real-Time Civic Redressal
+                Ministry of Housing and Urban Affairs • Single Sign-On Portal
               </p>
             </div>
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Ward 4 Central Grid Online</span>
+            <span>Municipal Cloud Online</span>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 z-10">
-        <div className="w-full max-w-xl bg-white text-slate-800 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="w-full max-w-md bg-white text-slate-800 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
           
           {/* Card Header Banner */}
-          <div className="bg-gradient-to-r from-[#2d7a70] to-[#23635b] text-white p-6 relative">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider">
-                  Swachh Bharat Mission (Urban)
-                </span>
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5">
-                  Sign In to Swachhata Portal
-                </h1>
-                <p className="text-xs text-teal-100 mt-1">
-                  Report grievances, coordinate field crews, or supervise ward remediation.
-                </p>
-              </div>
+          <div className="bg-[#115e59] text-white p-6 relative">
+            <div>
+              <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider">
+                Swachh Bharat Mission (Urban)
+              </span>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5">
+                Sign In to Swachhata
+              </h1>
+              <p className="text-xs text-teal-100 mt-1">
+                Authenticate with your official credentials to access your verified role dashboard.
+              </p>
             </div>
 
             {/* Auth Mode Tabs */}
-            <div className="mt-5 grid grid-cols-3 gap-1 bg-black/20 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => { setActiveTab('PRESETS'); setErrorMessage(null); }}
-                className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'PRESETS'
-                    ? 'bg-white text-[#2d7a70] shadow-sm'
-                    : 'text-teal-100 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Demo Personas</span>
-              </button>
-
+            <div className="mt-5 grid grid-cols-2 gap-1.5 bg-black/20 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => { setActiveTab('GOOGLE'); setErrorMessage(null); }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'GOOGLE'
-                    ? 'bg-white text-[#2d7a70] shadow-sm'
+                    ? 'bg-white text-[#115e59] shadow-sm'
                     : 'text-teal-100 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <span>Google</span>
+                <span>Google Account</span>
               </button>
 
               <button
@@ -248,7 +213,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                 onClick={() => { setActiveTab('PHONE'); setErrorMessage(null); }}
                 className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'PHONE'
-                    ? 'bg-white text-[#2d7a70] shadow-sm'
+                    ? 'bg-white text-[#115e59] shadow-sm'
                     : 'text-teal-100 hover:text-white hover:bg-white/10'
                 }`}
               >
@@ -276,73 +241,13 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
               </div>
             )}
 
-            {/* TAB 1: DEMO PERSONAS (1-Click Instant Evaluator Access) */}
-            {activeTab === 'PRESETS' && (
-              <div className="space-y-3">
-                <div className="text-center pb-1">
-                  <p className="text-xs font-bold text-slate-700">
-                    Instant Evaluator Access — Choose a Role:
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Inspect the app immediately with full role-based permissions and scoped views.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {DEMO_PRESETS.map((preset) => {
-                    const isCitizen = preset.role === 'CITIZEN';
-                    const isCrew = preset.role === 'FIELD_CREW';
-                    const isOfficer = preset.role === 'WARD_OFFICER';
-                    const isAdmin = preset.role === 'SUPER_ADMIN';
-
-                    return (
-                      <button
-                        key={preset.uid}
-                        type="button"
-                        onClick={() => handleSelectPreset(preset)}
-                        className="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 hover:bg-white hover:border-[#2d7a70] hover:shadow-md transition-all text-left group cursor-pointer flex items-start gap-3"
-                      >
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 mt-0.5 shadow-xs ${
-                          isCitizen ? 'bg-teal-600' :
-                          isCrew ? 'bg-amber-600' :
-                          isOfficer ? 'bg-indigo-600' : 'bg-rose-700'
-                        }`}>
-                          {isCitizen && <UserCheck className="w-4 h-4" />}
-                          {isCrew && <HardHat className="w-4 h-4" />}
-                          {isOfficer && <Shield className="w-4 h-4" />}
-                          {isAdmin && <Award className="w-4 h-4" />}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-900 group-hover:text-[#2d7a70] transition truncate">
-                              {preset.name}
-                            </span>
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
-                              {preset.role.replace('_', ' ')}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                            {preset.designation}
-                          </p>
-                          <p className="text-[10px] font-medium text-teal-700 truncate mt-0.5">
-                            {preset.ward}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: GOOGLE SIGN-IN */}
+            {/* TAB 1: GOOGLE SIGN-IN */}
             {activeTab === 'GOOGLE' && (
               <div className="space-y-4 py-2">
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-bold text-slate-800">1-Click Google Sign-In</p>
+                  <p className="text-sm font-bold text-slate-800">1-Click Single Sign-On</p>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Authenticates via Google Identity. Automatically links your verified citizen profile.
+                    Sign in with Google. Your verified role (Citizen, Crew, Ward Officer, or Super Admin) will be automatically resolved from the municipal registry.
                   </p>
                 </div>
 
@@ -353,7 +258,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                   className="w-full h-12 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-300 rounded-2xl shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-[#2d7a70]" />
+                    <Loader2 className="w-5 h-5 animate-spin text-[#115e59]" />
                   ) : (
                     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                       <path
@@ -374,17 +279,17 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                       />
                     </svg>
                   )}
-                  <span className="text-sm">Continue with Google Account</span>
+                  <span className="text-sm">Continue with Google</span>
                 </button>
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
                   <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>Secured by Municipal Single Sign-On & Cloud Identity Standards.</span>
+                  <span>Secured by Firebase Authentication & MoHUA Role Registry.</span>
                 </div>
               </div>
             )}
 
-            {/* TAB 3: MOBILE NUMBER & OTP */}
+            {/* TAB 2: MOBILE NUMBER & OTP */}
             {activeTab === 'PHONE' && (
               <div className="space-y-4">
                 {!otpSent ? (
@@ -398,9 +303,9 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                       </p>
                     </div>
 
-                    <div className="flex items-center rounded-2xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a70] focus-within:border-transparent transition">
+                    <div className="flex items-center rounded-2xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-[#115e59] focus-within:border-transparent transition">
                       <div className="px-3.5 py-3 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#2d7a70]" />
+                        <Phone className="w-3.5 h-3.5 text-[#115e59]" />
                         <span>+91</span>
                       </div>
                       <input
@@ -417,7 +322,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                     <button
                       type="submit"
                       disabled={isLoading || !phoneNumber.trim()}
-                      className="w-full h-12 bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs rounded-2xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full h-12 bg-[#115e59] hover:bg-[#0f4f4b] text-white font-bold text-xs rounded-2xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isLoading ? (
                         <>
@@ -442,14 +347,14 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                         <button
                           type="button"
                           onClick={() => { setOtpSent(false); setOtpCode(''); }}
-                          className="text-[11px] font-semibold text-[#2d7a70] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-[11px] font-semibold text-[#115e59] hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
                           <span>Change Number</span>
                         </button>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Enter code sent to +91 {phoneNumber}
+                        Enter the code sent to your phone.
                       </p>
                     </div>
 
@@ -458,26 +363,26 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="• • • • • •"
+                      className="w-full px-4 py-3 text-center text-lg font-mono tracking-widest text-slate-900 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-[#115e59] focus:outline-hidden"
                       maxLength={6}
                       autoFocus
-                      className="w-full text-center tracking-[0.4em] text-xl font-mono font-bold px-3 py-3 border border-slate-300 rounded-2xl bg-white focus:ring-2 focus:ring-[#2d7a70] focus:border-transparent focus:outline-hidden"
                       required
                     />
 
                     <button
                       type="submit"
                       disabled={isLoading || otpCode.length < 6}
-                      className="w-full h-12 bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs rounded-2xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full h-12 bg-[#115e59] hover:bg-[#0f4f4b] text-white font-bold text-xs rounded-2xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Verifying Code...</span>
+                          <span>Verifying Token...</span>
                         </>
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Verify & Proceed</span>
+                          <span>Verify & Sign In</span>
                         </>
                       )}
                     </button>
@@ -488,18 +393,19 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
 
           </div>
 
-          {/* Footer Note */}
-          <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Swachh Bharat Mission (Urban 2.0)</span>
-            <span className="font-mono">v2.5-Live-Sync</span>
+          {/* Card Footer */}
+          <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+            <p className="text-[11px] text-slate-500">
+              Swachh Bharat Mission (Urban) • Official Citizen & Governance Portal
+            </p>
           </div>
 
         </div>
       </main>
 
       {/* Bottom Footer */}
-      <footer className="p-4 text-center text-xs text-slate-500 border-t border-white/5 bg-slate-900/40 z-10">
-        Ministry of Housing and Urban Affairs, Government of India • National Citizen Grievance Portal
+      <footer className="p-4 text-center text-xs text-slate-500 border-t border-white/5 backdrop-blur-md bg-slate-900/40 z-10">
+        Ministry of Housing and Urban Affairs (MoHUA), Government of India
       </footer>
     </div>
   );

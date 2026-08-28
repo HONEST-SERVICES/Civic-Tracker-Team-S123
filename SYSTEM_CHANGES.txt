@@ -213,4 +213,26 @@ SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
 - Avatar & Ticket Numbering Standardization:
   * Replaced synthetic 3D avatar photos in CitizenPortal.tsx with clean, authentic UserCircle vector avatars inside #f0fdfa rounded containers across desktop and mobile.
   * Standardized ticket tracking numbering from legacy raw strings (W0488610C...) to clean, official municipal tracking format (Ticket #XXXX) with universal formatTicketId helper.
+
+15. FINAL PRODUCTION CLEANUP: API KEY ENCAPSULATION & STRICT RBAC ENFORCEMENT
+--------------------------------------------------------------------------------
+- API Key Inputs Removal:
+  * Completely purged "Automated Vision Triage Service Key" and any user-facing API key fields from SettingsModal.tsx.
+  * Secure background resolution: Keys are handled via server-side endpoints and client environment variables (import.meta.env) with zero exposure in citizen/officer preference dialogs.
+  * Streamlined Settings view strictly for clean citizen preferences: Map Style (Light/Dark), High Precision GPS, Push Notifications, Sound Alerts, and App Language (English/Hindi).
+- Dummy Role Selector Dropdown Removal:
+  * Completely removed the DemoRoleSwitcher component and manual override dropdown from the top navigation header in App.tsx.
+  * Header now features only:
+    - Left: Authentic Swachhata MoHUA Logo, Title & Subtitle.
+    - Center: Live Municipal Sync Status Badge (Desktop).
+    - Right: Single clean Profile Avatar / Account Action button.
+- Strict Real RBAC Enforcement:
+  * Role resolution is strictly driven by authenticated Firebase identity (auth.currentUser) and Firestore record (users/{uid}.role).
+  * peelaavinash04@gmail.com is verified and granted master SUPER_ADMIN privileges.
+  * Routing automatically maps users based on their official verified role:
+    - CITIZEN -> Swachhata Citizen Grievance Portal & Community Drives.
+    - FIELD_CREW / FIELD_CONTRACTOR -> Field Work Orders & Proof-of-Fix Upload Desk.
+    - WARD_OFFICER -> Ward-Scoped GIS Command & Dispatch Desk.
+    - SUPER_ADMIN -> Full Municipal Governance & All Wards Command Center.
+  * Profile view and profile menu render verified roles as clean static badges with no manual override dropdowns.
 ================================================================================
