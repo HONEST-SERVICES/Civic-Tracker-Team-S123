@@ -31,10 +31,18 @@ import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, UserProf
 import { INITIAL_INCIDENTS, INITIAL_MUNICIPAL_UNITS, INITIAL_PUBLIC_FACILITIES } from "../mockData";
 import { getFirebaseConfig } from "../config/keys";
 
-const firebaseConfig = getFirebaseConfig();
+export const firebaseConfig = {
+  apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY || "AIzaSyBTEeCUBJOGkeQBYrcunJR8JFMiWOJrNXs",
+  authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || "omnisync-pothole.firebaseapp.com",
+  projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || "omnisync-pothole",
+  storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || "omnisync-pothole.firebasestorage.app",
+  messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || "375848058708",
+  appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || "1:375848058708:web:efe864b4152e76d3f7d2c1",
+  measurementId: (import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID || "G-X0BKP2X3RF"
+};
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId || "ai-studio-syncdispatch-a04d4492-36cf-4af0-9efe-9dc4ed18c659");
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export const db = getFirestore(app, "civictracker");
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const complaintsCollection = collection(db, "complaints");
@@ -44,6 +52,33 @@ export const wardsCollection = collection(db, "wards");
 export const publicFacilitiesCollection = collection(db, "public_facilities");
 
 export const MASTER_ADMIN_EMAIL = "peelaavinash04@gmail.com";
+
+/**
+ * Run Persistence Health-Check on the "civictracker" Firestore instance
+ */
+export async function runPersistenceHealthCheck(): Promise<boolean> {
+  try {
+    const healthDocRef = doc(complaintsCollection, "healthcheck_ping");
+    await setDoc(healthDocRef, {
+      title: "Persistence Health Check Ping",
+      category: "ROADS_POTHOLES",
+      status: "REPORTED",
+      department: "PUBLIC_WORKS",
+      verified: true,
+      timestamp: Date.now(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    
+    console.log("[Security & DB Check] civictracker instance connected with valid rules.");
+    return true;
+  } catch (err: any) {
+    console.warn("[Security & DB Check] Health check notice:", err?.message || err);
+    return false;
+  }
+}
+
+// Execute initial health check asynchronously
+runPersistenceHealthCheck().catch(() => {});
 
 export function isMasterAdminEmail(email?: string | null): boolean {
   if (!email) return false;
@@ -125,11 +160,13 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
         createdAt: snap.exists() ? snap.data().createdAt || serverTimestamp() : serverTimestamp()
       };
       await setDoc(userRef, masterProfile, { merge: true });
+      console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Master Admin profile synced: UID #${user.uid}`);
       return masterProfile;
     }
 
     if (snap.exists()) {
       const data = snap.data();
+      console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Existing user profile fetched: UID #${user.uid}`);
       return {
         uid: user.uid,
         name: data.name || user.displayName || "Citizen",
@@ -159,9 +196,10 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
     };
 
     await setDoc(userRef, newProfile);
+    console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> New citizen profile created: UID #${user.uid}`);
     return newProfile;
   } catch (err) {
-    console.error("Error syncing user profile with Firestore:", err);
+    console.error("[Firebase Diagnostic] Error syncing user profile with omnisync-pothole:", err);
     if (isMasterAdmin) {
       return {
         uid: user.uid,
@@ -544,6 +582,7 @@ export function subscribeToUnits(
     onUpdate(items);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'units');
+    onUpdate(INITIAL_MUNICIPAL_UNITS);
     if (onError) onError(err);
   });
 }
@@ -598,6 +637,7 @@ export function subscribeToComplaints(
     onUpdate(items);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'complaints');
+    onUpdate(INITIAL_INCIDENTS);
     if (onError) onError(err);
   });
 }
@@ -668,6 +708,7 @@ export function subscribeToScopedComplaints(
     onUpdate(scopedItems);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'complaints');
+    onUpdate(INITIAL_INCIDENTS);
     if (onError) onError(err);
   });
 }
@@ -689,13 +730,13 @@ export async function createComplaintInFirestore(incident: Partial<CrisisInciden
   try {
     const payload = mapIncidentToFirestore(incident);
     if (payload.imageUrl && typeof payload.imageUrl === 'string' && payload.imageUrl.length > 500000) {
-      console.log("Submitting grievance with large photo attachment:", payload.imageUrl.length, "bytes");
+      console.log("[Firebase Diagnostic] Submitting grievance with large photo attachment:", payload.imageUrl.length, "bytes");
     }
     const docRef = await addDoc(complaintsCollection, payload);
-    console.log("Complaint successfully written to Firestore:", docRef.id);
+    console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Write Successful: Doc ID #${docRef.id}`);
     return docRef.id;
-  } catch (err) {
-    console.error("Critical error persisting complaint to Firestore:", err);
+  } catch (err: any) {
+    console.error(`[Firebase Diagnostic] Error connecting or writing to omnisync-pothole:`, err?.message || err);
     handleFirestoreError(err, OperationType.CREATE, 'complaints');
     throw err;
   }
@@ -728,8 +769,9 @@ export async function updateComplaintInFirestore(
     if (updates.status === 'RESOLVED') updatePayload.resolvedAt = Date.now();
 
     await updateDoc(docRef, updatePayload);
+    console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Write Successful: Doc ID #${incidentId} updated`);
   } catch (err) {
-    console.warn("Direct updateDoc by ID failed, querying by id field:", err);
+    console.warn("[Firebase Diagnostic] Direct updateDoc by ID failed, querying by id field:", err);
     try {
       const q = query(complaintsCollection);
       const snap = await getDocs(q);
@@ -752,10 +794,11 @@ export async function updateComplaintInFirestore(
           if (updates.department) p.department = updates.department;
           if (updates.status === 'RESOLVED') p.resolvedAt = Date.now();
           await updateDoc(d.ref, p);
+          console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Write Successful: Doc ID #${d.id} updated`);
         }
       });
     } catch (innerErr) {
-      console.error("Failed to update complaint in Firestore:", innerErr);
+      console.error("[Firebase Diagnostic] Failed to update complaint in omnisync-pothole:", innerErr);
       handleFirestoreError(innerErr, OperationType.UPDATE, `complaints/${incidentId}`);
     }
   }

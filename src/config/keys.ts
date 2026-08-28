@@ -20,14 +20,13 @@ export interface FirebaseClientConfig {
 }
 
 const DEFAULT_FIREBASE_CONFIG: FirebaseClientConfig = {
-  apiKey: firebaseAppletConfig.apiKey || "AIzaSyB3MGF_ZkERucwFW47-vy5NHAXT2ypBzx0",
-  authDomain: firebaseAppletConfig.authDomain || "gen-lang-client-0973558649.firebaseapp.com",
-  projectId: firebaseAppletConfig.projectId || "gen-lang-client-0973558649",
-  storageBucket: firebaseAppletConfig.storageBucket || "gen-lang-client-0973558649.firebasestorage.app",
-  messagingSenderId: firebaseAppletConfig.messagingSenderId || "934457241683",
-  appId: firebaseAppletConfig.appId || "1:934457241683:web:849ddcc1bb70e7b185d6a6",
-  measurementId: firebaseAppletConfig.measurementId || "",
-  firestoreDatabaseId: firebaseAppletConfig.firestoreDatabaseId || "ai-studio-syncdispatch-a04d4492-36cf-4af0-9efe-9dc4ed18c659"
+  apiKey: "AIzaSyBTEeCUBJOGkeQBYrcunJR8JFMiWOJrNXs",
+  authDomain: "omnisync-pothole.firebaseapp.com",
+  projectId: "omnisync-pothole",
+  storageBucket: "omnisync-pothole.firebasestorage.app",
+  messagingSenderId: "375848058708",
+  appId: "1:375848058708:web:efe864b4152e76d3f7d2c1",
+  measurementId: "G-X0BKP2X3RF"
 };
 
 /**
