@@ -86,9 +86,6 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showStaffManagementModal, setShowStaffManagementModal] = useState<boolean>(false);
-  const [showOfficerLoginModal, setShowOfficerLoginModal] = useState<boolean>(false);
-  const [officerPin, setOfficerPin] = useState<string>('');
-  const [pinError, setPinError] = useState<string>('');
 
   // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'
   const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'>('HOME');
@@ -433,19 +430,6 @@ export default function App() {
     });
   };
 
-  const handleOfficerLogin = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (officerPin === '1234' || officerPin === '') {
-      const officerPreset = DEMO_PRESETS[2]; // Ward Officer
-      setCurrentUser(officerPreset);
-      setShowOfficerLoginModal(false);
-      setOfficerPin('');
-      setPinError('');
-    } else {
-      setPinError('Invalid PIN. Use default 1234 or tap Quick Login.');
-    }
-  };
-
   // If user is completely logged out, display full Swachhata Auth screen
   if (!currentUser) {
     return <SwachhataAuthScreen onSuccess={(profile) => setCurrentUser(profile)} />;
@@ -557,6 +541,19 @@ export default function App() {
         </div>
       </header>
 
+      {/* Dynamic Network / Sync Indicator Bar (Active during Firestore read/write & dispatch) */}
+      <div className="h-0.5 w-full bg-teal-900/50 relative overflow-hidden flex-shrink-0">
+        <div 
+          className={`h-full transition-all duration-300 ${
+            isDispatching 
+              ? 'w-full bg-amber-400 animate-pulse' 
+              : isFirestoreConnected 
+              ? 'w-full bg-emerald-400/80' 
+              : 'w-full bg-rose-500 animate-pulse'
+          }`} 
+        />
+      </div>
+
       {/* 2. MAIN APPLICATION CONTENT ROUTING (ROLE-BASED) */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* VIEW A: WARD OFFICER & SUPER ADMIN COMMAND DESK */}
@@ -627,59 +624,91 @@ export default function App() {
                 </div>
               </div>
             ) : citizenTab === 'PROFILE' ? (
-              <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto space-y-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
+                <div className="w-full max-w-2xl bg-white rounded-2xl p-5 md:p-8 border border-slate-200 shadow-sm space-y-6">
                   {currentUser ? (
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-teal-50 border-2 border-[#2d7a70]/40 flex items-center justify-center text-xl font-bold text-[#2d7a70]">
-                        {currentUser.photoURL ? (
-                          <img
-                            src={currentUser.photoURL}
-                            alt={currentUser.name}
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <span>{currentUser.name.charAt(0)}</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-slate-900 truncate">{currentUser.name}</h3>
-                        <p className="text-xs text-slate-500 truncate">
-                          {currentUser.phone || currentUser.email || 'Authenticated Citizen'}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-bold text-[#2d7a70] bg-teal-50 px-2 py-0.5 rounded border border-teal-200 inline-block">
-                            Role: {currentUser.role}
-                          </span>
-                          {currentUser.assignedWard && (
-                            <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                              {currentUser.assignedWard}
-                            </span>
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 text-center sm:text-left">
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-20 h-20 rounded-full overflow-hidden bg-teal-50 border-2 border-[#2d7a70]/40 flex items-center justify-center text-2xl font-bold text-[#2d7a70] shrink-0 shadow-xs">
+                          {currentUser.photoURL ? (
+                            <img
+                              src={currentUser.photoURL}
+                              alt={currentUser.name}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <span>{currentUser.name.charAt(0)}</span>
                           )}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-bold text-slate-900 truncate">{currentUser.name}</h3>
+                          <p className="text-xs text-slate-500 truncate mt-0.5">
+                            {currentUser.phone || currentUser.email || 'peelaavinash04@gmail.com'}
+                          </p>
+                          <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-[#2d7a70] bg-teal-50 px-3 py-0.5 rounded-full border border-teal-200">
+                              Role: {currentUser.role.replace(/_/g, ' ')}
+                            </span>
+                            {currentUser.assignedWard && (
+                              <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-0.5 rounded-full border border-slate-200">
+                                {currentUser.assignedWard}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <button
                         onClick={handleSignOut}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition flex items-center gap-1 cursor-pointer"
+                        className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 border border-slate-200"
                       >
-                        <LogOut className="w-3.5 h-3.5" />
+                        <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>
                       </button>
                     </div>
                   ) : null}
 
-                  <div className="pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-700">
-                    <p><strong>Jurisdiction:</strong> Ward 4 - Central Zone</p>
-                    <p><strong>Complaints In Grid:</strong> {incidents.length} Registered</p>
-                    <p><strong>Database:</strong> Google Cloud Firestore (Live Sync)</p>
-                    <p><strong>App Version:</strong> Swachhata-MoHUA v4.8.2</p>
+                  {/* Sanitized Citizen / Officer Metadata Grid */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Citizen Verification & Deployment Info
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
+                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span className="text-slate-500 font-medium block text-[11px]">Assigned Ward</span>
+                        <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                          {currentUser?.assignedWard || 'Ward 4 - Central Zone'}
+                        </span>
+                      </div>
+                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span className="text-slate-500 font-medium block text-[11px]">Account Created</span>
+                        <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                          {currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '15 Jan 2025'}
+                        </span>
+                      </div>
+                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span className="text-slate-500 font-medium block text-[11px]">Primary Contact</span>
+                        <span className="font-bold text-slate-900 text-sm mt-0.5 block truncate">
+                          {currentUser?.phone || '+91 98765 43210'}
+                        </span>
+                      </div>
+                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                          <span className="text-slate-500 font-medium block text-[11px]">System Status</span>
+                          <span className="font-bold text-slate-900 text-sm mt-0.5 block">Redressal Online</span>
+                        </div>
+                        <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200 text-xs inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Online ✓
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 space-y-2">
+                  <div className="pt-2 space-y-3">
                     <button
-                      onClick={() => setShowOfficerLoginModal(true)}
-                      className="w-full h-11 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                      onClick={() => setShowAuthModal(true)}
+                      className="w-full min-h-[48px] bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Shield className="w-4 h-4" />
                       <span>Switch to Municipal Staff / Ward Officer Login</span>
@@ -687,10 +716,10 @@ export default function App() {
 
                     <button
                       onClick={() => setShowSettingsModal(true)}
-                      className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200"
                     >
                       <Settings className="w-4 h-4 text-slate-600" />
-                      <span>Configure API Keys & Firebase Connection</span>
+                      <span>Preferences & Settings</span>
                     </button>
                   </div>
                 </div>
@@ -700,7 +729,6 @@ export default function App() {
                 incidents={incidents}
                 onSubmitIncident={handleDispatchIncident}
                 isDispatching={isDispatching}
-                onOpenOfficerLogin={() => setShowOfficerLoginModal(true)}
                 activeScreen={citizenTab === 'FORM' ? 'FORM' : citizenTab === 'CATEGORIES' ? 'CATEGORIES' : citizenTab === 'COMPLAINTS' ? 'COMPLAINTS' : 'HOME'}
                 onNavigate={(scr) => setCitizenTab(scr)}
                 currentUser={currentUser}
@@ -772,72 +800,6 @@ export default function App() {
       )}
 
       {/* 4. MODALS */}
-      {/* Officer Quick Login Modal */}
-      {showOfficerLoginModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 border border-slate-200 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#2d7a70] flex items-center justify-center">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900">Ward Officer Login</h3>
-                  <p className="text-[11px] text-slate-500">MoHUA Staff Access (Ward 4)</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowOfficerLoginModal(false);
-                  setPinError('');
-                }}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleOfficerLogin} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Enter 4-Digit Security PIN</label>
-                <input
-                  type="password"
-                  maxLength={4}
-                  value={officerPin}
-                  onChange={(e) => setOfficerPin(e.target.value)}
-                  placeholder="• • • •"
-                  className="w-full h-10 px-3 text-center text-lg tracking-widest font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:outline-hidden"
-                  autoFocus
-                />
-                {pinError && <p className="text-[11px] text-rose-600 mt-1 font-medium">{pinError}</p>}
-                <p className="text-[10px] text-slate-400 mt-1">Default Demo PIN: <strong className="text-slate-600">1234</strong></p>
-              </div>
-
-              <div className="space-y-2 pt-1">
-                <button
-                  type="submit"
-                  className="w-full h-10 bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
-                >
-                  Verify & Access Command Desk
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const officerPreset = DEMO_PRESETS[2];
-                    setCurrentUser(officerPreset);
-                    setShowOfficerLoginModal(false);
-                  }}
-                  className="w-full h-9 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition cursor-pointer"
-                >
-                  Quick Bypass (Ward Officer Demo)
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Staff Management Modal */}
       {showStaffManagementModal && (
         <WardStaffManagementModal

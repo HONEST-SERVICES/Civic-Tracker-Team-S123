@@ -56,6 +56,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   onOpenAuth
 }) => {
   const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>(activeScreen);
+  const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>>([activeScreen]);
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
@@ -78,12 +79,39 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     }
   }, [currentUser]);
 
-  // Sync external navigation prop
+  // Sync external navigation prop without destroying form state or view history
   useEffect(() => {
-    if (activeScreen) {
+    if (activeScreen && activeScreen !== currentView) {
       setCurrentView(activeScreen);
+      setViewHistory((prev) => (prev[prev.length - 1] === activeScreen ? prev : [...prev, activeScreen]));
     }
-  }, [activeScreen]);
+  }, [activeScreen, currentView]);
+
+  // Structured client-side routing & view history manager
+  const pushView = (view: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS') => {
+    setViewHistory((prev) => (prev[prev.length - 1] === view ? prev : [...prev, view]));
+    setCurrentView(view);
+    onNavigate?.(view);
+  };
+
+  const popView = () => {
+    if (trackedIncident) {
+      setTrackedIncident(null);
+      return;
+    }
+    if (viewHistory.length > 1) {
+      const newHist = [...viewHistory];
+      newHist.pop();
+      const prevView = newHist[newHist.length - 1];
+      setViewHistory(newHist);
+      setCurrentView(prevView);
+      onNavigate?.(prevView);
+    } else {
+      setCurrentView('HOME');
+      setViewHistory(['HOME']);
+      onNavigate?.('HOME');
+    }
+  };
 
   // Selected Pin Coordinates on Map
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
@@ -143,8 +171,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   const handleSelectCategory = (catId: string) => {
     setSelectedCategory(catId as HazardCategory);
-    setCurrentView('FORM');
-    onNavigate?.('FORM');
+    pushView('FORM');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -268,9 +295,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-sm flex items-start gap-3 shadow-xs animate-in fade-in">
             <CheckCircle2 className="w-5 h-5 text-[#2d7a70] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-slate-900">Grievance Successfully Synced to Live Firestore Database!</p>
+              <p className="font-bold text-slate-900">Grievance submitted successfully. Tracking ID: #{lastSubmittedId}</p>
               <p className="text-xs text-slate-700 mt-0.5">
-                Ticket ID: <span className="font-mono font-bold text-[#2d7a70]">{lastSubmittedId}</span> is visible instantly on the Ward 4 Officer GIS Map and assigned for remediation.
+                Your report has been synced to the live municipal grid and dispatched to Ward 4 field remediation crews.
               </p>
             </div>
           </div>
@@ -626,12 +653,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       <div className="block md:hidden max-w-2xl mx-auto px-4 py-4 space-y-4">
         {/* Top Success Banner */}
         {submittedSuccess && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm flex items-start gap-3 shadow-sm animate-in fade-in">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-sm flex items-start gap-3 shadow-sm animate-in fade-in">
             <CheckCircle2 className="w-5 h-5 text-[#2d7a70] flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-bold text-slate-900">Complaint Registered Successfully!</p>
+              <p className="font-bold text-slate-900">Grievance submitted successfully. Tracking ID: #{lastSubmittedId}</p>
               <p className="text-xs text-slate-700 mt-0.5">
-                Complaint ID: <span className="font-mono font-bold text-[#2d7a70]">{lastSubmittedId}</span> has been dispatched to Ward 4 Sanitary Inspector / Asst. Engineer.
+                Dispatched to Ward 4 Sanitary Inspector & Field Repair Crews.
               </p>
             </div>
           </div>
@@ -714,10 +741,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <div className="grid grid-cols-2 gap-3.5">
               {/* Card 1: Post a Complaint (Soft Emerald Gradient) */}
               <div
-                onClick={() => {
-                  setCurrentView('CATEGORIES');
-                  onNavigate?.('CATEGORIES');
-                }}
+                onClick={() => pushView('CATEGORIES')}
                 className="bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] border border-emerald-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-[#2d7a70]">
@@ -735,10 +759,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
               {/* Card 2: My Active Complaints (Soft Amber Gradient) */}
               <div
-                onClick={() => {
-                  setCurrentView('COMPLAINTS');
-                  onNavigate?.('COMPLAINTS');
-                }}
+                onClick={() => pushView('COMPLAINTS')}
                 className="bg-gradient-to-br from-[#fff8e1] to-[#ffe0b2] border border-amber-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/90 shadow-xs flex items-center justify-center text-amber-700">
@@ -774,14 +795,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </div>
               </div>
 
-              {/* Card 4: Swachh Survekshan & Ward Inspection */}
+              {/* Card 4: Swachh Survekshan & Citizen Feedback */}
               <div
                 onClick={() => {
-                  if (onOpenOfficerLogin) {
-                    onOpenOfficerLogin();
-                  } else {
-                    alert('Swachh Survekshan 2026: Ward 4 ranking score is 94.2% based on civic response efficiency.');
-                  }
+                  alert('Swachh Survekshan 2026: Ward 4 Citizen Satisfaction Rating is 94.2%. Thank you for keeping your city clean!');
                 }}
                 className="bg-gradient-to-br from-[#e0f2f1] to-[#b2dfdb] border border-teal-200/90 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group select-none"
               >
@@ -799,7 +816,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </div>
             </div>
 
-            {/* Quick Officer Access Strip for Demo */}
+            {/* Officer & Staff Access Strip */}
             <div className="p-3.5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70]">
@@ -807,11 +824,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-900">Municipal Officer Desk</p>
-                  <p className="text-[11px] text-slate-500">Ward 4 Sanitary Inspector & Assistant Engineer Portal</p>
+                  <p className="text-[11px] text-slate-500">Ward Sanitary Inspector & Assistant Engineer Portal</p>
                 </div>
               </div>
               <button
-                onClick={onOpenOfficerLogin}
+                onClick={onOpenAuth}
                 className="px-3 py-1.5 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-semibold rounded-lg shadow-xs transition cursor-pointer"
               >
                 Staff Login
@@ -825,11 +842,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-[#2d7a70] px-4 py-3.5 text-white flex items-center gap-3">
               <button
-                onClick={() => {
-                  setCurrentView('HOME');
-                  onNavigate?.('HOME');
-                }}
+                onClick={popView}
                 className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
+                title="Go back"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -871,11 +886,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-[#2d7a70] px-4 py-3.5 text-white flex items-center gap-3">
               <button
-                onClick={() => {
-                  setCurrentView('CATEGORIES');
-                  onNavigate?.('CATEGORIES');
-                }}
+                onClick={popView}
                 className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
+                title="Go back"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -1074,31 +1087,26 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    setCurrentView('HOME');
-                    onNavigate?.('HOME');
-                  }}
+                  onClick={popView}
                   className="p-1 rounded-full hover:bg-slate-200 transition cursor-pointer"
+                  title="Go back"
                 >
                   <ArrowLeft className="w-5 h-5 text-slate-700" />
                 </button>
                 <h2 className="text-base font-bold text-slate-900">
-                  My Registered Complaints ({incidents.length})
+                  My Registered Complaints ({citizenComplaints.length})
                 </h2>
               </div>
               <button
-                onClick={() => {
-                  setCurrentView('CATEGORIES');
-                  onNavigate?.('CATEGORIES');
-                }}
-                className="text-xs font-bold text-[#2d7a70] bg-teal-50 px-3 py-1 rounded-lg border border-teal-200 cursor-pointer"
+                onClick={() => pushView('CATEGORIES')}
+                className="text-xs font-bold text-[#2d7a70] bg-teal-50 px-3 py-1 rounded-lg border border-teal-200 cursor-pointer hover:bg-teal-100 transition"
               >
                 + New Complaint
               </button>
             </div>
 
             <div className="space-y-3">
-              {incidents.map((ticket) => {
+              {citizenComplaints.map((ticket) => {
                 const isResolved = ticket.status === 'RESOLVED';
                 return (
                   <div

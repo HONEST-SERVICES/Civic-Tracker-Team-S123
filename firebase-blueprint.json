@@ -134,6 +134,20 @@
         "equipment": { "type": "array" }
       },
       "required": ["id", "name", "status"]
+    },
+    "Ward": {
+      "title": "Municipal Ward Jurisdiction",
+      "description": "Administrative ward and sub-area jurisdiction boundaries.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "district": { "type": "string" },
+        "subAreas": { "type": "array" },
+        "activeOfficerUid": { "type": "string" },
+        "activeOfficerName": { "type": "string" }
+      },
+      "required": ["id", "name", "district"]
     }
   },
   "firestore": {
@@ -154,6 +168,12 @@
         "$ref": "#/entities/Unit"
       },
       "description": "Collection of municipal repair crew units and vehicles."
+    },
+    "/wards/{wardId}": {
+      "schema": {
+        "$ref": "#/entities/Ward"
+      },
+      "description": "Collection of municipal wards, districts, and sub-area jurisdiction records."
     }
   }
 }

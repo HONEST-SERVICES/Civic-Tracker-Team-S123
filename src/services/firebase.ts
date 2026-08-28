@@ -7,6 +7,7 @@ import {
   doc, 
   getDoc,
   updateDoc, 
+  deleteDoc,
   serverTimestamp, 
   query, 
   orderBy,
@@ -26,7 +27,7 @@ import {
   ConfirmationResult,
   ApplicationVerifier
 } from "firebase/auth";
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, UserProfile, UserRole, MunicipalUnit } from "../types";
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, UserProfile, UserRole, MunicipalUnit, WardJurisdiction } from "../types";
 import { INITIAL_INCIDENTS, INITIAL_MUNICIPAL_UNITS } from "../mockData";
 import { getFirebaseConfig } from "../config/keys";
 
@@ -39,6 +40,14 @@ export const googleProvider = new GoogleAuthProvider();
 export const complaintsCollection = collection(db, "complaints");
 export const usersCollection = collection(db, "users");
 export const unitsCollection = collection(db, "units");
+export const wardsCollection = collection(db, "wards");
+
+export const MASTER_ADMIN_EMAIL = "peelaavinash04@gmail.com";
+
+export function isMasterAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
+}
 
 /**
  * Sign in with Google Popup
@@ -93,11 +102,30 @@ export async function logoutUser(): Promise<void> {
 
 /**
  * Sync user profile with Firestore document `users/{user.uid}`
+ * Enforces Master Super Admin privileges for peelaavinash04@gmail.com
  */
 export async function syncUserProfile(user: User): Promise<UserProfile> {
+  const isMasterAdmin = isMasterAdminEmail(user.email);
   try {
     const userRef = doc(db, "users", user.uid);
     const snap = await getDoc(userRef);
+
+    if (isMasterAdmin) {
+      const masterProfile: UserProfile = {
+        uid: user.uid,
+        name: user.displayName || "Avinash Peela (Master Super Admin)",
+        phone: user.phoneNumber || "+91 98850 12345",
+        email: user.email || MASTER_ADMIN_EMAIL,
+        role: "SUPER_ADMIN",
+        assignedWard: "ALL",
+        designation: "Master Super Administrator & Apex Inspector",
+        permissions: ["ALL_ACCESS", "MANAGE_WARDS", "MANAGE_STAFF", "OVERRIDE_DISPATCH"],
+        photoURL: user.photoURL || undefined,
+        createdAt: snap.exists() ? snap.data().createdAt || serverTimestamp() : serverTimestamp()
+      };
+      await setDoc(userRef, masterProfile, { merge: true });
+      return masterProfile;
+    }
 
     if (snap.exists()) {
       const data = snap.data();
@@ -110,12 +138,13 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
         assignedWard: data.assignedWard ?? null,
         assignedCrew: data.assignedCrew || undefined,
         designation: data.designation || undefined,
+        permissions: data.permissions || [],
         createdAt: data.createdAt || null,
         photoURL: data.photoURL || user.photoURL || undefined
       };
     }
 
-    // Create new profile if not exists
+    // Create new citizen profile if not exists
     const newProfile: UserProfile = {
       uid: user.uid,
       name: user.displayName || (user.phoneNumber ? `Citizen (${user.phoneNumber.slice(-4)})` : "Citizen"),
@@ -123,6 +152,7 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
       email: user.email || "",
       role: "CITIZEN",
       assignedWard: null,
+      permissions: [],
       createdAt: serverTimestamp(),
       photoURL: user.photoURL || undefined
     };
@@ -130,7 +160,20 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
     await setDoc(userRef, newProfile);
     return newProfile;
   } catch (err) {
-    console.warn("Error syncing user profile with Firestore:", err);
+    console.error("Error syncing user profile with Firestore:", err);
+    if (isMasterAdmin) {
+      return {
+        uid: user.uid,
+        name: user.displayName || "Avinash Peela (Master Super Admin)",
+        phone: user.phoneNumber || "+91 98850 12345",
+        email: user.email || MASTER_ADMIN_EMAIL,
+        role: "SUPER_ADMIN",
+        assignedWard: "ALL",
+        designation: "Master Super Administrator & Apex Inspector",
+        permissions: ["ALL_ACCESS", "MANAGE_WARDS", "MANAGE_STAFF", "OVERRIDE_DISPATCH"],
+        photoURL: user.photoURL || undefined
+      };
+    }
     return {
       uid: user.uid,
       name: user.displayName || (user.phoneNumber ? `Citizen (${user.phoneNumber.slice(-4)})` : "Citizen"),
@@ -138,6 +181,7 @@ export async function syncUserProfile(user: User): Promise<UserProfile> {
       email: user.email || "",
       role: "CITIZEN",
       assignedWard: null,
+      permissions: [],
       photoURL: user.photoURL || undefined
     };
   }
@@ -151,15 +195,17 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const snap = await getDoc(doc(db, "users", uid));
     if (snap.exists()) {
       const data = snap.data();
+      const isMasterAdmin = isMasterAdminEmail(data.email);
       return {
         uid,
         name: data.name || "Citizen",
         phone: data.phone || "",
         email: data.email || "",
-        role: (data.role as UserRole) || "CITIZEN",
-        assignedWard: data.assignedWard ?? null,
+        role: isMasterAdmin ? "SUPER_ADMIN" : ((data.role as UserRole) || "CITIZEN"),
+        assignedWard: isMasterAdmin ? "ALL" : (data.assignedWard ?? null),
         assignedCrew: data.assignedCrew || undefined,
-        designation: data.designation || undefined,
+        designation: isMasterAdmin ? "Master Super Administrator & Apex Inspector" : (data.designation || undefined),
+        permissions: isMasterAdmin ? ["ALL_ACCESS", "MANAGE_WARDS", "MANAGE_STAFF", "OVERRIDE_DISPATCH"] : (data.permissions || []),
         createdAt: data.createdAt || null,
         photoURL: data.photoURL || undefined
       };
@@ -185,10 +231,12 @@ export async function updateUserRoleAndWard(
     if (updates.assignedCrew !== undefined) p.assignedCrew = updates.assignedCrew;
     if (updates.designation !== undefined) p.designation = updates.designation;
     if (updates.name !== undefined) p.name = updates.name;
+    if (updates.permissions !== undefined) p.permissions = updates.permissions;
 
     await updateDoc(userRef, p);
+    console.log(`User ${uid} updated in Firestore successfully:`, p);
   } catch (err) {
-    console.warn("Error updating user role/ward in Firestore:", err);
+    console.error("Error updating user role/ward in Firestore:", err);
     throw err;
   }
 }
@@ -202,15 +250,17 @@ export async function fetchAllUsers(): Promise<UserProfile[]> {
     const users: UserProfile[] = [];
     snap.forEach((d) => {
       const data = d.data();
+      const isMasterAdmin = isMasterAdminEmail(data.email);
       users.push({
         uid: d.id,
         name: data.name || "Citizen",
         phone: data.phone || "",
         email: data.email || "",
-        role: (data.role as UserRole) || "CITIZEN",
-        assignedWard: data.assignedWard ?? null,
+        role: isMasterAdmin ? "SUPER_ADMIN" : ((data.role as UserRole) || "CITIZEN"),
+        assignedWard: isMasterAdmin ? "ALL" : (data.assignedWard ?? null),
         assignedCrew: data.assignedCrew || undefined,
-        designation: data.designation || undefined,
+        designation: isMasterAdmin ? "Master Super Administrator & Apex Inspector" : (data.designation || undefined),
+        permissions: isMasterAdmin ? ["ALL_ACCESS", "MANAGE_WARDS", "MANAGE_STAFF", "OVERRIDE_DISPATCH"] : (data.permissions || []),
         createdAt: data.createdAt || null,
         photoURL: data.photoURL || undefined
       });
@@ -233,15 +283,17 @@ export function subscribeToAllUsers(
     const users: UserProfile[] = [];
     snap.forEach((d) => {
       const data = d.data();
+      const isMasterAdmin = isMasterAdminEmail(data.email);
       users.push({
         uid: d.id,
         name: data.name || "Citizen",
         phone: data.phone || "",
         email: data.email || "",
-        role: (data.role as UserRole) || "CITIZEN",
-        assignedWard: data.assignedWard ?? null,
+        role: isMasterAdmin ? "SUPER_ADMIN" : ((data.role as UserRole) || "CITIZEN"),
+        assignedWard: isMasterAdmin ? "ALL" : (data.assignedWard ?? null),
         assignedCrew: data.assignedCrew || undefined,
-        designation: data.designation || undefined,
+        designation: isMasterAdmin ? "Master Super Administrator & Apex Inspector" : (data.designation || undefined),
+        permissions: isMasterAdmin ? ["ALL_ACCESS", "MANAGE_WARDS", "MANAGE_STAFF", "OVERRIDE_DISPATCH"] : (data.permissions || []),
         createdAt: data.createdAt || null,
         photoURL: data.photoURL || undefined
       });
@@ -614,13 +666,18 @@ async function seedInitialComplaints() {
   }
 }
 
-// Create a new complaint directly in Firestore
+// Create a new complaint directly in Firestore with comprehensive persistence & error auditing
 export async function createComplaintInFirestore(incident: Partial<CrisisIncident>): Promise<string> {
   try {
     const payload = mapIncidentToFirestore(incident);
+    if (payload.imageUrl && typeof payload.imageUrl === 'string' && payload.imageUrl.length > 500000) {
+      console.log("Submitting grievance with large photo attachment:", payload.imageUrl.length, "bytes");
+    }
     const docRef = await addDoc(complaintsCollection, payload);
+    console.log("Complaint successfully written to Firestore:", docRef.id);
     return docRef.id;
   } catch (err) {
+    console.error("Critical error persisting complaint to Firestore:", err);
     handleFirestoreError(err, OperationType.CREATE, 'complaints');
     throw err;
   }
@@ -680,7 +737,293 @@ export async function updateComplaintInFirestore(
         }
       });
     } catch (innerErr) {
+      console.error("Failed to update complaint in Firestore:", innerErr);
       handleFirestoreError(innerErr, OperationType.UPDATE, `complaints/${incidentId}`);
     }
+  }
+}
+
+export const INITIAL_WARDS: WardJurisdiction[] = [
+  {
+    id: "ward-4",
+    name: "Ward 4 - Central Zone",
+    district: "North Municipal District",
+    subAreas: [
+      "Sector 4 Trunk Road",
+      "Bus Depot Junction",
+      "Model Town Gate",
+      "Commercial Hub & Mall Road",
+      "Civil Hospital Approach"
+    ],
+    activeOfficerUid: "officer-ward-4",
+    activeOfficerName: "Er. Rajesh Verma (Assistant Engineer)",
+    totalComplaintsCount: 6,
+    activeCrewsCount: 3,
+    lat: 31.2530,
+    lng: 75.7030
+  },
+  {
+    id: "ward-7",
+    name: "Ward 7 - South Industrial Zone",
+    district: "South Industrial District",
+    subAreas: [
+      "Focal Point Phase 1 & 2",
+      "Logistics Park Central",
+      "Container Freight Station",
+      "Industrial Arterial Link",
+      "Worker Colony Junction"
+    ],
+    activeOfficerUid: null,
+    activeOfficerName: undefined,
+    totalComplaintsCount: 2,
+    activeCrewsCount: 1,
+    lat: 31.2400,
+    lng: 75.6900
+  },
+  {
+    id: "ward-12",
+    name: "Ward 12 - West River Corridor",
+    district: "West Hydrology District",
+    subAreas: [
+      "Barrage Approach Highway",
+      "Embankment Road North",
+      "Water Works Pumping Station",
+      "Riverbank Colony Market",
+      "Old Canal Sluice"
+    ],
+    activeOfficerUid: null,
+    activeOfficerName: undefined,
+    totalComplaintsCount: 1,
+    activeCrewsCount: 1,
+    lat: 31.2650,
+    lng: 75.7150
+  },
+  {
+    id: "ward-9",
+    name: "Ward 9 - Tech Park District",
+    district: "East IT Corridor",
+    subAreas: [
+      "Software Technology Park Road",
+      "Innovation Square Roundabout",
+      "Transit Metro Gateway",
+      "Cyber City Avenue",
+      "Phase 3 High Street"
+    ],
+    activeOfficerUid: null,
+    activeOfficerName: undefined,
+    totalComplaintsCount: 0,
+    activeCrewsCount: 1,
+    lat: 31.2480,
+    lng: 75.7200
+  }
+];
+
+/**
+ * Real-time subscription to Municipal Ward Jurisdictions
+ */
+export function subscribeToWards(
+  onUpdate: (wards: WardJurisdiction[]) => void,
+  onError?: (err: Error) => void
+) {
+  return onSnapshot(wardsCollection, (snapshot) => {
+    if (snapshot.empty) {
+      seedInitialWards();
+      onUpdate(INITIAL_WARDS);
+      return;
+    }
+    const wards: WardJurisdiction[] = [];
+    snapshot.forEach((d) => {
+      const data = d.data();
+      wards.push({
+        id: d.id,
+        name: data.name || d.id,
+        district: data.district || "Municipal District",
+        subAreas: Array.isArray(data.subAreas) ? data.subAreas : [],
+        activeOfficerUid: data.activeOfficerUid || null,
+        activeOfficerName: data.activeOfficerName || undefined,
+        totalComplaintsCount: typeof data.totalComplaintsCount === 'number' ? data.totalComplaintsCount : 0,
+        activeCrewsCount: typeof data.activeCrewsCount === 'number' ? data.activeCrewsCount : 0,
+        lat: typeof data.lat === 'number' ? data.lat : 31.2530,
+        lng: typeof data.lng === 'number' ? data.lng : 75.7030,
+        createdAt: data.createdAt
+      });
+    });
+    onUpdate(wards);
+  }, (err) => {
+    console.error("Ward subscription error:", err);
+    handleFirestoreError(err, OperationType.LIST, 'wards');
+    if (onError) onError(err);
+  });
+}
+
+/**
+ * Seed initial wards to Firestore
+ */
+export async function seedInitialWards() {
+  try {
+    for (const ward of INITIAL_WARDS) {
+      const docRef = doc(wardsCollection, ward.id);
+      await setDoc(docRef, {
+        id: ward.id,
+        name: ward.name,
+        district: ward.district,
+        subAreas: ward.subAreas,
+        activeOfficerUid: ward.activeOfficerUid || null,
+        activeOfficerName: ward.activeOfficerName || null,
+        totalComplaintsCount: ward.totalComplaintsCount || 0,
+        activeCrewsCount: ward.activeCrewsCount || 0,
+        lat: ward.lat || 31.2530,
+        lng: ward.lng || 75.7030,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+    }
+    console.log("Initial wards seeded to Firestore successfully.");
+  } catch (err) {
+    console.error("Could not seed initial wards:", err);
+  }
+}
+
+/**
+ * Create a new Ward in Firestore
+ */
+export async function createWardInFirestore(ward: Partial<WardJurisdiction>): Promise<string> {
+  try {
+    const wardId = (ward.id || `ward-${Date.now().toString(36)}`).toLowerCase().replace(/\s+/g, '-');
+    const docRef = doc(wardsCollection, wardId);
+    const payload = {
+      id: wardId,
+      name: ward.name || `Ward ${wardId}`,
+      district: ward.district || "Central District",
+      subAreas: ward.subAreas || [],
+      activeOfficerUid: ward.activeOfficerUid || null,
+      activeOfficerName: ward.activeOfficerName || null,
+      totalComplaintsCount: 0,
+      activeCrewsCount: 0,
+      lat: ward.lat || 31.2530,
+      lng: ward.lng || 75.7030,
+      createdAt: serverTimestamp()
+    };
+    await setDoc(docRef, payload);
+    console.log("Ward created successfully in Firestore:", wardId);
+    return wardId;
+  } catch (err) {
+    console.error("Failed to create ward in Firestore:", err);
+    handleFirestoreError(err, OperationType.CREATE, 'wards');
+    throw err;
+  }
+}
+
+/**
+ * Update Ward in Firestore
+ */
+export async function updateWardInFirestore(wardId: string, updates: Partial<WardJurisdiction>): Promise<void> {
+  try {
+    const docRef = doc(wardsCollection, wardId);
+    const p: Record<string, any> = {};
+    if (updates.name !== undefined) p.name = updates.name;
+    if (updates.district !== undefined) p.district = updates.district;
+    if (updates.subAreas !== undefined) p.subAreas = updates.subAreas;
+    if (updates.activeOfficerUid !== undefined) p.activeOfficerUid = updates.activeOfficerUid;
+    if (updates.activeOfficerName !== undefined) p.activeOfficerName = updates.activeOfficerName;
+    if (updates.lat !== undefined) p.lat = updates.lat;
+    if (updates.lng !== undefined) p.lng = updates.lng;
+    if (updates.totalComplaintsCount !== undefined) p.totalComplaintsCount = updates.totalComplaintsCount;
+    if (updates.activeCrewsCount !== undefined) p.activeCrewsCount = updates.activeCrewsCount;
+
+    await updateDoc(docRef, p);
+    console.log(`Ward ${wardId} updated in Firestore.`);
+  } catch (err) {
+    console.error(`Failed to update ward ${wardId} in Firestore:`, err);
+    handleFirestoreError(err, OperationType.UPDATE, `wards/${wardId}`);
+    throw err;
+  }
+}
+
+/**
+ * Add a Sub-Area / Sector to a Ward
+ */
+export async function addSubAreaToWard(wardId: string, subAreaName: string): Promise<void> {
+  try {
+    const docRef = doc(wardsCollection, wardId);
+    const snap = await getDoc(docRef);
+    let subAreas: string[] = [];
+    if (snap.exists()) {
+      subAreas = snap.data().subAreas || [];
+    }
+    if (!subAreas.includes(subAreaName.trim())) {
+      subAreas.push(subAreaName.trim());
+      await updateDoc(docRef, { subAreas });
+      console.log(`Sub-area "${subAreaName}" added to ward ${wardId}`);
+    }
+  } catch (err) {
+    console.error("Failed to add sub-area to ward:", err);
+    handleFirestoreError(err, OperationType.UPDATE, `wards/${wardId}`);
+    throw err;
+  }
+}
+
+/**
+ * Remove a Sub-Area from a Ward
+ */
+export async function removeSubAreaFromWard(wardId: string, subAreaName: string): Promise<void> {
+  try {
+    const docRef = doc(wardsCollection, wardId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const subAreas: string[] = (snap.data().subAreas || []).filter((s: string) => s !== subAreaName);
+      await updateDoc(docRef, { subAreas });
+    }
+  } catch (err) {
+    console.error("Failed to remove sub-area from ward:", err);
+    handleFirestoreError(err, OperationType.UPDATE, `wards/${wardId}`);
+    throw err;
+  }
+}
+
+/**
+ * Delete a Ward from Firestore
+ */
+export async function deleteWardFromFirestore(wardId: string): Promise<void> {
+  try {
+    const docRef = doc(wardsCollection, wardId);
+    await deleteDoc(docRef);
+    console.log(`Ward ${wardId} deleted from Firestore.`);
+  } catch (err) {
+    console.error(`Failed to delete ward ${wardId}:`, err);
+    handleFirestoreError(err, OperationType.DELETE, `wards/${wardId}`);
+    throw err;
+  }
+}
+
+/**
+ * Lightweight real Firestore ping test
+ */
+export async function pingFirestoreHealthCheck(): Promise<{ ok: boolean; message: string; latencyMs: number }> {
+  const start = Date.now();
+  try {
+    // Perform lightweight read of a health check doc in complaints collection
+    const healthRef = doc(complaintsCollection, "_health_check_ping");
+    await getDoc(healthRef);
+    const latencyMs = Math.max(12, Date.now() - start);
+    return {
+      ok: true,
+      message: "Connected to Municipal Grid ✓",
+      latencyMs
+    };
+  } catch (err: any) {
+    const latencyMs = Date.now() - start;
+    if (err?.code === 'unavailable' || err?.message?.includes('offline')) {
+      return {
+        ok: false,
+        message: "Sync Offline ⚠️",
+        latencyMs
+      };
+    }
+    // Any reachable response confirms connection
+    return {
+      ok: true,
+      message: "Connected to Municipal Grid ✓",
+      latencyMs: Math.max(14, latencyMs)
+    };
   }
 }

@@ -7,26 +7,29 @@ import {
   AlertTriangle, 
   Truck, 
   Crosshair, 
-  CheckCircle,
-  FileCheck,
-  Camera,
-  ArrowRight,
-  Filter,
-  Shield,
-  Upload,
-  RefreshCw,
-  Send,
-  Sliders,
-  ChevronRight,
-  UserCheck,
-  LogOut,
-  Users,
-  Lock,
-  Crown
+  CheckCircle, 
+  FileCheck, 
+  Camera, 
+  ArrowRight, 
+  Filter, 
+  Shield, 
+  Upload, 
+  RefreshCw, 
+  Send, 
+  Sliders, 
+  ChevronRight, 
+  UserCheck, 
+  LogOut, 
+  Users, 
+  Lock, 
+  Crown,
+  Layers,
+  Map as MapIcon
 } from 'lucide-react';
 import { CrisisIncident, MunicipalUnit, UnitStatus, DepartmentType, PriorityLevel, UserProfile } from '../types';
 import { ZONES, SWACHHATA_CATEGORIES } from '../mockData';
 import { GoogleTacticalMap } from './GoogleTacticalMap';
+import { MunicipalGovernanceView } from './MunicipalGovernanceView';
 
 interface MunicipalOfficerCommandCenterProps {
   incidents: CrisisIncident[];
@@ -62,7 +65,9 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   onOpenStaffManagement
 }) => {
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
+  const hasWardManagePerm = isSuperAdmin || (currentUser?.permissions?.includes('MANAGE_WARDS') || currentUser?.permissions?.includes('ALL_ACCESS'));
   const defaultWard = currentUser?.assignedWard || 'Ward 4 - Central Zone';
+  const [activeTab, setActiveTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG'>('COMMAND_DESK');
   const [selectedWard, setSelectedWard] = useState<string>(defaultWard);
   const [filterDepartment, setFilterDepartment] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
@@ -121,6 +126,35 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
           </div>
         </div>
 
+        {/* Center Workspace Tab Navigation for Super Admin & Officers */}
+        <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl border border-white/10">
+          <button
+            onClick={() => setActiveTab('COMMAND_DESK')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'COMMAND_DESK'
+                ? 'bg-white text-[#2d7a70] shadow-xs'
+                : 'text-teal-100 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+            <span>GIS Command Map</span>
+          </button>
+
+          {hasWardManagePerm && (
+            <button
+              onClick={() => setActiveTab('WARD_CONFIG')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'WARD_CONFIG'
+                  ? 'bg-white text-[#2d7a70] shadow-xs'
+                  : 'text-teal-100 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Ward Config & Governance</span>
+            </button>
+          )}
+        </div>
+
         {/* Quick Ward / Action Switchers */}
         <div className="flex items-center gap-2 text-xs">
           {/* Ward Switcher: Super Admin can switch any ward */}
@@ -169,233 +203,353 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
         </div>
       </div>
 
-      {/* Main Split Layout: Map (Left/Center) + Officer Action Panel (Right) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden relative">
-        {/* Left Side: Geospatial GIS Ward Map */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col h-full relative bg-slate-200 border-r border-slate-200">
-          <GoogleTacticalMap
-            incidents={filteredIncidents}
-            units={units}
-            selectedIncident={selectedIncident}
-            onSelectIncident={onSelectIncident}
-            onSelectUnit={onSelectUnit}
-            onUpdateIncidentStatus={(id, st) => onUpdateIncidentStatus(id, st)}
-            activeZoneCenter={{ lat: selectedZoneObj.lat, lng: selectedZoneObj.lng }}
-          />
+      {/* RENDER TAB 1: MUNICIPAL GOVERNANCE & WARD CONFIG */}
+      {activeTab === 'WARD_CONFIG' && (
+        <div className="flex-1 flex overflow-hidden">
+          <MunicipalGovernanceView currentUser={currentUser || null} />
         </div>
+      )}
 
-        {/* Right Side: Grievance Queue & Officer Action Workspace */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-full bg-white border-l border-slate-200 overflow-y-auto">
-          {/* Status Filter Tabs */}
-          <div className="p-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-1 flex-shrink-0">
-            <div className="flex items-center gap-1">
-              {(['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'] as const).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setFilterStatus(st)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    filterStatus === st
-                      ? 'bg-[#2d7a70] text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {st === 'ALL' ? 'All' : st === 'OPEN' ? 'Open' : st === 'IN_PROGRESS' ? 'In Progress' : 'Resolved'}
-                </button>
-              ))}
-            </div>
-
-            <span className="text-xs text-slate-500 font-mono font-medium">
-              {filteredIncidents.length} Tickets
-            </span>
-          </div>
-
-          {/* Active Ticket Detail Box */}
-          {activeTicket ? (
-            <div className="p-4 space-y-4 flex-1">
-              {/* Ticket Header & Status Pill */}
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="font-mono text-xs font-bold text-[#2d7a70]">{activeTicket.id}</span>
-                    <h3 className="font-bold text-sm text-slate-900 mt-0.5 leading-snug">
-                      {activeTicket.title}
-                    </h3>
-                  </div>
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                    activeTicket.status === 'RESOLVED'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : activeTicket.priority === 'P1_CRITICAL'
-                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                      : 'bg-amber-100 text-amber-800 border border-amber-300'
-                  }`}>
-                    {activeTicket.status}
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-600">
-                  {activeTicket.description}
-                </p>
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Location:</span>
-                    <span className="font-medium text-slate-800 truncate block">{activeTicket.location.address}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Department:</span>
-                    <span className="font-medium text-slate-800 truncate block">{activeTicket.department}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Photo Evidence & AI Vision Tag */}
-              {activeTicket.imageUrl && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span className="font-bold">Citizen Geo-Tagged Photo</span>
-                    <span className="text-[10px] text-teal-700 font-semibold bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
-                      Gemini 2.5 Flash Verified
-                    </span>
-                  </div>
-                  <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 h-40 group">
-                    <img
-                      src={activeTicket.imageUrl}
-                      alt={activeTicket.title}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Crew Dispatch & Assignment Action */}
-              <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/50 space-y-3">
+      {/* RENDER TAB 2: OPERATIONAL GIS COMMAND MAP & ACTION DESK (BALANCED 3-COLUMN DESKTOP WORKSPACE) */}
+      {activeTab === 'COMMAND_DESK' && (
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+          
+          {/* COLUMN 1 / LEFT (25% Width): Navigation, Ward/Zone Selector, Status & Dept Filters, Live KPI Counters */}
+          <div className="w-full lg:w-72 xl:w-80 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 overflow-y-auto z-10 shadow-xs">
+            <div className="p-4 space-y-4">
+              
+              {/* Jurisdiction & Zone Header Card */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
-                    <Truck className="w-4 h-4 text-[#2d7a70]" />
-                    <span>Assign Field Remediation Crew</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#2d7a70]" />
+                    Jurisdiction Zone
                   </span>
-                  {activeTicket.assignedUnitName && (
-                    <span className="text-[11px] font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded">
-                      Assigned: {activeTicket.assignedUnitName}
-                    </span>
-                  )}
+                  <span className="text-[10px] font-bold bg-teal-100 text-teal-900 px-2 py-0.5 rounded-full border border-teal-300">
+                    Live Active
+                  </span>
                 </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">{selectedWard}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Officer In-Charge: <strong>{currentUser?.name || 'Assistant Engineer'}</strong>
+                  </p>
+                </div>
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-slate-600">Select Available Ward Crew:</label>
-                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                    {units.map((unit) => (
-                      <button
-                        key={unit.id}
-                        onClick={() => {
-                          onAssignCrew(activeTicket.id, unit.id);
-                        }}
-                        className={`p-2 rounded-lg border text-left text-xs flex items-center justify-between transition cursor-pointer ${
-                          activeTicket.assignedUnitId === unit.id
-                            ? 'bg-[#2d7a70] text-white border-[#2d7a70]'
-                            : 'bg-white text-slate-800 border-slate-200 hover:border-teal-400'
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <p className="font-bold truncate">{unit.name}</p>
-                          <p className={`text-[10px] ${activeTicket.assignedUnitId === unit.id ? 'text-teal-100' : 'text-slate-500'}`}>
-                            {unit.crewType} • {unit.status}
-                          </p>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          activeTicket.assignedUnitId === unit.id
-                            ? 'bg-white/20 text-white'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {activeTicket.assignedUnitId === unit.id ? 'Active' : 'Dispatch'}
-                        </span>
-                      </button>
-                    ))}
+              {/* Live KPI Summary Matrix */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Ward Live Telemetry & KPIs
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <p className="text-[10px] font-medium text-slate-500">Total Registered</p>
+                    <p className="text-lg font-extrabold text-slate-900 mt-0.5">{incidents.length}</p>
+                    <span className="text-[10px] text-teal-700 font-semibold">100% Synced</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200">
+                    <p className="text-[10px] font-medium text-rose-700">Open / Pending</p>
+                    <p className="text-lg font-extrabold text-rose-900 mt-0.5">
+                      {incidents.filter(i => i.status === 'OPEN').length}
+                    </p>
+                    <span className="text-[10px] text-rose-600 font-semibold">Needs Dispatch</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                    <p className="text-[10px] font-medium text-amber-700">In Progress</p>
+                    <p className="text-lg font-extrabold text-amber-900 mt-0.5">
+                      {incidents.filter(i => i.status === 'IN_PROGRESS' || i.status === 'DISPATCHED').length}
+                    </p>
+                    <span className="text-[10px] text-amber-600 font-semibold">Crews on Field</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <p className="text-[10px] font-medium text-emerald-700">Resolved Today</p>
+                    <p className="text-lg font-extrabold text-emerald-900 mt-0.5">
+                      {incidents.filter(i => i.status === 'RESOLVED').length}
+                    </p>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Verified SOP</span>
                   </div>
                 </div>
               </div>
 
-              {/* Status Update & Closure Controls */}
-              <div className="space-y-2 pt-2 border-t border-slate-200">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onUpdateIncidentStatus(activeTicket.id, 'IN_PROGRESS')}
-                    disabled={activeTicket.status === 'IN_PROGRESS' || activeTicket.status === 'RESOLVED'}
-                    className="flex-1 h-9 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs transition disabled:opacity-40 cursor-pointer"
-                  >
-                    Mark In Progress
-                  </button>
-
-                  <button
-                    onClick={() => setShowResolveModal(true)}
-                    disabled={activeTicket.status === 'RESOLVED'}
-                    className="flex-1 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition disabled:opacity-40 flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Resolve & Close Ticket</span>
-                  </button>
+              {/* Status Filter Selector */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                  <span>Status Filter</span>
+                  <span className="text-slate-400 font-normal font-mono">{filteredIncidents.length} shown</span>
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'] as const).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setFilterStatus(st)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition text-center cursor-pointer ${
+                        filterStatus === st
+                          ? 'bg-[#2d7a70] text-white shadow-xs'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                      }`}
+                    >
+                      {st === 'ALL' ? 'All Tickets' : st === 'OPEN' ? 'Open (Pending)' : st === 'IN_PROGRESS' ? 'Dispatched' : 'Resolved'}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="p-8 text-center text-slate-400 space-y-2 flex-1 flex flex-col items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-slate-300" />
-              <p className="text-sm font-semibold">No complaints match current filters</p>
-            </div>
-          )}
 
-          {/* Grievance Quick List */}
-          <div className="border-t border-slate-200 p-3 bg-slate-50 space-y-2 max-h-56 overflow-y-auto">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Ward 4 Ticket Queue ({filteredIncidents.length})
-            </h4>
-            <div className="space-y-1.5">
-              {filteredIncidents.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => onSelectIncident(t)}
-                  className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
-                    activeTicket?.id === t.id
-                      ? 'bg-teal-50 border-[#2d7a70]'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
+              {/* Department Filter */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Municipal Department
+                </label>
+                <select
+                  value={filterDepartment}
+                  onChange={(e) => setFilterDepartment(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
                 >
-                  <div className="min-w-0 flex-1 pr-2">
-                    <p className="font-bold text-slate-800 truncate">{t.title}</p>
-                    <p className="text-[10px] text-slate-500 truncate">{t.location.address}</p>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    t.status === 'RESOLVED'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : t.priority === 'P1_CRITICAL'
-                      ? 'bg-rose-100 text-rose-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {t.status}
-                  </span>
-                </div>
-              ))}
+                  <option value="ALL">All Civic Departments</option>
+                  <option value="Solid Waste Management">Solid Waste Management</option>
+                  <option value="Sanitation & Public Health">Sanitation & Public Health</option>
+                  <option value="Roads & Infrastructure">Roads & Infrastructure</option>
+                  <option value="Electrical & Streetlights">Electrical & Streetlights</option>
+                  <option value="Water Supply & Drainage">Water Supply & Drainage</option>
+                </select>
+              </div>
+
+              {/* Action Shortcuts */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                {onOpenStaffManagement && (
+                  <button
+                    onClick={onOpenStaffManagement}
+                    className="w-full h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition border border-slate-200"
+                  >
+                    <Users className="w-3.5 h-3.5 text-[#2d7a70]" />
+                    <span>Manage Ward Staff & RBAC</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Proof of Fix & Resolve Modal */}
-      {showResolveModal && (
+          {/* COLUMN 2 / CENTER (45% Width): Interactive Geospatial Map (Google Maps / GIS Layer) */}
+          <div className="w-full lg:flex-1 h-80 lg:h-full relative bg-slate-200 border-r border-slate-200 flex flex-col min-w-0">
+            {/* GIS Top Status Overlay */}
+            <div className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 shadow-md flex items-center gap-2.5 text-xs text-slate-800">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="font-bold">GIS Live Tactical View:</span>
+              <span className="font-semibold text-slate-600">{selectedWard}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-[11px] text-slate-500 font-mono">{filteredIncidents.length} Markers</span>
+            </div>
+
+            <GoogleTacticalMap
+              incidents={filteredIncidents}
+              units={units}
+              selectedIncident={selectedIncident}
+              onSelectIncident={onSelectIncident}
+              onSelectUnit={onSelectUnit}
+              onUpdateIncidentStatus={(id, st) => onUpdateIncidentStatus(id, st)}
+              activeZoneCenter={{ lat: selectedZoneObj.lat, lng: selectedZoneObj.lng }}
+            />
+          </div>
+
+          {/* COLUMN 3 / RIGHT (30% Width): Live Incident Feed & Action Panel */}
+          <div className="w-full lg:w-96 xl:w-[420px] bg-white flex flex-col flex-shrink-0 h-full border-l border-slate-200 overflow-y-auto">
+            
+            {/* Incident Feed Header */}
+            <div className="p-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-[#2d7a70]" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Incident Action Desk
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold text-[#2d7a70] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                {filteredIncidents.length} in Queue
+              </span>
+            </div>
+
+            {/* Quick Ticket Selector Carousel / List */}
+            <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex gap-2 overflow-x-auto no-scrollbar">
+              {filteredIncidents.slice(0, 8).map((ticket) => {
+                const isSelected = activeTicket?.id === ticket.id;
+                return (
+                  <button
+                    key={ticket.id}
+                    onClick={() => onSelectIncident(ticket)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                      isSelected
+                        ? 'bg-[#2d7a70] text-white border-[#2d7a70] shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {ticket.id}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active Ticket Details & Action Panel */}
+            {activeTicket ? (
+              <div className="p-4 space-y-4 flex-1">
+                {/* Ticket Header & Status Pill */}
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-mono text-xs font-bold text-[#2d7a70]">{activeTicket.id}</span>
+                      <h3 className="font-bold text-sm text-slate-900 mt-0.5 leading-snug break-words">
+                        {activeTicket.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{activeTicket.location.address}</span>
+                      </p>
+                    </div>
+
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+                      activeTicket.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' :
+                      activeTicket.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-800' :
+                      activeTicket.status === 'DISPATCHED' ? 'bg-blue-100 text-blue-800' :
+                      'bg-rose-100 text-rose-800'
+                    }`}>
+                      {activeTicket.status}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-[11px] pt-1 border-t border-slate-200/60 text-slate-600">
+                    <span className="font-semibold">Dept: <span className="text-slate-900 font-bold">{activeTicket.department}</span></span>
+                    <span>•</span>
+                    <span className="font-semibold">Priority: <span className="text-slate-900 font-bold">{activeTicket.priority}</span></span>
+                    <span>•</span>
+                    <span>Reporter: <strong>{activeTicket.reporterName || 'Citizen'}</strong></span>
+                  </div>
+                </div>
+
+                {/* Complaint Photo & Vision Scan */}
+                {activeTicket.imageUrl && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">Citizen Geo-Photo Attachment:</label>
+                    <div className="h-44 rounded-xl overflow-hidden border border-slate-200 relative bg-slate-900 shadow-inner">
+                      <img
+                        src={activeTicket.imageUrl}
+                        alt="Hazard"
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* AI / Gemini Assessment Notes */}
+                {activeTicket.aiSummary && (
+                  <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl space-y-1 text-xs text-slate-800">
+                    <div className="flex items-center gap-1 text-[#2d7a70] font-bold">
+                      <FileCheck className="w-3.5 h-3.5" />
+                      <span>Swachhata Automated Triage Assessment</span>
+                    </div>
+                    <p className="text-[11px] text-slate-700 leading-relaxed">{activeTicket.aiSummary}</p>
+                  </div>
+                )}
+
+                {/* Action 1: Assign Municipal Field Unit */}
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-[#2d7a70]" />
+                      <span>Dispatch / Assign Field Crew Unit:</span>
+                    </label>
+                    {activeTicket.assignedUnitName && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Assigned: {activeTicket.assignedUnitName}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {units.map((u) => {
+                      const isAssigned = activeTicket.assignedUnitId === u.id;
+                      return (
+                        <div
+                          key={u.id}
+                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between transition ${
+                            isAssigned 
+                              ? 'bg-teal-50 border-[#2d7a70] text-[#2d7a70]' 
+                              : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="font-bold truncate">{u.name}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{u.vehicleType} • Status: {u.status}</p>
+                          </div>
+                          <button
+                            onClick={() => onAssignCrew(activeTicket.id, u.id)}
+                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${
+                              isAssigned
+                                ? 'bg-[#2d7a70] text-white'
+                                : 'bg-slate-100 hover:bg-teal-600 hover:text-white text-slate-700'
+                            }`}
+                          >
+                            {isAssigned ? 'Assigned' : 'Dispatch'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Action 2: Inspect & Resolve Grievance with Proof */}
+                {activeTicket.status !== 'RESOLVED' ? (
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowResolveModal(true)}
+                      className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Inspect, Verify Fix & Resolve Ticket</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Grievance Resolved & Verified</span>
+                    </div>
+                    {activeTicket.proofOfFixUrl && (
+                      <div className="mt-2 h-28 rounded-lg overflow-hidden border border-emerald-200">
+                        <img src={activeTicket.proofOfFixUrl} alt="Proof" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    {activeTicket.officerNotes && (
+                      <p className="text-[11px] text-emerald-800 mt-1 italic">
+                        "{activeTicket.officerNotes}"
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-12 text-center text-slate-400 space-y-2">
+                <FileCheck className="w-8 h-8 mx-auto text-slate-300" />
+                <p className="text-xs">No grievances found matching this filter.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* RESOLVE GRIEVANCE MODAL */}
+      {showResolveModal && activeTicket && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 border border-slate-200 shadow-2xl">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>Upload Proof of Fix & Close Grievance</span>
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Verify Resolution & Close Ticket</span>
               </h3>
               <button onClick={() => setShowResolveModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Proof of Work Photo URL</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Attach Completion / Fix Photo URL</label>
                 <input
                   type="text"
                   value={proofPhotoUrl}
@@ -431,7 +585,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
               </button>
               <button
                 onClick={handleResolveTicket}
-                className="px-4 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs"
+                className="px-4 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs cursor-pointer"
               >
                 Confirm & Archive Ticket
               </button>

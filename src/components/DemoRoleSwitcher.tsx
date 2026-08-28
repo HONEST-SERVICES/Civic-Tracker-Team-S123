@@ -29,6 +29,7 @@ export const DEMO_PRESETS: {
   uid: string;
   phone: string;
   email: string;
+  permissions?: string[];
   description: string;
 }[] = [
   {
@@ -41,6 +42,7 @@ export const DEMO_PRESETS: {
     uid: 'citizen-demo-sangit',
     phone: '+91 98765 43210',
     email: 'sangit.citizen@gmail.com',
+    permissions: ['VIEW_COMPLAINTS', 'SUBMIT_COMPLAINTS'],
     description: 'Post grievances, track live repair progress, rate resolved work.'
   },
   {
@@ -54,6 +56,7 @@ export const DEMO_PRESETS: {
     uid: 'crew-demo-ramesh',
     phone: '+91 98111 22334',
     email: 'ramesh.crew04@moh-ua.gov.in',
+    permissions: ['VIEW_ASSIGNED_WORK_ORDERS', 'UPDATE_WORK_ORDER_STATUS'],
     description: 'Ward 4 work orders, status updates, completion photo upload.'
   },
   {
@@ -66,19 +69,21 @@ export const DEMO_PRESETS: {
     uid: 'officer-demo-rajesh',
     phone: '+91 98222 33445',
     email: 'rajesh.ae.ward4@moh-ua.gov.in',
+    permissions: ['MANAGE_WARD_COMPLAINTS', 'DISPATCH_CREW', 'VERIFY_RESOLUTION'],
     description: 'Ward 4 inspection desk, dispatch triage, resolution verification.'
   },
   {
     role: 'SUPER_ADMIN',
-    name: 'Dr. A. Sharma IAS',
-    designation: 'Municipal Commissioner',
-    ward: null,
+    name: 'Avinash Peela (Master Super Admin)',
+    designation: 'Municipal Commissioner & SBM Chief Director',
+    ward: 'ALL',
     icon: Crown,
     color: 'bg-purple-700 text-white',
-    uid: 'admin-demo-sharma',
+    uid: 'master-superadmin-peela',
     phone: '+91 98999 00001',
-    email: 'commissioner@moh-ua.gov.in',
-    description: 'All 6 wards GIS control, autonomous AI engine, staff delegation.'
+    email: 'peelaavinash04@gmail.com',
+    permissions: ['ALL_ACCESS', 'MANAGE_WARDS', 'MANAGE_STAFF', 'OVERRIDE_DISPATCH'],
+    description: 'Master Super Admin: All Wards GIS control, Ward Config & Staff Delegations.'
   }
 ];
 
@@ -101,7 +106,8 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
       role: preset.role,
       assignedWard: preset.ward,
       assignedCrew: preset.crew,
-      designation: preset.designation
+      designation: preset.designation,
+      permissions: preset.permissions || ['ALL_ACCESS']
     };
     onSwitchRole(profile);
     setIsOpen(false);
@@ -118,81 +124,72 @@ export const DemoRoleSwitcher: React.FC<DemoRoleSwitcherProps> = ({
         <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[11px] shrink-0 animate-pulse">
           <FlaskConical className="w-3 h-3" />
         </div>
-
-        <div className="flex items-center gap-1">
-          <span className="text-[11px] text-amber-300 font-extrabold hidden md:inline">Demo Role:</span>
-          <span className="text-[11px] text-white font-bold max-w-[90px] sm:max-w-[130px] truncate">
-            {activePreset.name.split(' ')[0]} ({activePreset.role.replace('_', ' ')})
-          </span>
+        <div className="text-left hidden sm:block leading-tight">
+          <span className="text-[9px] uppercase tracking-wider text-amber-300 block font-extrabold">Switch Role</span>
+          <span className="text-xs font-bold truncate max-w-[130px] block">{activePreset.name.split(' ')[0]} ({activePreset.role})</span>
         </div>
-
         <ChevronDown className={`w-3.5 h-3.5 text-amber-300 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Role Dropdown Menu */}
       {isOpen && (
-        <>
-          <div 
-            className="fixed inset-0 z-30" 
-            onClick={() => setIsOpen(false)} 
-          />
-
-          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2.5 z-40 space-y-1.5 animate-fade-in text-slate-800">
-            <div className="px-2.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                <FlaskConical className="w-3.5 h-3.5 text-amber-600" />
-                <span>Evaluator Role Switcher</span>
-              </div>
-              <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
-                1-Click Testing
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-amber-400/40 p-2 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
+          <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <FlaskConical className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                RBAC Workspace Switcher
               </span>
             </div>
-
-            <p className="text-[11px] text-slate-500 px-2.5 pb-1">
-              Switch persona to test strict ward scoping & hierarchical permissions:
-            </p>
-
-            <div className="space-y-1">
-              {DEMO_PRESETS.map((preset) => {
-                const isSelected = currentRole === preset.role;
-                const PresetIcon = preset.icon;
-
-                return (
-                  <button
-                    key={preset.role}
-                    onClick={() => handleSelect(preset)}
-                    className={`w-full text-left p-2 rounded-xl transition flex items-start gap-2.5 cursor-pointer ${
-                      isSelected
-                        ? 'bg-slate-100 border border-slate-300 font-semibold'
-                        : 'hover:bg-slate-50 border border-transparent'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-lg ${preset.color} flex items-center justify-center shrink-0 shadow-xs`}>
-                      <PresetIcon className="w-4 h-4" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900 truncate">
-                          {preset.name}
-                        </span>
-                        {isSelected && (
-                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium">
-                        {preset.designation} {preset.ward ? `• ${preset.ward.split(' - ')[0]}` : '• All Wards'}
-                      </p>
-                      <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
-                        {preset.description}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+              4 Roles
+            </span>
           </div>
-        </>
+
+          <div className="p-1 space-y-1 mt-1">
+            {DEMO_PRESETS.map((preset) => {
+              const isCurrent = preset.role === currentRole;
+              const PctIcon = preset.icon;
+
+              return (
+                <button
+                  key={preset.role}
+                  onClick={() => handleSelect(preset)}
+                  className={`w-full text-left p-2.5 rounded-xl transition flex items-start gap-3 cursor-pointer ${
+                    isCurrent 
+                      ? 'bg-slate-900 text-white shadow-md' 
+                      : 'hover:bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg ${preset.color} flex items-center justify-center shrink-0 shadow-xs mt-0.5`}>
+                    <PctIcon className="w-4 h-4" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-bold ${isCurrent ? 'text-white' : 'text-slate-900'}`}>
+                        {preset.name}
+                      </span>
+                      {isCurrent && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                    </div>
+
+                    <p className={`text-[11px] font-semibold ${isCurrent ? 'text-amber-300' : 'text-[#2d7a70]'}`}>
+                      {preset.designation}
+                    </p>
+
+                    <p className={`text-[10px] mt-0.5 line-clamp-1 ${isCurrent ? 'text-slate-300' : 'text-slate-500'}`}>
+                      {preset.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 leading-tight">
+            💡 <strong>100% Real Firestore:</strong> All grievances, units, and ward configurations load and save live to Firestore.
+          </div>
+        </div>
       )}
     </div>
   );

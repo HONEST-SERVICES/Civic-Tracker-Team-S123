@@ -51,3 +51,34 @@ SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
 --------------------------------------------------------------------------------
 - Multimodal Vision: Auto-classifies civic defects (potholes, garbage dumps, broken streetlights, waterlogging) directly from photo uploads and pre-populates category and severity scores.
 - Autonomous Dispatch: Chain-of-thought multi-criteria dispatch optimization for rapid response crews.
+
+5. AUDIT BATCH 1: SECURITY CLEANUP, UI SANITIZATION & BUTTON HANDLERS
+--------------------------------------------------------------------------------
+- Purged Raw Metadata & Sensitive Key Dumps (Issues #5 & #7):
+  * Cleaned Settings Modal: Removed raw Firebase configuration blocks, socket parameters, and database internal objects. Replaced with clean user toggles (Push Notifications, Light/Dark GIS Map Theme, Location Precision GPS, Sound Alerts) and an optional Gemini Key input.
+  * Sanitized Profile View: Removed raw JSON dumps, complaints-in-grid strings, and database internals. Profile displays strictly clean citizen/officer info (Name, Phone/Email, Role Badge, Assigned Ward, Account Created date) and a single "System Status: Online ✓" badge.
+- Form Handlers & Submission Toast (Issue #8):
+  * Audited and verified `e.preventDefault()` across all form submit triggers.
+  * Verified no unintended `useEffect` hooks auto-submit tickets or dump raw database objects.
+  * Standardized grievance submission success alert/toast across desktop and mobile views: "Grievance submitted successfully. Tracking ID: #{lastSubmittedId}".
+- Real-time Connection Test & Dynamic Sync Loading Bar (Issues #10 & #12):
+  * Wired "Test Connection" button in Settings to a lightweight real Firestore ping (`pingFirestoreHealthCheck()` via `getDoc`). Displays green "Connected to Municipal Grid ✓" (with ping latency in ms) or red "Sync Offline ⚠️".
+  * Replaced static navbar decoration with a dynamic real-time network/sync loading bar with `animate-pulse` active during Firestore dispatches, reads, and writes.
+
+6. AUDIT BATCH 2: NAVIGATION ROUTING, PROFILE RESPONSIVENESS & 3-COLUMN DESKTOP WORKSPACE
+--------------------------------------------------------------------------------
+- Navigation Routing & State Preservation (Issue #2):
+  * Replaced rigid state reset navigation with a structured view history/tab stack manager (`pushView` and `popView`).
+  * Switching between sub-views (Complaint Details -> Active Map -> Report Form -> Categories -> Home) preserves form state, attached photo previews, and selected coordinates without clearing form entries or resetting to the home screen.
+  * Added back-action navigation (`popView`) on all sub-screen headers, preserving user context and navigation history.
+- Balanced 3-Column Desktop Command Center (Issue #14):
+  * Refactored the desktop officer/admin workspace (`MunicipalOfficerCommandCenter.tsx`) from a single vertical scroll into a balanced 3-column layout:
+    * Column 1 / Left (25% width): Navigation, Ward/Zone selector, Status filters (All, Open, Dispatched, Resolved), Civic Department selector, and Live Ward Telemetry KPI counters.
+    * Column 2 / Center (45% width): Interactive Geospatial Map (`GoogleTacticalMap` / GIS layer) spanning full container height with live incident markers and fleet positions.
+    * Column 3 / Right (30% width): Live Incident Action Desk & Queue with rapid ticket selector carousel, incident inspection details, photo attachment, AI assessment notes, field crew dispatching, and proof-of-fix resolution workflow.
+- Responsive Profile View (Issue #11):
+  * Refactored the Profile tab to scale seamlessly across viewports:
+    * Mobile (< 768px): Stacked vertical cards with clean spacing and full-width touch targets (≥ 44px min-height).
+    * Desktop (md: and above): Centered container (`max-w-2xl mx-auto py-8`) with 2-column grid alignment for profile fields, role badge, assigned ward, and system status indicator.
+
+

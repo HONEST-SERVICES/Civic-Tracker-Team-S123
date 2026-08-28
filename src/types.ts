@@ -29,8 +29,23 @@ export interface UserProfile {
   assignedWard: string | null;
   assignedCrew?: string;
   designation?: string;
+  permissions?: string[];
   createdAt?: any;
   photoURL?: string;
+}
+
+export interface WardJurisdiction {
+  id: string; // e.g. "ward-4"
+  name: string; // e.g. "Ward 4 - Central Zone"
+  district: string; // e.g. "North Municipal District"
+  subAreas: string[]; // e.g. ["Sector 4 Trunk Road", "Bus Depot Junction", "Model Town Gate"]
+  activeOfficerUid: string | null;
+  activeOfficerName?: string;
+  totalComplaintsCount?: number;
+  activeCrewsCount?: number;
+  lat?: number;
+  lng?: number;
+  createdAt?: any;
 }
 
 export type UnitType = 

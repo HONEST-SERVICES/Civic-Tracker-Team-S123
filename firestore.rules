@@ -29,6 +29,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Municipal wards and jurisdiction collection rules
+    match /wards/{wardId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Connection test document
     match /test/{docId} {
       allow read, write: if true;
