@@ -12,6 +12,18 @@ import {
   setDoc,
   getDocs
 } from "firebase/firestore";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber, 
+  onAuthStateChanged, 
+  signOut,
+  User,
+  ConfirmationResult,
+  ApplicationVerifier
+} from "firebase/auth";
 import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType } from "../types";
 import { INITIAL_INCIDENTS } from "../mockData";
 import { getFirebaseConfig } from "../config/keys";
@@ -20,7 +32,63 @@ const firebaseConfig = getFirebaseConfig();
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 export const complaintsCollection = collection(db, "complaints");
+
+/**
+ * Sign in with Google Popup
+ */
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  return await signInWithPopup(auth, provider);
+}
+
+/**
+ * Setup reCAPTCHA verifier for Phone OTP SMS verification
+ */
+export function setupRecaptcha(containerId: string): RecaptchaVerifier {
+  return new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+    callback: () => {
+      // reCAPTCHA solved callback
+    }
+  });
+}
+
+/**
+ * Send Phone OTP SMS verification code
+ */
+export async function sendPhoneOtp(
+  phoneNumber: string, 
+  appVerifier: ApplicationVerifier
+): Promise<ConfirmationResult> {
+  return await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+}
+
+/**
+ * Verify received Phone OTP Code
+ */
+export async function verifyPhoneOtp(
+  confirmationResult: ConfirmationResult, 
+  otpCode: string
+) {
+  return await confirmationResult.confirm(otpCode);
+}
+
+/**
+ * Sign out current authenticated user
+ */
+export async function logoutUser(): Promise<void> {
+  return await signOut(auth);
+}
+
+/**
+ * Listen to Auth State Changes
+ */
+export function onAuthChange(callback: (user: User | null) => void) {
+  return onAuthStateChanged(auth, callback);
+}
 
 // Map Firestore document data to CrisisIncident
 export function mapDocToIncident(id: string, data: any): CrisisIncident {

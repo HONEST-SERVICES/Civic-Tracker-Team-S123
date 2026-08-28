@@ -2,7 +2,7 @@
 SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
 ================================================================================
 
-1. LIVE GOOGLE FIREBASE FIRESTORE INTEGRATION & DYNAMIC CONFIGURATION
+1. LIVE GOOGLE FIREBASE FIRESTORE & AUTHENTICATION INTEGRATION
 --------------------------------------------------------------------------------
 - Centralized Key Management (`src/config/keys.ts`):
   * Environment variable fallback hierarchy: `import.meta.env.VITE_FIREBASE_*` -> `localStorage.getItem("FIREBASE_*")` -> Hardcoded production defaults (`omnisync-pothole`).
@@ -10,6 +10,14 @@ SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
     - Project ID: `omnisync-pothole`
     - Auth Domain: `omnisync-pothole.firebaseapp.com`
     - Collection: `complaints`
+- Firebase Authentication Modular Service (`/src/services/firebase.ts`):
+  * Initialized and exported `auth = getAuth(app)`.
+  * `loginWithGoogle()`: Authenticates via `signInWithPopup(auth, GoogleAuthProvider)`.
+  * `setupRecaptcha(containerId)`: Initializes invisible `RecaptchaVerifier` on specified DOM containers.
+  * `sendPhoneOtp(phoneNumber, appVerifier)`: Triggers SMS verification via `signInWithPhoneNumber(auth, ...)`.
+  * `verifyPhoneOtp(confirmationResult, otpCode)`: Confirms SMS OTP code with `confirmationResult.confirm(otpCode)`.
+  * `logoutUser()`: Signs out active user sessions via `signOut(auth)`.
+  * `onAuthChange(callback)`: Real-time listener for user session changes via `onAuthStateChanged(auth, callback)`.
 - Data Model:
   * `id`: Unique grievance identifier (e.g., `W0488610C948211`)
   * `title`: Complaint title / hazard category
