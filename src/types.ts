@@ -47,6 +47,21 @@ export interface ScannerData {
   structuralIntegrityScore?: number;
 }
 
+export interface GeminiVisionResult {
+  category: HazardCategory;
+  hazardName: string;
+  severity: 'CRITICAL' | 'URGENT' | 'NORMAL';
+  priority: PriorityLevel;
+  riskScore: number;
+  hazardDescription: string;
+  recommendedDepartment: DepartmentType;
+  recommendedCrew: string;
+  estimatedRepairTimeMinutes: number;
+  safetyDirectives: string[];
+  anomaliesDetected?: string[];
+  analyzedWithGemini?: boolean;
+}
+
 export interface CrisisIncident {
   id: string;
   title: string;

@@ -20,6 +20,7 @@ import {
 } from './types';
 import { CitizenPortal } from './components/CitizenPortal';
 import { MunicipalOfficerCommandCenter } from './components/MunicipalOfficerCommandCenter';
+import { SettingsModal } from './components/SettingsModal';
 import { executeAutonomousDispatch } from './services/geminiService';
 import { 
   subscribeToComplaints, 
@@ -41,13 +42,15 @@ import {
   KeyRound,
   CheckCircle2,
   AlertCircle,
-  Radio
+  Radio,
+  Settings
 } from 'lucide-react';
 
 export default function App() {
   // Application State
   const [incidents, setIncidents] = useState<CrisisIncident[]>(INITIAL_INCIDENTS);
   const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
   const [units, setUnits] = useState<MunicipalUnit[]>(() => {
     const saved = localStorage.getItem('syncdispatch_units');
@@ -450,6 +453,16 @@ export default function App() {
             </button>
           )}
 
+          {/* Settings / API Key modal button */}
+          <button
+            id="settings-toggle-btn"
+            onClick={() => setShowSettingsModal(true)}
+            title="Configure Gemini & Firebase API Keys"
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 cursor-pointer shadow-xs transition-colors"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+
           {/* Reset */}
           <button
             onClick={handleResetData}
@@ -515,13 +528,21 @@ export default function App() {
                     <p><strong>App Version:</strong> Swachhata-MoHUA v4.8.2</p>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100">
+                  <div className="pt-4 border-t border-slate-100 space-y-2">
                     <button
                       onClick={() => setShowOfficerLoginModal(true)}
                       className="w-full h-11 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Shield className="w-4 h-4" />
                       <span>Switch to Municipal Staff / Ward Officer Login</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowSettingsModal(true)}
+                      className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-slate-600" />
+                      <span>Configure API Keys & Firebase Connection</span>
                     </button>
                   </div>
                 </div>
@@ -691,6 +712,12 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Settings & Key Configuration Modal */}
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
     </div>
   );
 }

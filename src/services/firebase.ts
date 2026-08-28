@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getFirestore, 
   collection, 
@@ -14,18 +14,11 @@ import {
 } from "firebase/firestore";
 import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType } from "../types";
 import { INITIAL_INCIDENTS } from "../mockData";
+import { getFirebaseConfig } from "../config/keys";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBTEeCUBJOGkeQBYrcunJR8JFMiWOJrNXs",
-  authDomain: "omnisync-pothole.firebaseapp.com",
-  projectId: "omnisync-pothole",
-  storageBucket: "omnisync-pothole.firebasestorage.app",
-  messagingSenderId: "375848058708",
-  appId: "1:375848058708:web:efe864b4152e76d3f7d2c1",
-  measurementId: "G-X0BKP2X3RF"
-};
+const firebaseConfig = getFirebaseConfig();
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
 export const complaintsCollection = collection(db, "complaints");
 

@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "Complaint": {
+      "title": "Complaint",
+      "description": "Civic grievance or crisis incident complaint submitted by citizens or monitored by municipal officers.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique complaint identifier (e.g. W0488610C948211)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title or brief summary of the grievance"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed citizen or officer report description"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the civic hazard"
+        },
+        "priority": {
+          "type": "string",
+          "description": "Priority tier: P1_CRITICAL, P2_URGENT, P3_SCHEDULED"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status: REPORTED, DISPATCHED, ON_SCENE, IN_PROGRESS, RESOLVED, VERIFIED"
+        },
+        "department": {
+          "type": "string",
+          "description": "Assigned municipal department"
+        },
+        "location": {
+          "type": "object",
+          "description": "Geographic coordinates and landmark address"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Image URL or data URI of the civic hazard"
+        },
+        "reporterName": {
+          "type": "string",
+          "description": "Name of citizen who logged the grievance"
+        },
+        "reporterPhone": {
+          "type": "string",
+          "description": "Contact phone number of the citizen"
+        },
+        "reporterEmail": {
+          "type": "string",
+          "description": "Contact email address"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp when complaint was logged"
+        },
+        "riskScore": {
+          "type": "number",
+          "description": "AI-calculated risk priority score (0-100)"
+        },
+        "proofOfFixUrl": {
+          "type": "string",
+          "description": "Photo proof URL uploaded by crew upon resolving"
+        },
+        "officerNotes": {
+          "type": "string",
+          "description": "Administrative / field notes by ward officer"
+        },
+        "assignedCrew": {
+          "type": "string",
+          "description": "Name or ID of assigned response crew"
+        },
+        "etaMinutes": {
+          "type": "number",
+          "description": "Estimated time of arrival or resolution in minutes"
+        },
+        "aiSummary": {
+          "type": "string",
+          "description": "Gemini 2.5 Flash hazard diagnostic analysis"
+        },
+        "actionDirectives": {
+          "type": "array",
+          "description": "Recommended tactical action items"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Citizen resolution satisfaction rating (1-5)"
+        },
+        "citizenFeedback": {
+          "type": "string",
+          "description": "Citizen post-resolution review feedback"
+        }
+      },
+      "required": ["title", "category", "status", "department"]
+    }
+  },
+  "firestore": {
+    "/complaints/{complaintId}": {
+      "schema": {
+        "$ref": "#/entities/Complaint"
+      },
+      "description": "Collection of all civic grievances and municipal crisis incidents."
+    }
+  }
+}

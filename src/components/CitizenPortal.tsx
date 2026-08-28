@@ -28,8 +28,9 @@ import {
   Radio,
   Layers
 } from 'lucide-react';
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType } from '../types';
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult } from '../types';
 import { SWACHHATA_CATEGORIES } from '../mockData';
+import { analyzeHazardWithGeminiVision } from '../services/geminiService';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -52,6 +53,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [isAnalyzingVision, setIsAnalyzingVision] = useState<boolean>(false);
+  const [visionResult, setVisionResult] = useState<GeminiVisionResult | null>(null);
   const [landmark, setLandmark] = useState<string>('Cinema Road, Outside Verad Gate');
   const [reporterName, setReporterName] = useState<string>('Sangit');
   const [reporterPhone, setReporterPhone] = useState<string>('+91 98765 43210');
@@ -224,11 +227,27 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     });
   }, [incidents]);
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const result = event.target?.result as string;
       setPhotoUrl(result);
+      
+      // Auto-trigger Gemini 2.5 Flash Vision Analysis
+      setIsAnalyzingVision(true);
+      try {
+        const visionData = await analyzeHazardWithGeminiVision(result, file.type || 'image/jpeg');
+        setVisionResult(visionData);
+        
+        // Auto-select detected category if valid
+        if (visionData.category && SWACHHATA_CATEGORIES.some(c => c.id === visionData.category)) {
+          setSelectedCategory(visionData.category);
+        }
+      } catch (err) {
+        console.warn('Vision analysis failed:', err);
+      } finally {
+        setIsAnalyzingVision(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -252,17 +271,17 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     if (isDispatching) return;
 
     const catObj = SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory);
-    const department: DepartmentType = catObj?.department || 'PUBLIC_WORKS';
+    const department: DepartmentType = visionResult?.recommendedDepartment || catObj?.department || 'PUBLIC_WORKS';
     
     const isCritical = selectedCategory === 'OPEN_MANHOLES' || selectedCategory === 'DOWNED_POWER_LINE' || selectedCategory === 'STRUCTURAL_SINKHOLE';
-    const priority: PriorityLevel = isCritical ? 'P1_CRITICAL' : 'P2_URGENT';
-    const riskScore = isCritical ? 92 : 74;
+    const priority: PriorityLevel = visionResult?.priority || (isCritical ? 'P1_CRITICAL' : 'P2_URGENT');
+    const riskScore = visionResult?.riskScore || (isCritical ? 92 : 74);
 
     const uniqueId = `W0488610C${Math.floor(Math.random() * 899999 + 100000)}`;
 
     const incidentData: Partial<CrisisIncident> = {
       id: uniqueId,
-      title: catObj?.name || 'Civic Infrastructure Complaint',
+      title: visionResult?.hazardName || catObj?.name || 'Civic Infrastructure Complaint',
       description: landmark ? `${landmark}. Citizen reported via Swachhata-MoHUA.` : 'Citizen reported civic grievance.',
       category: selectedCategory,
       priority,
@@ -277,13 +296,21 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       },
       imageUrl: photoUrl || 'https://images.unsplash.com/photo-1584463699031-c4c0b629c135?auto=format&fit=crop&w=800&q=80',
       reporterName: reporterName || 'Sangit',
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      aiSummary: visionResult?.hazardDescription,
+      actionDirectives: visionResult?.safetyDirectives,
+      scannerData: visionResult ? {
+        detectedAnomalies: visionResult.anomaliesDetected || [visionResult.hazardName],
+        boundingBoxes: [],
+        structuralIntegrityScore: 100 - riskScore
+      } : undefined
     };
 
     await onSubmitIncident(incidentData);
     setSubmittedSuccess(true);
     setLastSubmittedId(uniqueId);
     setPhotoUrl(null);
+    setVisionResult(null);
     setCurrentView('HOME');
     onNavigate?.('HOME');
     setTimeout(() => setSubmittedSuccess(false), 8000);
@@ -417,25 +444,71 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Photo Dropzone */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Capture or Attach Photo of Hazard:
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Capture or Attach Photo of Hazard:
+                    </label>
+                    {isAnalyzingVision && (
+                      <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Gemini 2.5 Flash Analyzing...
+                      </span>
+                    )}
+                  </div>
+
                   {photoUrl ? (
-                    <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden h-40">
-                      <img
-                        src={photoUrl}
-                        alt="Hazard"
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-2 right-2 bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow cursor-pointer flex items-center gap-1"
-                      >
-                        <Camera className="w-3 h-3 text-[#2d7a70]" />
-                        <span>Change Photo</span>
-                      </button>
+                    <div className="space-y-2">
+                      <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden h-44">
+                        <img
+                          src={photoUrl}
+                          alt="Hazard"
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        {isAnalyzingVision && (
+                          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
+                            <Sparkles className="w-6 h-6 text-teal-300 animate-spin" />
+                            <p className="text-xs font-bold">Scanning pavement anomalies & hazard severity...</p>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="absolute bottom-2 right-2 bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition"
+                        >
+                          <Camera className="w-3 h-3 text-[#2d7a70]" />
+                          <span>Change Photo</span>
+                        </button>
+                      </div>
+
+                      {/* Vision Result Diagnostic Card */}
+                      {visionResult && !isAnalyzingVision && (
+                        <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 font-bold text-teal-900">
+                              <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                              <span>Gemini 2.5 Flash Assessment</span>
+                            </div>
+                            <span className="bg-teal-700 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                              Risk {visionResult.riskScore}/100
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-semibold text-slate-900">
+                            {visionResult.hazardName}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
+                            <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                              Dept: {visionResult.recommendedDepartment}
+                            </span>
+                            <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                              Crew: {visionResult.recommendedCrew}
+                            </span>
+                            <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                              ETA: ~{visionResult.estimatedRepairTimeMinutes}m
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div
@@ -449,7 +522,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     >
                       <Camera className="w-5 h-5 text-[#2d7a70] mb-1" />
                       <p className="text-xs font-bold text-slate-800">Click to upload or drag & drop photo</p>
-                      <p className="text-[11px] text-slate-500">Auto-attaches timestamp & geo-coordinates</p>
+                      <p className="text-[11px] text-slate-500">Auto-triggers Gemini 2.5 Flash Vision & Geo-tagging</p>
                     </div>
                   )}
                   <input
@@ -929,31 +1002,74 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               {/* Photo Upload Box */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Capture / Upload Geo-Tagged Photo
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Capture / Upload Geo-Tagged Photo
+                  </label>
+                  {isAnalyzingVision && (
+                    <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Gemini 2.5 Flash Analyzing...
+                    </span>
+                  )}
+                </div>
 
                 {photoUrl ? (
-                  <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden group">
-                    <img
-                      src={photoUrl}
-                      alt="Hazard preview"
-                      className="w-full h-48 object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Photo Attached</span>
+                  <div className="space-y-2">
+                    <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden group">
+                      <img
+                        src={photoUrl}
+                        alt="Hazard preview"
+                        className="w-full h-48 object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      {isAnalyzingVision ? (
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
+                          <Sparkles className="w-6 h-6 text-teal-300 animate-spin" />
+                          <p className="text-xs font-bold">Scanning pavement anomalies & hazard severity...</p>
+                        </div>
+                      ) : (
+                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Photo Attached</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-3 right-3 bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-[#2d7a70]" />
+                        <span>Retake Photo</span>
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-3 right-3 bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-[#2d7a70]" />
-                      <span>Retake Photo</span>
-                    </button>
+                    {/* Vision Diagnostic Assessment */}
+                    {visionResult && !isAnalyzingVision && (
+                      <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-teal-900">
+                            <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                            <span>Gemini 2.5 Flash Assessment</span>
+                          </div>
+                          <span className="bg-teal-700 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                            Risk {visionResult.riskScore}/100
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-semibold text-slate-900">
+                          {visionResult.hazardName}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
+                          <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                            Dept: {visionResult.recommendedDepartment}
+                          </span>
+                          <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                            Crew: {visionResult.recommendedCrew}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div
@@ -969,7 +1085,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       <Camera className="w-6 h-6" />
                     </div>
                     <p className="text-sm font-semibold text-slate-800">Tap to take photo of civic issue</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Auto GPS metadata will attach to complaint</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Auto-triggers Gemini 2.5 Flash Vision Assessment</p>
                   </div>
                 )}
 

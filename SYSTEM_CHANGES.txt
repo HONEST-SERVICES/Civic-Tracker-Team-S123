@@ -2,12 +2,14 @@
 SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
 ================================================================================
 
-1. LIVE GOOGLE FIREBASE FIRESTORE INTEGRATION
+1. LIVE GOOGLE FIREBASE FIRESTORE INTEGRATION & DYNAMIC CONFIGURATION
 --------------------------------------------------------------------------------
-- Real-time Firestore initialization in `/src/services/firebase.ts` with project:
-  * Project ID: `omnisync-pothole`
-  * Auth Domain: `omnisync-pothole.firebaseapp.com`
-  * Collection: `complaints`
+- Centralized Key Management (`src/config/keys.ts`):
+  * Environment variable fallback hierarchy: `import.meta.env.VITE_FIREBASE_*` -> `localStorage.getItem("FIREBASE_*")` -> Hardcoded production defaults (`omnisync-pothole`).
+  * Real-time Firestore initialization in `/src/services/firebase.ts` with project:
+    - Project ID: `omnisync-pothole`
+    - Auth Domain: `omnisync-pothole.firebaseapp.com`
+    - Collection: `complaints`
 - Data Model:
   * `id`: Unique grievance identifier (e.g., `W0488610C948211`)
   * `title`: Complaint title / hazard category
@@ -20,13 +22,33 @@ SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
   * `createdAt`: Firestore `serverTimestamp()`
   * `priority`: P1_CRITICAL / P2_URGENT / P3_NORMAL
   * `department`: PUBLIC_WORKS / SANITATION / WATER_SUPPLY / ELECTRICITY
-  * `riskScore`, `imageUrl`, `proofOfFixUrl`, `officerNotes`, `etaMinutes`
+  * `riskScore`, `imageUrl`, `proofOfFixUrl`, `officerNotes`, `etaMinutes`, `aiSummary`, `actionDirectives`
 - Real-time Listeners & Auto-Sync:
   * Uses Firestore `onSnapshot` with `orderBy("createdAt", "desc")` to ensure instant updates across all citizen and municipal officer screens simultaneously.
   * Submissions write directly to Firestore via `addDoc` / `setDoc`.
   * Officer status changes, crew assignments, and resolution photologs update Firestore documents via `updateDoc`.
 
-2. RESPONSIVE DESKTOP VS. MOBILE ARCHITECTURE
+2. GEMINI AI VISION & AUTONOMOUS DISPATCH INTEGRATION
+--------------------------------------------------------------------------------
+- Gemini Vision Model: `models/gemini-2.5-flash`
+  * Server endpoint: `POST /api/gemini/analyze-vision` (proxies vision analysis securely, accepts custom header key or server `GEMINI_API_KEY`).
+  * Client service: `analyzeHazardWithGeminiVision` in `/src/services/geminiService.ts`.
+  * Features: Pavement defect classification, severity scoring (1-100), automated department mapping, crew allocation recommendation, and safety directives.
+  * Visual UI: Integrated live diagnostic badge with loading animations on both Desktop and Mobile grievance forms.
+- Gemini Autonomous Dispatch Reasoning: `models/gemini-3.7-flash`
+  * Server endpoint: `POST /api/gemini/dispatch` (executes chain-of-thought multi-criteria dispatch optimization).
+  * Considers priority, spatial proximity, department jurisdiction, vehicle equipment capabilities, and crew shift availability.
+
+3. SETTINGS & API KEY CONFIGURATION MODAL (`src/components/SettingsModal.tsx`)
+--------------------------------------------------------------------------------
+- Clean UI modal accessible from the top navigation bar and user profile tab.
+- Allows live configuration and testing of:
+  * Gemini API Key (with instant connection test against Gemini 2.5 Flash).
+  * Firebase Project ID and Firebase API Key (with instant Firestore handshake verification).
+  * Cloudflare & custom deployment environment documentation.
+- Stores custom keys safely in browser `localStorage` and memory.
+
+4. RESPONSIVE DESKTOP VS. MOBILE ARCHITECTURE
 --------------------------------------------------------------------------------
 - Mobile Layout (< 768px):
   * Authentic vertical Swachhata-MoHUA app experience.
@@ -44,7 +66,7 @@ SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
     - Left Column (Col 7-8/12): 60%+ width Leaflet GIS map with ward boundary circles and real-time markers.
     - Right Column (Col 4-5/12): 40% real-time Firestore complaints list, triage workspace, dispatch controls, and proof-of-fix verification modal.
 
-3. ROLE-BASED ACCESS CONTROL (RBAC) & WARD OFFICER DESK
+5. ROLE-BASED ACCESS CONTROL (RBAC) & WARD OFFICER DESK
 --------------------------------------------------------------------------------
 - PIN-Protected Authentication modal (Staff PIN: `1234`).
 - Citizen Mode: Safe grievance submission, geo-photo upload, tracking, and rating.
