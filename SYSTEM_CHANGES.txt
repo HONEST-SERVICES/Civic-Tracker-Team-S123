@@ -1,0 +1,52 @@
+================================================================================
+SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
+================================================================================
+
+1. LIVE GOOGLE FIREBASE FIRESTORE INTEGRATION
+--------------------------------------------------------------------------------
+- Real-time Firestore initialization in `/src/services/firebase.ts` with project:
+  * Project ID: `omnisync-pothole`
+  * Auth Domain: `omnisync-pothole.firebaseapp.com`
+  * Collection: `complaints`
+- Data Model:
+  * `id`: Unique grievance identifier (e.g., `W0488610C948211`)
+  * `title`: Complaint title / hazard category
+  * `category`: Hazard category code
+  * `status`: "Registered" | "Assigned" | "In Remediation" | "Resolved"
+  * `ward`: Jurisdiction zone (e.g., "Ward 4 - Central Zone")
+  * `location`: Address, latitude, longitude, zone
+  * `citizenName`: Reporting citizen name
+  * `assignedCrew`: Dispatched rapid patcher / ward inspector
+  * `createdAt`: Firestore `serverTimestamp()`
+  * `priority`: P1_CRITICAL / P2_URGENT / P3_NORMAL
+  * `department`: PUBLIC_WORKS / SANITATION / WATER_SUPPLY / ELECTRICITY
+  * `riskScore`, `imageUrl`, `proofOfFixUrl`, `officerNotes`, `etaMinutes`
+- Real-time Listeners & Auto-Sync:
+  * Uses Firestore `onSnapshot` with `orderBy("createdAt", "desc")` to ensure instant updates across all citizen and municipal officer screens simultaneously.
+  * Submissions write directly to Firestore via `addDoc` / `setDoc`.
+  * Officer status changes, crew assignments, and resolution photologs update Firestore documents via `updateDoc`.
+
+2. RESPONSIVE DESKTOP VS. MOBILE ARCHITECTURE
+--------------------------------------------------------------------------------
+- Mobile Layout (< 768px):
+  * Authentic vertical Swachhata-MoHUA app experience.
+  * Rich teal header (`bg-[#2d7a70]`), "Good Afternoon, Welcome Sangit" card.
+  * Active grievance hero card with 4-stage mini progress stepper.
+  * 2x2 Soft-gradient quick-action cards (Post a Complaint, My Complaints, SBM Toilet Locator, Swachh Survekshan).
+  * Category picker list with circular icons.
+  * Fixed bottom navigation bar with elevated floating circular (+) button.
+- Desktop Layout (md and above):
+  * Full-width responsive dashboard (`max-w-7xl mx-auto px-6 py-6`).
+  * Citizen Portal: Balanced 2-column layout (`grid grid-cols-1 md:grid-cols-12 gap-8`):
+    - Left Column (Col 6/12): Category selector tiles & complaint submission form with live photo dropzone and draggable map pin.
+    - Right Column (Col 6/12): Active complaint hero status banner, Ward 4 geospatial real-time map, and auto-synced complaints stream.
+  * Officer Command Desk:
+    - Left Column (Col 7-8/12): 60%+ width Leaflet GIS map with ward boundary circles and real-time markers.
+    - Right Column (Col 4-5/12): 40% real-time Firestore complaints list, triage workspace, dispatch controls, and proof-of-fix verification modal.
+
+3. ROLE-BASED ACCESS CONTROL (RBAC) & WARD OFFICER DESK
+--------------------------------------------------------------------------------
+- PIN-Protected Authentication modal (Staff PIN: `1234`).
+- Citizen Mode: Safe grievance submission, geo-photo upload, tracking, and rating.
+- Municipal Officer Desk: Live triage, crew dispatching, department re-routing, priority adjustments, proof photolog verification, and automated status transitions.
+================================================================================

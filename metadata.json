@@ -1,0 +1,6 @@
+{
+  "name": "SyncDispatch",
+  "description": "Autonomous Pothole & Civic Issue Dispatcher with Tactical Geospatial Map View, Gemini Function Calling, and Municipal Fleet Matrix",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
