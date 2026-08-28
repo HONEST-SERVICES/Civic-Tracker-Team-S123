@@ -6,6 +6,8 @@
  * 3. Default demo fallback credentials
  */
 
+import firebaseAppletConfig from '../../firebase-applet-config.json';
+
 export interface FirebaseClientConfig {
   apiKey: string;
   authDomain: string;
@@ -14,17 +16,54 @@ export interface FirebaseClientConfig {
   messagingSenderId: string;
   appId: string;
   measurementId: string;
+  firestoreDatabaseId?: string;
 }
 
 const DEFAULT_FIREBASE_CONFIG: FirebaseClientConfig = {
-  apiKey: "AIzaSyBTEeCUBJOGkeQBYrcunJR8JFMiWOJrNXs",
-  authDomain: "omnisync-pothole.firebaseapp.com",
-  projectId: "omnisync-pothole",
-  storageBucket: "omnisync-pothole.firebasestorage.app",
-  messagingSenderId: "375848058708",
-  appId: "1:375848058708:web:efe864b4152e76d3f7d2c1",
-  measurementId: "G-X0BKP2X3RF"
+  apiKey: firebaseAppletConfig.apiKey || "AIzaSyB3MGF_ZkERucwFW47-vy5NHAXT2ypBzx0",
+  authDomain: firebaseAppletConfig.authDomain || "gen-lang-client-0973558649.firebaseapp.com",
+  projectId: firebaseAppletConfig.projectId || "gen-lang-client-0973558649",
+  storageBucket: firebaseAppletConfig.storageBucket || "gen-lang-client-0973558649.firebasestorage.app",
+  messagingSenderId: firebaseAppletConfig.messagingSenderId || "934457241683",
+  appId: firebaseAppletConfig.appId || "1:934457241683:web:849ddcc1bb70e7b185d6a6",
+  measurementId: firebaseAppletConfig.measurementId || "",
+  firestoreDatabaseId: firebaseAppletConfig.firestoreDatabaseId || "ai-studio-syncdispatch-a04d4492-36cf-4af0-9efe-9dc4ed18c659"
 };
+
+/**
+ * Get the current resolved Google Maps API Key
+ * Order: import.meta.env.VITE_GOOGLE_MAPS_API_KEY -> localStorage -> fallback demo key
+ */
+export function getGoogleMapsApiKey(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const envKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;
+  if (envKey && typeof envKey === "string" && envKey.trim().length > 0) {
+    return envKey.trim();
+  }
+
+  const localKey = localStorage.getItem("GOOGLE_MAPS_API_KEY");
+  if (localKey && localKey.trim().length > 0) {
+    return localKey.trim();
+  }
+
+  return "";
+}
+
+/**
+ * Persist Google Maps API key
+ */
+export function setGoogleMapsApiKey(key: string): void {
+  if (typeof window !== "undefined") {
+    if (!key || key.trim() === "") {
+      localStorage.removeItem("GOOGLE_MAPS_API_KEY");
+    } else {
+      localStorage.setItem("GOOGLE_MAPS_API_KEY", key.trim());
+    }
+  }
+}
 
 /**
  * Get the current resolved Gemini API Key

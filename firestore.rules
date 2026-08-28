@@ -23,6 +23,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Municipal units collection rules
+    match /units/{unitId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Connection test document
     match /test/{docId} {
       allow read, write: if true;

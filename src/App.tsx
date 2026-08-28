@@ -21,13 +21,19 @@ import {
 } from './types';
 import { CitizenPortal } from './components/CitizenPortal';
 import { MunicipalOfficerCommandCenter } from './components/MunicipalOfficerCommandCenter';
+import { FieldCrewWorkOrders } from './components/FieldCrewWorkOrders';
+import { WardStaffManagementModal } from './components/WardStaffManagementModal';
+import { DemoRoleSwitcher, DEMO_PRESETS } from './components/DemoRoleSwitcher';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
+import { SwachhataAuthScreen } from './components/SwachhataAuthScreen';
 import { executeAutonomousDispatch } from './services/geminiService';
 import { 
-  subscribeToComplaints, 
+  subscribeToScopedComplaints,
+  subscribeToUnits,
   createComplaintInFirestore, 
   updateComplaintInFirestore,
+  updateUnitInFirestore,
   onAuthChange,
   logoutUser,
   syncUserProfile
@@ -50,32 +56,41 @@ import {
   Radio,
   Settings,
   LogIn,
-  LogOut
+  LogOut,
+  Truck,
+  Users,
+  Crown
 } from 'lucide-react';
 
 export default function App() {
-  // Application State
-  const [incidents, setIncidents] = useState<CrisisIncident[]>(INITIAL_INCIDENTS);
-  const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
-  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-
-  const [units, setUnits] = useState<MunicipalUnit[]>(() => {
-    const saved = localStorage.getItem('syncdispatch_units');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_MUNICIPAL_UNITS;
+  // Authentication & Current User Profile
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    const preset = DEMO_PRESETS[0];
+    return {
+      uid: preset.uid,
+      name: preset.name,
+      phone: preset.phone,
+      email: preset.email,
+      role: preset.role,
+      assignedWard: preset.ward,
+      designation: preset.designation
+    };
   });
 
-  // RBAC State: 'CITIZEN' (default) vs 'OFFICER'
-  const [userRole, setUserRole] = useState<UserRole>('CITIZEN');
+  // Application Data State (Subscribed 100% to Firestore)
+  const [incidents, setIncidents] = useState<CrisisIncident[]>(INITIAL_INCIDENTS);
+  const [units, setUnits] = useState<MunicipalUnit[]>(INITIAL_MUNICIPAL_UNITS);
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
+
+  // Modals & Navigation
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [showStaffManagementModal, setShowStaffManagementModal] = useState<boolean>(false);
   const [showOfficerLoginModal, setShowOfficerLoginModal] = useState<boolean>(false);
   const [officerPin, setOfficerPin] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
 
-  // Citizen Navigation State: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'
+  // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'
   const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE'>('HOME');
 
   const [selectedIncident, setSelectedIncident] = useState<CrisisIncident | null>(null);
@@ -94,6 +109,8 @@ export default function App() {
     }
   ]);
 
+  const userRole: UserRole = currentUser?.role || 'CITIZEN';
+
   // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribeAuth = onAuthChange(async (firebaseUser) => {
@@ -101,14 +118,9 @@ export default function App() {
         try {
           const profile = await syncUserProfile(firebaseUser);
           setCurrentUser(profile);
-          if (profile.role === 'OFFICER') {
-            setUserRole('OFFICER');
-          }
         } catch (e) {
           console.warn('Error fetching auth user profile:', e);
         }
-      } else {
-        setCurrentUser(null);
       }
     });
 
@@ -117,19 +129,11 @@ export default function App() {
     };
   }, []);
 
-  const handleSignOut = async () => {
-    try {
-      await logoutUser();
-      setCurrentUser(null);
-      setUserRole('CITIZEN');
-    } catch (e) {
-      console.error('Logout error:', e);
-    }
-  };
-
-  // Connect to Firestore real-time complaints stream
+  // Subscribe to real-time scoped Firestore complaints based on active role
   useEffect(() => {
-    const unsubscribe = subscribeToComplaints(
+    const unsubscribeComplaints = subscribeToScopedComplaints(
+      userRole,
+      currentUser,
       (firestoreIncidents) => {
         if (firestoreIncidents && firestoreIncidents.length > 0) {
           setIncidents(firestoreIncidents);
@@ -137,20 +141,47 @@ export default function App() {
         }
       },
       (error) => {
-        console.warn('Firestore connection fallback:', error);
+        console.warn('Firestore complaints subscription warning:', error);
         setIsFirestoreConnected(false);
       }
     );
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribeComplaints) unsubscribeComplaints();
+    };
+  }, [userRole, currentUser?.assignedWard, currentUser?.uid]);
+
+  // Subscribe to real-time units from Firestore
+  useEffect(() => {
+    const unsubscribeUnits = subscribeToUnits(
+      (firestoreUnits) => {
+        if (firestoreUnits && firestoreUnits.length > 0) {
+          setUnits(firestoreUnits);
+        }
+      },
+      (error) => {
+        console.warn('Firestore units subscription warning:', error);
+      }
+    );
+
+    return () => {
+      if (unsubscribeUnits) unsubscribeUnits();
     };
   }, []);
 
-  // Persist units state locally
-  useEffect(() => {
-    localStorage.setItem('syncdispatch_units', JSON.stringify(units));
-  }, [units]);
+  const handleSignOut = async () => {
+    try {
+      await logoutUser();
+      setCurrentUser(null);
+    } catch (e) {
+      console.error('Logout error:', e);
+      setCurrentUser(null);
+    }
+  };
+
+  const handleRolePresetSwitch = (profile: UserProfile) => {
+    setCurrentUser(profile);
+  };
 
   // Core Autonomous Dispatch Trigger & Firestore Write
   const handleDispatchIncident = async (incidentData: Partial<CrisisIncident>) => {
@@ -174,7 +205,9 @@ export default function App() {
       },
       imageUrl: incidentData.imageUrl,
       createdAt: Date.now(),
-      reporterName: incidentData.reporterName || 'Sangit'
+      reporterName: incidentData.reporterName || currentUser?.name || 'Sangit',
+      reporterPhone: incidentData.reporterPhone || currentUser?.phone || '',
+      citizenUid: currentUser?.uid || ''
     };
 
     // 1. Optimistic Local Update
@@ -211,6 +244,11 @@ export default function App() {
 
         // Sync dispatch updates to Firestore
         await updateComplaintInFirestore(newTicketId, updates);
+        await updateUnitInFirestore(assignedUnit.id, {
+          status: 'EN_ROUTE',
+          assignedIncidentId: fullIncident.id,
+          currentZone: fullIncident.location.zone
+        });
 
         // Update local incidents and units
         setIncidents(prev => prev.map(inc => {
@@ -288,6 +326,11 @@ export default function App() {
     if (newStatus === 'RESOLVED') {
       const target = incidents.find(i => i.id === incidentId);
       if (target?.assignedUnitId) {
+        await updateUnitInFirestore(target.assignedUnitId, {
+          status: 'AVAILABLE',
+          assignedIncidentId: undefined
+        });
+
         setUnits(prev => prev.map(u => {
           if (u.id === target.assignedUnitId) {
             return {
@@ -303,6 +346,7 @@ export default function App() {
   };
 
   const handleUpdateUnitStatus = (unitId: string, newStatus: UnitStatus) => {
+    updateUnitInFirestore(unitId, { status: newStatus }).catch(console.warn);
     setUnits(prev => prev.map(u => (u.id === unitId ? { ...u, status: newStatus } : u)));
   };
 
@@ -316,6 +360,11 @@ export default function App() {
         assignedUnitName: unit.name,
         status: 'DISPATCHED',
         etaMinutes: 15
+      });
+
+      await updateUnitInFirestore(unit.id, {
+        status: 'EN_ROUTE',
+        assignedIncidentId: incidentId
       });
     } catch (err) {
       console.warn('Firestore assign crew err:', err);
@@ -384,17 +433,11 @@ export default function App() {
     });
   };
 
-  const handleResetData = () => {
-    setIncidents(INITIAL_INCIDENTS);
-    setUnits(INITIAL_MUNICIPAL_UNITS);
-    setSelectedIncident(null);
-    setSelectedUnit(null);
-  };
-
   const handleOfficerLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (officerPin === '1234' || officerPin === '') {
-      setUserRole('OFFICER');
+      const officerPreset = DEMO_PRESETS[2]; // Ward Officer
+      setCurrentUser(officerPreset);
       setShowOfficerLoginModal(false);
       setOfficerPin('');
       setPinError('');
@@ -403,10 +446,15 @@ export default function App() {
     }
   };
 
+  // If user is completely logged out, display full Swachhata Auth screen
+  if (!currentUser) {
+    return <SwachhataAuthScreen onSuccess={(profile) => setCurrentUser(profile)} />;
+  }
+
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 text-slate-900 overflow-hidden font-sans select-none">
       {/* 1. SWACHHATA RICH TEAL TOP HEADER */}
-      <header className="w-full bg-[#2d7a70] text-white px-4 md:px-6 py-3 flex items-center justify-between gap-2 shadow-md z-30 flex-shrink-0">
+      <header className="w-full bg-[#2d7a70] text-white px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 shadow-md z-30 flex-shrink-0">
         {/* Left: Brand Identity */}
         <div className="text-base font-bold tracking-tight flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white flex-shrink-0 shadow-xs">
@@ -420,28 +468,41 @@ export default function App() {
               </span>
             </div>
             <p className="text-[10px] text-teal-100 truncate hidden md:block">
-              Ministry of Housing and Urban Affairs • Ward 4 Civic Redressal
+              Ministry of Housing and Urban Affairs • Ward-Scoped Redressal
             </p>
           </div>
         </div>
 
         {/* Center: Live Firestore Status Badge & Role Indicator */}
-        <div className="flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-black/15 px-3 py-1 rounded-full border border-white/20 text-xs">
-            <span className={`w-2 h-2 rounded-full ${userRole === 'OFFICER' ? 'bg-amber-400' : 'bg-emerald-400'} animate-pulse`} />
+            <span className={`w-2 h-2 rounded-full ${
+              userRole === 'SUPER_ADMIN' ? 'bg-purple-400' :
+              userRole === 'WARD_OFFICER' ? 'bg-blue-400' :
+              userRole === 'FIELD_CREW' ? 'bg-amber-400' : 'bg-emerald-400'
+            } animate-pulse`} />
             <span className="font-semibold text-white">
-              {userRole === 'OFFICER' ? 'Officer Desk (Ward 4)' : 'Citizen Mode'}
+              {userRole === 'SUPER_ADMIN' ? '👑 Super Admin (All Wards)' :
+               userRole === 'WARD_OFFICER' ? '🏢 Ward Officer (Ward 4)' :
+               userRole === 'FIELD_CREW' ? '🚛 Field Crew (Unit 04)' : '👤 Citizen Mode'}
             </span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-1 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] px-2.5 py-1 rounded-full font-medium">
+          <div className="flex items-center gap-1 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] px-2.5 py-1 rounded-full font-medium">
             <Radio className="w-3 h-3 text-emerald-300 animate-pulse" />
-            <span>omnisync-pothole Firestore</span>
+            <span>Firestore Live</span>
           </div>
         </div>
 
-        {/* Right: Quick Actions & Role Switcher */}
+        {/* Right: Quick Actions & Demo Switcher */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* 🧪 Evaluator Floating Demo Role Switcher */}
+          <DemoRoleSwitcher
+            currentRole={userRole}
+            currentUser={currentUser}
+            onSwitchRole={handleRolePresetSwitch}
+          />
+
           {/* Quick Scenario Dropdown */}
           <div className="relative">
             <button
@@ -455,123 +516,112 @@ export default function App() {
             </button>
 
             {showScenarioMenu && (
-              <div className="absolute right-0 mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-slate-900">
-                <div className="px-3 py-1.5 text-[11px] font-bold text-slate-500 border-b border-slate-100">
-                  Simulate Grievance Scenario:
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-slate-800 animate-in fade-in">
+                <div className="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Test Autonomous Dispatch Scenarios
                 </div>
                 {CRISIS_SCENARIOS.map((sc, idx) => (
                   <button
                     key={sc.id}
                     onClick={() => {
-                      setShowScenarioMenu(false);
                       handleSimulateScenario(idx);
+                      setShowScenarioMenu(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 flex flex-col gap-0.5 cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-teal-50 hover:text-[#2d7a70] transition flex flex-col cursor-pointer"
                   >
-                    <span className="font-bold text-slate-900 truncate">{sc.title}</span>
-                    <span className="text-[10px] text-slate-500 truncate">{sc.zone} • {sc.category.replace(/_/g, ' ')}</span>
+                    <span className="font-bold">{sc.title}</span>
+                    <span className="text-[10px] text-slate-500">{sc.category} • {sc.priority}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Auth State Button / Profile Chip in Header */}
-          {currentUser ? (
-            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/20">
-              <div className="w-5 h-5 rounded-full bg-teal-600 border border-white/40 flex items-center justify-center text-[10px] font-bold text-white uppercase overflow-hidden shrink-0">
-                {currentUser.photoURL ? (
-                  <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  currentUser.name.charAt(0)
-                )}
-              </div>
-              <span className="text-xs font-bold text-white max-w-[80px] sm:max-w-[110px] truncate hidden sm:inline">
-                {currentUser.name}
-              </span>
-              <span className="bg-teal-100 text-teal-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded tracking-wide uppercase">
-                {currentUser.role}
-              </span>
-              <button
-                onClick={handleSignOut}
-                title="Sign Out"
-                className="p-1 rounded text-teal-200 hover:text-white hover:bg-white/15 transition cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/30 text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition"
-            >
-              <LogIn className="w-3.5 h-3.5 text-teal-200" />
-              <span className="hidden sm:inline">Login / Register</span>
-            </button>
-          )}
-
-          {/* Role Toggle Trigger */}
-          {userRole === 'CITIZEN' ? (
-            <button
-              onClick={() => setShowOfficerLoginModal(true)}
-              className="px-2.5 py-1.5 rounded-lg bg-white text-[#2d7a70] hover:bg-teal-50 text-xs font-bold shadow-xs flex items-center gap-1 cursor-pointer transition"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Staff Login</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setUserRole('CITIZEN')}
-              className="px-2.5 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-bold border border-white/30 shadow-xs flex items-center gap-1 cursor-pointer transition"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Citizen View</span>
-            </button>
-          )}
-
-          {/* Settings / API Key modal button */}
+          {/* Settings button */}
           <button
-            id="settings-toggle-btn"
             onClick={() => setShowSettingsModal(true)}
-            title="Configure Gemini & Firebase API Keys"
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 cursor-pointer shadow-xs transition-colors"
+            title="Configure API Keys & Endpoints"
+            className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-white flex items-center justify-center transition cursor-pointer"
           >
-            <Settings className="w-3.5 h-3.5" />
+            <Settings className="w-4 h-4" />
           </button>
 
-          {/* Reset */}
+          {/* User Sign Out */}
           <button
-            onClick={handleResetData}
-            title="Reset default data"
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 cursor-pointer shadow-xs transition-colors"
+            onClick={handleSignOut}
+            title="Sign Out"
+            className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 border border-white/30 text-white flex items-center justify-center transition cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* 2. MAIN VIEW CONTAINER */}
+      {/* 2. MAIN APPLICATION CONTENT ROUTING (ROLE-BASED) */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        {userRole === 'CITIZEN' ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
+        {/* VIEW A: WARD OFFICER & SUPER ADMIN COMMAND DESK */}
+        {(userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && (
+          <MunicipalOfficerCommandCenter
+            incidents={incidents}
+            units={units}
+            selectedIncident={selectedIncident}
+            selectedUnit={selectedUnit}
+            onSelectIncident={setSelectedIncident}
+            onSelectUnit={setSelectedUnit}
+            onUpdateIncidentStatus={handleUpdateIncidentStatus}
+            onUpdateUnitStatus={handleUpdateUnitStatus}
+            onAssignCrew={handleAssignCrew}
+            onReRouteDepartment={handleReRouteDepartment}
+            onAdjustPriority={handleAdjustPriority}
+            onLogout={() => {
+              const citizenPreset = DEMO_PRESETS[0];
+              setCurrentUser(citizenPreset);
+            }}
+            currentUser={currentUser}
+            onOpenStaffManagement={() => setShowStaffManagementModal(true)}
+          />
+        )}
+
+        {/* VIEW B: FIELD CREW WORK ORDERS */}
+        {userRole === 'FIELD_CREW' && (
+          <FieldCrewWorkOrders
+            incidents={incidents}
+            currentUser={currentUser}
+            onUpdateIncidentStatus={(id, st, proofUrl, notes) => handleUpdateIncidentStatus(id, st, proofUrl, notes)}
+          />
+        )}
+
+        {/* VIEW C: CITIZEN SWACCHATA PORTAL */}
+        {userRole === 'CITIZEN' && (
+          <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
             {citizenTab === 'EVENTS' ? (
-              <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto space-y-4">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-                  <h2 className="text-base font-bold text-[#2d7a70] flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>Ward 4 Civic Cleanliness Events & Drives</span>
-                  </h2>
-                  <p className="text-xs text-slate-600">
-                    Community engagement and Swachhata Shramdaan activities in Central Ward 4:
-                  </p>
-                  <div className="space-y-2.5 pt-2">
-                    <div className="p-3 bg-teal-50 rounded-xl border border-teal-200">
-                      <p className="text-xs font-bold text-slate-900">Ward 4 Zero-Pothole Verification Drive</p>
-                      <p className="text-[11px] text-slate-600">This Saturday • Main Commercial Spine • Lead by Asst. Eng. Miller</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70]">
+                      <Calendar className="w-5 h-5" />
                     </div>
-                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
-                      <p className="text-xs font-bold text-slate-900">SBM Community Plastic Segregation Awareness</p>
-                      <p className="text-[11px] text-slate-600">Sector 4 Community Hall • 10:00 AM</p>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900">Ward 4 Cleanliness Drives & SBM Events</h3>
+                      <p className="text-xs text-slate-500">Community participation initiatives in Central Zone</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5 pt-2">
+                    <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-xs text-teal-900">Sunday Mega Plastic-Free Market Drive</p>
+                        <p className="text-[11px] text-teal-700">Verad Gate Market • Sunday 07:00 AM • 45 Registered</p>
+                      </div>
+                      <span className="text-xs font-bold text-white bg-[#2d7a70] px-2.5 py-1 rounded-lg">Join Drive</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-xs text-slate-800">Ward 4 Stormwater Drain Awareness Campaign</p>
+                        <p className="text-[11px] text-slate-500">Community Hall, Sector 3 • Friday 05:00 PM</p>
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">Attending</span>
                     </div>
                   </div>
                 </div>
@@ -617,26 +667,7 @@ export default function App() {
                         <span>Sign Out</span>
                       </button>
                     </div>
-                  ) : (
-                    <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-xl text-center space-y-3">
-                      <div className="w-12 h-12 rounded-full bg-teal-100 text-[#2d7a70] mx-auto flex items-center justify-center">
-                        <User className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900">Sign In to Swachhata Account</h4>
-                        <p className="text-xs text-slate-600 mt-0.5">
-                          Track your submitted grievances in real time, view repair progress photos, and rate municipal crew resolution.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setShowAuthModal(true)}
-                        className="px-5 py-2 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
-                      >
-                        <LogIn className="w-4 h-4" />
-                        <span>Login with Google or Mobile OTP</span>
-                      </button>
-                    </div>
-                  )}
+                  ) : null}
 
                   <div className="pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-700">
                     <p><strong>Jurisdiction:</strong> Ward 4 - Central Zone</p>
@@ -677,21 +708,6 @@ export default function App() {
               />
             )}
           </div>
-        ) : (
-          <MunicipalOfficerCommandCenter
-            incidents={incidents}
-            units={units}
-            selectedIncident={selectedIncident}
-            selectedUnit={selectedUnit}
-            onSelectIncident={setSelectedIncident}
-            onSelectUnit={setSelectedUnit}
-            onUpdateIncidentStatus={handleUpdateIncidentStatus}
-            onUpdateUnitStatus={handleUpdateUnitStatus}
-            onAssignCrew={handleAssignCrew}
-            onReRouteDepartment={handleReRouteDepartment}
-            onAdjustPriority={handleAdjustPriority}
-            onLogout={() => setUserRole('CITIZEN')}
-          />
         )}
       </main>
 
@@ -755,76 +771,66 @@ export default function App() {
         </nav>
       )}
 
-      {/* 4. OFFICER / WARD ENGINEER PIN LOGIN MODAL */}
+      {/* 4. MODALS */}
+      {/* Officer Quick Login Modal */}
       {showOfficerLoginModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden">
-            <div className="bg-[#2d7a70] p-4 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 border border-slate-200 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-amber-300" />
-                <h3 className="text-sm font-bold">Municipal Officer Authentication</h3>
+                <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#2d7a70] flex items-center justify-center">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Ward Officer Login</h3>
+                  <p className="text-[11px] text-slate-500">MoHUA Staff Access (Ward 4)</p>
+                </div>
               </div>
               <button
                 onClick={() => {
                   setShowOfficerLoginModal(false);
                   setPinError('');
                 }}
-                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleOfficerLogin} className="p-5 space-y-4">
-              <div className="text-center space-y-1">
-                <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 text-[#2d7a70] flex items-center justify-center mx-auto mb-2">
-                  <KeyRound className="w-6 h-6" />
-                </div>
-                <h4 className="text-sm font-bold text-slate-900">Ward 4 Officer Portal</h4>
-                <p className="text-xs text-slate-500">
-                  Enter 4-digit Municipal Staff PIN to access officer triage & crew dispatch.
-                </p>
-              </div>
-
-              <div className="space-y-1">
+            <form onSubmit={handleOfficerLogin} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Enter 4-Digit Security PIN</label>
                 <input
                   type="password"
                   maxLength={4}
                   value={officerPin}
-                  onChange={(e) => {
-                    setOfficerPin(e.target.value);
-                    setPinError('');
-                  }}
-                  placeholder="Enter PIN (Default: 1234)"
-                  className="w-full h-11 px-3 bg-slate-50 border border-slate-300 rounded-xl text-center text-lg font-mono tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2d7a70]"
+                  onChange={(e) => setOfficerPin(e.target.value)}
+                  placeholder="• • • •"
+                  className="w-full h-10 px-3 text-center text-lg tracking-widest font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:outline-hidden"
                   autoFocus
                 />
-                {pinError && (
-                  <p className="text-xs text-rose-600 text-center font-medium mt-1">
-                    {pinError}
-                  </p>
-                )}
+                {pinError && <p className="text-[11px] text-rose-600 mt-1 font-medium">{pinError}</p>}
+                <p className="text-[10px] text-slate-400 mt-1">Default Demo PIN: <strong className="text-slate-600">1234</strong></p>
               </div>
 
-              <div className="flex flex-col gap-2 pt-2">
+              <div className="space-y-2 pt-1">
                 <button
                   type="submit"
-                  className="w-full h-11 rounded-xl bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold shadow-sm transition cursor-pointer"
+                  className="w-full h-10 bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                 >
-                  Verify & Enter Officer Desk
+                  Verify & Access Command Desk
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
-                    setOfficerPin('1234');
-                    setUserRole('OFFICER');
+                    const officerPreset = DEMO_PRESETS[2];
+                    setCurrentUser(officerPreset);
                     setShowOfficerLoginModal(false);
-                    setPinError('');
                   }}
-                  className="w-full h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
+                  className="w-full h-9 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-xl transition cursor-pointer"
                 >
-                  Quick Demo Login (Staff PIN: 1234)
+                  Quick Bypass (Ward Officer Demo)
                 </button>
               </div>
             </form>
@@ -832,17 +838,31 @@ export default function App() {
         </div>
       )}
 
-      {/* Settings & Key Configuration Modal */}
+      {/* Staff Management Modal */}
+      {showStaffManagementModal && (
+        <WardStaffManagementModal
+          isOpen={showStaffManagementModal}
+          onClose={() => setShowStaffManagementModal(false)}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(profile) => {
+            setCurrentUser(profile);
+            setShowAuthModal(false);
+          }}
+        />
+      )}
+
+      {/* Settings Modal */}
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-      />
-
-      {/* Swachhata Citizen Authentication Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={(profile) => setCurrentUser(profile)}
       />
     </div>
   );

@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
-import L from 'leaflet';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   MapPin, 
   CheckCircle2, 
@@ -31,6 +30,9 @@ import {
 import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile } from '../types';
 import { SWACHHATA_CATEGORIES } from '../mockData';
 import { analyzeHazardWithGeminiVision } from '../services/geminiService';
+import { GooglePinPickerMap } from './GooglePinPickerMap';
+import { GooglePlacesAutocompleteInput } from './GooglePlacesAutocompleteInput';
+import { GoogleDesktopOverviewMap } from './GoogleDesktopOverviewMap';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -90,154 +92,21 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const pinMarkerRef = useRef<L.Marker | null>(null);
-
-  // Desktop Live Map Ref
-  const desktopMapContainerRef = useRef<HTMLDivElement>(null);
-  const desktopMapInstanceRef = useRef<L.Map | null>(null);
-  const desktopMarkersLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Most recent open or active complaint for the hero banner
   const activeComplaint = incidents.find(i => i.status !== 'RESOLVED') || incidents[0];
 
-  // Mobile / Form Leaflet map setup for complaint form
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-    if (mapInstanceRef.current) return;
-
-    const map = L.map(mapContainerRef.current, {
-      center: [selectedCoords.lat, selectedCoords.lng],
-      zoom: 15,
-      zoomControl: true,
-      attributionControl: false
+  // Strict citizen scoping for "My Complaints"
+  const citizenComplaints = useMemo(() => {
+    if (!currentUser) return incidents;
+    const matching = incidents.filter(ticket => {
+      if (ticket.citizenUid && currentUser.uid && ticket.citizenUid === currentUser.uid) return true;
+      if (currentUser.name && ticket.reporterName && ticket.reporterName.toLowerCase() === currentUser.name.toLowerCase()) return true;
+      if (currentUser.phone && ticket.reporterPhone && ticket.reporterPhone.replace(/\s+/g, '') === currentUser.phone.replace(/\s+/g, '')) return true;
+      return false;
     });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
-    }).addTo(map);
-
-    const pinIconHtml = `
-      <div class="relative cursor-pointer flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
-        <div class="w-8 h-8 rounded-full bg-[#2d7a70] border-2 border-white shadow-md flex items-center justify-center text-white font-bold text-xs animate-bounce">
-          📍
-        </div>
-      </div>
-    `;
-
-    const customIcon = L.divIcon({
-      html: pinIconHtml,
-      className: 'citizen-gps-pin',
-      iconSize: [32, 32]
-    });
-
-    const marker = L.marker([selectedCoords.lat, selectedCoords.lng], {
-      icon: customIcon,
-      draggable: true
-    }).addTo(map);
-
-    marker.on('dragend', (e) => {
-      const position = e.target.getLatLng();
-      setSelectedCoords({ lat: Number(position.lat.toFixed(4)), lng: Number(position.lng.toFixed(4)) });
-    });
-
-    map.on('click', (e) => {
-      marker.setLatLng(e.latlng);
-      setSelectedCoords({ lat: Number(e.latlng.lat.toFixed(4)), lng: Number(e.latlng.lng.toFixed(4)) });
-    });
-
-    pinMarkerRef.current = marker;
-    mapInstanceRef.current = map;
-
-    const handleResize = () => {
-      map.invalidateSize();
-    };
-    window.addEventListener('resize', handleResize);
-    setTimeout(handleResize, 300);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      map.remove();
-      mapInstanceRef.current = null;
-    };
-  }, [currentView]);
-
-  // Desktop Overview Live Map
-  useEffect(() => {
-    if (!desktopMapContainerRef.current) return;
-    if (desktopMapInstanceRef.current) return;
-
-    const map = L.map(desktopMapContainerRef.current, {
-      center: [31.253, 75.703],
-      zoom: 14,
-      zoomControl: true,
-      attributionControl: false
-    });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
-    }).addTo(map);
-
-    const markersGroup = L.layerGroup().addTo(map);
-    desktopMarkersLayerRef.current = markersGroup;
-    desktopMapInstanceRef.current = map;
-
-    const handleResize = () => {
-      map.invalidateSize();
-    };
-    window.addEventListener('resize', handleResize);
-    setTimeout(handleResize, 350);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      map.remove();
-      desktopMapInstanceRef.current = null;
-    };
-  }, []);
-
-  // Update markers on desktop live map
-  useEffect(() => {
-    const map = desktopMapInstanceRef.current;
-    const group = desktopMarkersLayerRef.current;
-    if (!map || !group) return;
-
-    group.clearLayers();
-
-    incidents.forEach((inc) => {
-      const isResolved = inc.status === 'RESOLVED';
-      const isCritical = inc.priority === 'P1_CRITICAL';
-
-      const iconHtml = `
-        <div class="relative cursor-pointer transition-transform hover:scale-110">
-          <div class="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-md border-2 border-white ${
-            isResolved
-              ? 'bg-emerald-600 text-white'
-              : isCritical
-              ? 'bg-rose-600 text-white animate-pulse'
-              : 'bg-[#2d7a70] text-white'
-          }">
-            ${isResolved ? '✓' : isCritical ? '!' : '●'}
-          </div>
-        </div>
-      `;
-
-      const customIcon = L.divIcon({
-        html: iconHtml,
-        className: 'desktop-citizen-marker',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-
-      L.marker([inc.location.lat, inc.location.lng], { icon: customIcon })
-        .addTo(group)
-        .on('click', () => {
-          setTrackedIncident(inc);
-        });
-    });
-  }, [incidents]);
+    return matching.length > 0 ? matching : incidents;
+  }, [incidents, currentUser]);
 
   const handleFileUpload = async (file: File) => {
     const reader = new FileReader();
@@ -308,6 +177,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       },
       imageUrl: photoUrl || 'https://images.unsplash.com/photo-1584463699031-c4c0b629c135?auto=format&fit=crop&w=800&q=80',
       reporterName: reporterName || 'Sangit',
+      reporterPhone: reporterPhone || '',
+      citizenUid: currentUser?.uid || '',
+      ward: 'Ward 4 - Central Zone',
       createdAt: Date.now(),
       aiSummary: visionResult?.hazardDescription,
       actionDirectives: visionResult?.safetyDirectives,
@@ -553,30 +425,33 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700">
-                      Location Pin (Drag on Map):
+                      Location Pin (Drag on Google Map):
                     </label>
                     <span className="text-[11px] font-mono text-[#2d7a70] font-semibold">
                       {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
                     </span>
                   </div>
 
-                  <div
-                    ref={mapContainerRef}
+                  <GooglePinPickerMap
+                    coords={selectedCoords}
+                    onCoordsChange={setSelectedCoords}
                     className="w-full h-36 rounded-xl border border-slate-200 overflow-hidden relative z-0"
                   />
                 </div>
 
-                {/* Street / Landmark input */}
+                {/* Street / Landmark input with Google Places Autocomplete */}
                 <div className="space-y-1">
                   <label className="block text-xs font-bold text-slate-700">
-                    Street / Landmark Description:
+                    Street / Landmark Description (Google Places):
                   </label>
-                  <input
-                    type="text"
+                  <GooglePlacesAutocompleteInput
                     value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
+                    onChange={setLandmark}
+                    onPlaceSelect={(coords, formattedAddress) => {
+                      setSelectedCoords(coords);
+                      setLandmark(formattedAddress);
+                    }}
                     placeholder="e.g. Cinema Road, Outside Verad Gate, Ward 4"
-                    className="w-full h-10 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2d7a70]"
                     required
                   />
                 </div>
@@ -689,8 +564,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </span>
               </div>
 
-              <div
-                ref={desktopMapContainerRef}
+              <GoogleDesktopOverviewMap
+                incidents={incidents}
+                onSelectIncident={(inc) => setTrackedIncident(inc)}
                 className="w-full h-56 rounded-xl border border-slate-200 overflow-hidden relative z-0"
               />
               <p className="text-[11px] text-slate-500">
@@ -1113,19 +989,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 />
               </div>
 
-              {/* Location & GPS Leaflet Map Box */}
+              {/* Location & GPS Google Map Box */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Incident Location Pin
+                    Incident Location Pin (Google Map)
                   </label>
                   <span className="text-xs font-mono text-[#2d7a70] font-semibold">
                     {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
                   </span>
                 </div>
 
-                <div
-                  ref={mapContainerRef}
+                <GooglePinPickerMap
+                  coords={selectedCoords}
+                  onCoordsChange={setSelectedCoords}
                   className="w-full h-44 rounded-xl border border-slate-200 overflow-hidden relative z-0"
                 />
                 <p className="text-[11px] text-slate-500">
@@ -1133,15 +1010,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </p>
               </div>
 
-              {/* Landmark Input */}
+              {/* Landmark Input with Google Places */}
               <div className="space-y-1">
-                <label className="block text-xs font-bold text-slate-700">Street / Landmark Description</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-bold text-slate-700">Street / Landmark Description (Google Places)</label>
+                <GooglePlacesAutocompleteInput
                   value={landmark}
-                  onChange={(e) => setLandmark(e.target.value)}
+                  onChange={setLandmark}
+                  onPlaceSelect={(coords, formattedAddress) => {
+                    setSelectedCoords(coords);
+                    setLandmark(formattedAddress);
+                  }}
                   placeholder="e.g. Cinema Road, Outside Verad Gate, Ward 4"
-                  className="w-full h-11 px-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2d7a70]"
+                  className="h-11 text-sm"
                   required
                 />
               </div>

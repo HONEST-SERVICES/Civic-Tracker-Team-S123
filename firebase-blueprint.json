@@ -105,12 +105,35 @@
         "name": { "type": "string" },
         "phone": { "type": "string" },
         "email": { "type": "string" },
-        "role": { "type": "string", "description": "CITIZEN or OFFICER" },
+        "role": { "type": "string", "description": "CITIZEN, FIELD_CREW, WARD_OFFICER, SUPER_ADMIN" },
         "assignedWard": { "type": "string" },
+        "assignedCrew": { "type": "string" },
+        "designation": { "type": "string" },
         "createdAt": { "type": "object" },
         "photoURL": { "type": "string" }
       },
       "required": ["uid", "role"]
+    },
+    "Unit": {
+      "title": "Municipal Repair Unit",
+      "description": "Field response crew or municipal vehicle fleet.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "capacity": { "type": "string" },
+        "currentZone": { "type": "string" },
+        "baseZone": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "driverCrew": { "type": "string" },
+        "contactFreq": { "type": "string" },
+        "efficiencyRating": { "type": "number" },
+        "equipment": { "type": "array" }
+      },
+      "required": ["id", "name", "status"]
     }
   },
   "firestore": {
@@ -125,6 +148,12 @@
         "$ref": "#/entities/User"
       },
       "description": "Collection of registered citizen and officer user profiles."
+    },
+    "/units/{unitId}": {
+      "schema": {
+        "$ref": "#/entities/Unit"
+      },
+      "description": "Collection of municipal repair crew units and vehicles."
     }
   }
 }

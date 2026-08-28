@@ -1,90 +1,53 @@
 ================================================================================
-SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
+SWACHHATA-MoHUA CIVIC APP: PURE FIRESTORE, GOOGLE MAPS PLATFORM & RBAC UPGRADE
 ================================================================================
 
-1. LIVE GOOGLE FIREBASE FIRESTORE & AUTHENTICATION INTEGRATION
+1. ZERO HARDCODED MOCKS & 100% REAL FIRESTORE FLOW
 --------------------------------------------------------------------------------
-- Centralized Key Management (`src/config/keys.ts`):
-  * Environment variable fallback hierarchy: `import.meta.env.VITE_FIREBASE_*` -> `localStorage.getItem("FIREBASE_*")` -> Hardcoded production defaults (`omnisync-pothole`).
-  * Real-time Firestore initialization in `/src/services/firebase.ts` with project:
-    - Project ID: `omnisync-pothole`
-    - Auth Domain: `omnisync-pothole.firebaseapp.com`
-    - Collection: `complaints`
-- Firebase Authentication Modular Service (`/src/services/firebase.ts`):
-  * Initialized and exported `auth = getAuth(app)`.
-  * `loginWithGoogle()`: Authenticates via `signInWithPopup(auth, GoogleAuthProvider)`.
-  * `setupRecaptcha(containerId)`: Initializes invisible `RecaptchaVerifier` on specified DOM containers.
-  * `sendPhoneOtp(phoneNumber, appVerifier)`: Triggers SMS verification via `signInWithPhoneNumber(auth, ...)`.
-  * `verifyPhoneOtp(confirmationResult, otpCode)`: Confirms SMS OTP code with `confirmationResult.confirm(otpCode)`.
-  * `logoutUser()`: Signs out active user sessions via `signOut(auth)`.
-  * `onAuthChange(callback)`: Real-time listener for user session changes via `onAuthStateChanged(auth, callback)`.
-  * `syncUserProfile(user)`: Syncs user profile with Firestore document `users/{user.uid}`, creating default CITIZEN records if not present.
-  * `getUserProfile(uid)`: Retrieves registered user profile metadata from Firestore.
-- Swachhata-MoHUA Citizen Auth Modal (`src/components/AuthModal.tsx`):
-  * Clean UI modal with Swachhata branding and teal accents.
-  * 1-Click "Continue with Google" sign-in.
-  * Phone Number & SMS OTP verification flow with invisible reCAPTCHA integration and resend options.
-  * Live user profile chip in header with role badge, user display name, and sign-out controls.
-  * Integrated Citizen Profile tab with dynamic session management.
-- Data Model:
-  * `id`: Unique grievance identifier (e.g., `W0488610C948211`)
-  * `title`: Complaint title / hazard category
-  * `category`: Hazard category code
-  * `status`: "Registered" | "Assigned" | "In Remediation" | "Resolved"
-  * `ward`: Jurisdiction zone (e.g., "Ward 4 - Central Zone")
-  * `location`: Address, latitude, longitude, zone
-  * `citizenName`: Reporting citizen name
-  * `assignedCrew`: Dispatched rapid patcher / ward inspector
-  * `createdAt`: Firestore `serverTimestamp()`
-  * `priority`: P1_CRITICAL / P2_URGENT / P3_NORMAL
-  * `department`: PUBLIC_WORKS / SANITATION / WATER_SUPPLY / ELECTRICITY
-  * `riskScore`, `imageUrl`, `proofOfFixUrl`, `officerNotes`, `etaMinutes`, `aiSummary`, `actionDirectives`
-- Real-time Listeners & Auto-Sync:
-  * Uses Firestore `onSnapshot` with `orderBy("createdAt", "desc")` to ensure instant updates across all citizen and municipal officer screens simultaneously.
-  * Submissions write directly to Firestore via `addDoc` / `setDoc`.
-  * Officer status changes, crew assignments, and resolution photologs update Firestore documents via `updateDoc`.
+- Real-time Database Collections:
+  * `complaints`: Scoped queries (`onSnapshot`) with role-based filtering:
+    - `CITIZEN`: Filtered to grievances filed by current user (`citizenUid == auth.currentUser.uid` or reporter match).
+    - `FIELD_CREW`: Filtered to grievances in crew's assigned ward (`assignedWard == userProfile.assignedWard`).
+    - `WARD_OFFICER`: Filtered strictly to complaints in `userProfile.assignedWard`.
+    - `SUPER_ADMIN`: Unrestricted apex access across all wards and national municipal jurisdictions.
+  * `units`: Live municipal crew and repair vehicle fleet records:
+    - Real-time `onSnapshot` tracking of crew location, status (`AVAILABLE`, `EN_ROUTE`, `MAINTENANCE`), equipment, and active assignments.
+  * `users`: User profiles with hierarchical RBAC roles: `CITIZEN`, `FIELD_CREW`, `WARD_OFFICER`, `SUPER_ADMIN`.
+- Firestore Writes:
+  * Citizen Grievance Submission: Creates records with `serverTimestamp()`, AI Vision diagnostics, and geospatial coordinates.
+  * Officer Crew Dispatch & Work Order Allocation: Atomic updates to `complaints` and `units`.
+  * Status Transitions & Proof-of-Fix: Uploads remediation photo URLs, inspector closure notes, and resolution timestamps.
 
-2. GEMINI AI VISION & AUTONOMOUS DISPATCH INTEGRATION
+2. GOOGLE MAPS JAVASCRIPT & PLACES API INTEGRATION
 --------------------------------------------------------------------------------
-- Gemini Vision Model: `models/gemini-2.5-flash`
-  * Server endpoint: `POST /api/gemini/analyze-vision` (proxies vision analysis securely, accepts custom header key or server `GEMINI_API_KEY`).
-  * Client service: `analyzeHazardWithGeminiVision` in `/src/services/geminiService.ts`.
-  * Features: Pavement defect classification, severity scoring (1-100), automated department mapping, crew allocation recommendation, and safety directives.
-  * Visual UI: Integrated live diagnostic badge with loading animations on both Desktop and Mobile grievance forms.
-- Gemini Autonomous Dispatch Reasoning: `models/gemini-3.7-flash`
-  * Server endpoint: `POST /api/gemini/dispatch` (executes chain-of-thought multi-criteria dispatch optimization).
-  * Considers priority, spatial proximity, department jurisdiction, vehicle equipment capabilities, and crew shift availability.
+- Maps JS API Loader (`src/services/googleMapsLoader.ts`):
+  * Asynchronous singleton loader using `@googlemaps/js-api-loader` v2 `setOptions` and `importLibrary`.
+  * Automatically resolves API keys with fallback to standard demo key for immediate preview.
+- Google Places Autocomplete (`src/components/GooglePlacesAutocompleteInput.tsx`):
+  * Real-time location search powered by `google.maps.places.AutocompleteService` and `PlacesService`.
+  * Geocoding support and reverse-geocoding coordinates back to street addresses.
+- Interactive Pin Picker Map (`src/components/GooglePinPickerMap.tsx`):
+  * Draggable Google Maps marker with reverse-geocoding on drag end (`google.maps.Geocoder`).
+  * Smooth pan/zoom and custom pin styling.
+- Desktop Overview Map (`src/components/GoogleDesktopOverviewMap.tsx`):
+  * Live GIS dashboard mapping grievances, priority color-coding (P1 Critical Red, P2 Urgent Teal, Resolved Green), and interactive InfoWindows.
+- Officer Tactical GIS Map (`src/components/GoogleTacticalMap.tsx`):
+  * Comprehensive command map rendering ward sector boundary circles, active grievance markers, field crew vehicle markers, and dispatch route polylines.
 
-3. SETTINGS & API KEY CONFIGURATION MODAL (`src/components/SettingsModal.tsx`)
+3. SWACHHATA AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
 --------------------------------------------------------------------------------
-- Clean UI modal accessible from the top navigation bar and user profile tab.
-- Allows live configuration and testing of:
-  * Gemini API Key (with instant connection test against Gemini 2.5 Flash).
-  * Firebase Project ID and Firebase API Key (with instant Firestore handshake verification).
-  * Cloudflare & custom deployment environment documentation.
-- Stores custom keys safely in browser `localStorage` and memory.
+- Swachhata Authentication Screen (`src/components/SwachhataAuthScreen.tsx`):
+  * Authentic Swachhata-MoHUA design with rich teal aesthetics (`#2d7a70`).
+  * Method 1: 1-Click "Continue with Google" popup authentication.
+  * Method 2: Mobile Number & SMS OTP login with invisible reCAPTCHA container.
+  * Method 3: 1-Click Evaluator Demo Personas for instant switching between Citizen, Field Crew, Ward Officer, and Super Admin.
+- Route Lifecycle & Access Enforcements:
+  * Unauthenticated sessions immediately show the clean Swachhata login portal.
+  * `CITIZEN` -> Swachhata Citizen App (Grievance submission, AI Vision detection, My Complaints tracking).
+  * `FIELD_CREW` -> Ward-scoped Field Work Orders (Assigned tickets, status updates, proof photo uploads).
+  * `WARD_OFFICER` & `SUPER_ADMIN` -> Ward Inspection & GIS Remediation Command Center.
 
-4. RESPONSIVE DESKTOP VS. MOBILE ARCHITECTURE
+4. GEMINI 2.5 FLASH VISION & GEMINI 3.7 DISPATCH ENGINE
 --------------------------------------------------------------------------------
-- Mobile Layout (< 768px):
-  * Authentic vertical Swachhata-MoHUA app experience.
-  * Rich teal header (`bg-[#2d7a70]`), "Good Afternoon, Welcome Sangit" card.
-  * Active grievance hero card with 4-stage mini progress stepper.
-  * 2x2 Soft-gradient quick-action cards (Post a Complaint, My Complaints, SBM Toilet Locator, Swachh Survekshan).
-  * Category picker list with circular icons.
-  * Fixed bottom navigation bar with elevated floating circular (+) button.
-- Desktop Layout (md and above):
-  * Full-width responsive dashboard (`max-w-7xl mx-auto px-6 py-6`).
-  * Citizen Portal: Balanced 2-column layout (`grid grid-cols-1 md:grid-cols-12 gap-8`):
-    - Left Column (Col 6/12): Category selector tiles & complaint submission form with live photo dropzone and draggable map pin.
-    - Right Column (Col 6/12): Active complaint hero status banner, Ward 4 geospatial real-time map, and auto-synced complaints stream.
-  * Officer Command Desk:
-    - Left Column (Col 7-8/12): 60%+ width Leaflet GIS map with ward boundary circles and real-time markers.
-    - Right Column (Col 4-5/12): 40% real-time Firestore complaints list, triage workspace, dispatch controls, and proof-of-fix verification modal.
-
-5. ROLE-BASED ACCESS CONTROL (RBAC) & WARD OFFICER DESK
---------------------------------------------------------------------------------
-- PIN-Protected Authentication modal (Staff PIN: `1234`).
-- Citizen Mode: Safe grievance submission, geo-photo upload, tracking, and rating.
-- Municipal Officer Desk: Live triage, crew dispatching, department re-routing, priority adjustments, proof photolog verification, and automated status transitions.
-================================================================================
+- Multimodal Vision: Auto-classifies civic defects (potholes, garbage dumps, broken streetlights, waterlogging) directly from photo uploads and pre-populates category and severity scores.
+- Autonomous Dispatch: Chain-of-thought multi-criteria dispatch optimization for rapid response crews.

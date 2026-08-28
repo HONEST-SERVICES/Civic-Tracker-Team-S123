@@ -18,7 +18,7 @@ export type IncidentStatus = 'OPEN' | 'DISPATCHED' | 'IN_PROGRESS' | 'RESOLVED';
 
 export type DepartmentType = 'PUBLIC_WORKS' | 'SANITATION' | 'WATER_SUPPLY' | 'ELECTRICITY' | 'HEALTH_SBM';
 
-export type UserRole = 'CITIZEN' | 'OFFICER';
+export type UserRole = 'CITIZEN' | 'FIELD_CREW' | 'WARD_OFFICER' | 'SUPER_ADMIN';
 
 export interface UserProfile {
   uid: string;
@@ -27,6 +27,8 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   assignedWard: string | null;
+  assignedCrew?: string;
+  designation?: string;
   createdAt?: any;
   photoURL?: string;
 }
@@ -102,6 +104,11 @@ export interface CrisisIncident {
   actionDirectives?: string[];
   aiSummary?: string;
   reporterName?: string;
+  reporterPhone?: string;
+  citizenUid?: string;
+  ward?: string;
+  rating?: number;
+  citizenFeedback?: string;
 }
 
 export interface MunicipalUnit {
