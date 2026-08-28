@@ -18,6 +18,14 @@ SWACHHATA-MoHUA CIVIC APP REFACTOR, LIVE FIRESTORE & RESPONSIVE DESKTOP OVERHAUL
   * `verifyPhoneOtp(confirmationResult, otpCode)`: Confirms SMS OTP code with `confirmationResult.confirm(otpCode)`.
   * `logoutUser()`: Signs out active user sessions via `signOut(auth)`.
   * `onAuthChange(callback)`: Real-time listener for user session changes via `onAuthStateChanged(auth, callback)`.
+  * `syncUserProfile(user)`: Syncs user profile with Firestore document `users/{user.uid}`, creating default CITIZEN records if not present.
+  * `getUserProfile(uid)`: Retrieves registered user profile metadata from Firestore.
+- Swachhata-MoHUA Citizen Auth Modal (`src/components/AuthModal.tsx`):
+  * Clean UI modal with Swachhata branding and teal accents.
+  * 1-Click "Continue with Google" sign-in.
+  * Phone Number & SMS OTP verification flow with invisible reCAPTCHA integration and resend options.
+  * Live user profile chip in header with role badge, user display name, and sign-out controls.
+  * Integrated Citizen Profile tab with dynamic session management.
 - Data Model:
   * `id`: Unique grievance identifier (e.g., `W0488610C948211`)
   * `title`: Complaint title / hazard category

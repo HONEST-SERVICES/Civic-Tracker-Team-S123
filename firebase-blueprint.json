@@ -95,6 +95,22 @@
         }
       },
       "required": ["title", "category", "status", "department"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "Registered citizen or municipal officer profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "description": "CITIZEN or OFFICER" },
+        "assignedWard": { "type": "string" },
+        "createdAt": { "type": "object" },
+        "photoURL": { "type": "string" }
+      },
+      "required": ["uid", "role"]
     }
   },
   "firestore": {
@@ -103,6 +119,12 @@
         "$ref": "#/entities/Complaint"
       },
       "description": "Collection of all civic grievances and municipal crisis incidents."
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Collection of registered citizen and officer user profiles."
     }
   }
 }

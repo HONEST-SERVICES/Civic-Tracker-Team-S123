@@ -17,6 +17,12 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // Users collection rules
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Connection test document
     match /test/{docId} {
       allow read, write: if true;

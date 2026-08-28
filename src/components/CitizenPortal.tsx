@@ -28,7 +28,7 @@ import {
   Radio,
   Layers
 } from 'lucide-react';
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult } from '../types';
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile } from '../types';
 import { SWACHHATA_CATEGORIES } from '../mockData';
 import { analyzeHazardWithGeminiVision } from '../services/geminiService';
 
@@ -39,6 +39,8 @@ interface CitizenPortalProps {
   onOpenOfficerLogin?: () => void;
   activeScreen?: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS';
   onNavigate?: (screen: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS') => void;
+  currentUser?: UserProfile | null;
+  onOpenAuth?: () => void;
 }
 
 export const CitizenPortal: React.FC<CitizenPortalProps> = ({
@@ -47,7 +49,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   isDispatching,
   onOpenOfficerLogin,
   activeScreen = 'HOME',
-  onNavigate
+  onNavigate,
+  currentUser,
+  onOpenAuth
 }) => {
   const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS'>(activeScreen);
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
@@ -56,13 +60,21 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [isAnalyzingVision, setIsAnalyzingVision] = useState<boolean>(false);
   const [visionResult, setVisionResult] = useState<GeminiVisionResult | null>(null);
   const [landmark, setLandmark] = useState<string>('Cinema Road, Outside Verad Gate');
-  const [reporterName, setReporterName] = useState<string>('Sangit');
-  const [reporterPhone, setReporterPhone] = useState<string>('+91 98765 43210');
+  const [reporterName, setReporterName] = useState<string>(currentUser?.name || 'Sangit');
+  const [reporterPhone, setReporterPhone] = useState<string>(currentUser?.phone || '+91 98765 43210');
   const [submittedSuccess, setSubmittedSuccess] = useState<boolean>(false);
   const [lastSubmittedId, setLastSubmittedId] = useState<string>('');
   const [trackedIncident, setTrackedIncident] = useState<CrisisIncident | null>(null);
   const [rating, setRating] = useState<number>(5);
   const [ratingSubmitted, setRatingSubmitted] = useState<boolean>(false);
+
+  // Sync user profile if updated
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name) setReporterName(currentUser.name);
+      if (currentUser.phone) setReporterPhone(currentUser.phone);
+    }
+  }, [currentUser]);
 
   // Sync external navigation prop
   useEffect(() => {

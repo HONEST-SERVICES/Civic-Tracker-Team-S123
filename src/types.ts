@@ -20,6 +20,17 @@ export type DepartmentType = 'PUBLIC_WORKS' | 'SANITATION' | 'WATER_SUPPLY' | 'E
 
 export type UserRole = 'CITIZEN' | 'OFFICER';
 
+export interface UserProfile {
+  uid: string;
+  name: string;
+  phone: string;
+  email: string;
+  role: UserRole;
+  assignedWard: string | null;
+  createdAt?: any;
+  photoURL?: string;
+}
+
 export type UnitType = 
   | 'RAPID_ASPHALT_PATCHER'
   | 'HYDRO_VAC_DRAINAGE'

@@ -5,6 +5,7 @@ import {
   addDoc, 
   onSnapshot, 
   doc, 
+  getDoc,
   updateDoc, 
   serverTimestamp, 
   query, 
@@ -24,7 +25,7 @@ import {
   ConfirmationResult,
   ApplicationVerifier
 } from "firebase/auth";
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType } from "../types";
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, UserProfile } from "../types";
 import { INITIAL_INCIDENTS } from "../mockData";
 import { getFirebaseConfig } from "../config/keys";
 
@@ -35,13 +36,16 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const complaintsCollection = collection(db, "complaints");
+export const usersCollection = collection(db, "users");
 
 /**
  * Sign in with Google Popup
  */
-export async function loginWithGoogle() {
+export async function loginWithGoogle(): Promise<{ user: User; profile: UserProfile }> {
   const provider = new GoogleAuthProvider();
-  return await signInWithPopup(auth, provider);
+  const cred = await signInWithPopup(auth, provider);
+  const profile = await syncUserProfile(cred.user);
+  return { user: cred.user, profile };
 }
 
 /**
@@ -72,8 +76,10 @@ export async function sendPhoneOtp(
 export async function verifyPhoneOtp(
   confirmationResult: ConfirmationResult, 
   otpCode: string
-) {
-  return await confirmationResult.confirm(otpCode);
+): Promise<{ user: User; profile: UserProfile }> {
+  const cred = await confirmationResult.confirm(otpCode);
+  const profile = await syncUserProfile(cred.user);
+  return { user: cred.user, profile };
 }
 
 /**
@@ -81,6 +87,81 @@ export async function verifyPhoneOtp(
  */
 export async function logoutUser(): Promise<void> {
   return await signOut(auth);
+}
+
+/**
+ * Sync user profile with Firestore document `users/{user.uid}`
+ */
+export async function syncUserProfile(user: User): Promise<UserProfile> {
+  try {
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        uid: user.uid,
+        name: data.name || user.displayName || "Citizen",
+        phone: data.phone || user.phoneNumber || "",
+        email: data.email || user.email || "",
+        role: (data.role as 'CITIZEN' | 'OFFICER') || "CITIZEN",
+        assignedWard: data.assignedWard || null,
+        createdAt: data.createdAt || null,
+        photoURL: data.photoURL || user.photoURL || undefined
+      };
+    }
+
+    // Create new profile if not exists
+    const newProfile: UserProfile = {
+      uid: user.uid,
+      name: user.displayName || (user.phoneNumber ? `Citizen (${user.phoneNumber.slice(-4)})` : "Citizen"),
+      phone: user.phoneNumber || "",
+      email: user.email || "",
+      role: "CITIZEN",
+      assignedWard: null,
+      createdAt: serverTimestamp(),
+      photoURL: user.photoURL || undefined
+    };
+
+    await setDoc(userRef, newProfile);
+    return newProfile;
+  } catch (err) {
+    console.warn("Error syncing user profile with Firestore:", err);
+    return {
+      uid: user.uid,
+      name: user.displayName || (user.phoneNumber ? `Citizen (${user.phoneNumber.slice(-4)})` : "Citizen"),
+      phone: user.phoneNumber || "",
+      email: user.email || "",
+      role: "CITIZEN",
+      assignedWard: null,
+      photoURL: user.photoURL || undefined
+    };
+  }
+}
+
+/**
+ * Get user profile by UID
+ */
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        uid,
+        name: data.name || "Citizen",
+        phone: data.phone || "",
+        email: data.email || "",
+        role: (data.role as 'CITIZEN' | 'OFFICER') || "CITIZEN",
+        assignedWard: data.assignedWard || null,
+        createdAt: data.createdAt || null,
+        photoURL: data.photoURL || undefined
+      };
+    }
+  } catch (err) {
+    console.warn("Failed to fetch user profile:", err);
+  }
+  return null;
 }
 
 /**
