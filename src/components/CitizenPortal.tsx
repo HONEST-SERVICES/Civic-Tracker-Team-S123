@@ -1152,12 +1152,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         MOBILE LAYOUT (< md) -> AUTHENTIC SWACHHATA MOBILE FLOW 
         ========================================================================
       */}
-      <div className="block md:hidden max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <div className="block md:hidden max-w-2xl mx-auto px-4 py-3 space-y-2.5">
         {/* Top Success Banner */}
         {submittedSuccess && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-sm flex items-start gap-3 shadow-sm animate-in fade-in">
-            <CheckCircle2 className="w-5 h-5 text-[#2d7a70] flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-[#2d7a70] flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
               <p className="font-bold text-slate-900">Grievance submitted successfully. Tracking ID: #{lastSubmittedId}</p>
               <p className="text-xs text-slate-700 mt-0.5">
                 Dispatched to Ward 4 Sanitary Inspector & Field Repair Crews.
@@ -1168,15 +1168,15 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
         {/* VIEW 1: AUTHENTIC CIVICPULSE CITIZEN HOME */}
         {currentView === 'HOME' && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {/* 1. Compact Header Welcome Card */}
-            <div className="bg-white rounded-2xl py-3 px-4 shadow-xs border border-slate-200/80 flex items-center justify-between gap-3">
+            <div className="bg-white rounded-xl py-2.5 px-4 shadow-xs border border-slate-200/80 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-full bg-teal-50 border border-[#115e59]/30 flex items-center justify-center flex-shrink-0 shadow-xs">
                   <UserCircle className="w-5 h-5 text-[#115e59]" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-slate-800 tracking-tight truncate">
+                  <h2 className="text-sm font-bold text-slate-800 tracking-tight truncate">
                     Welcome, {reporterName}
                   </h2>
                   <p className="text-[11px] text-slate-500 truncate">
@@ -1193,7 +1193,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
             {/* 2. Compact Incident Card or Clean Empty State */}
             {activeComplaint ? (
-              <div className="bg-gradient-to-r from-[#115e59] to-[#2d7a70] rounded-2xl p-3.5 text-white shadow-xs space-y-2 relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[#115e59] to-[#2d7a70] rounded-xl py-2 px-3.5 text-white shadow-xs space-y-1.5 relative overflow-hidden">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
@@ -1211,26 +1211,26 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </div>
                   <button
                     onClick={() => setTrackedIncident(activeComplaint)}
-                    className="px-3 py-1 rounded-full bg-white text-[#115e59] text-[11px] font-bold shadow-xs hover:bg-teal-50 transition cursor-pointer flex-shrink-0"
+                    className="px-2.5 py-1 rounded-full bg-white text-[#115e59] text-xs font-bold shadow-xs hover:bg-teal-50 transition cursor-pointer flex-shrink-0"
                   >
                     Track Status
                   </button>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-teal-50 pt-1 border-t border-white/10">
-                  <p className="text-xs font-semibold text-white truncate max-w-[220px]">
+                  <p className="text-xs font-semibold text-white truncate max-w-[200px]">
                     {activeComplaint.title}
                   </p>
-                  <span className="text-[11px] text-teal-200 font-mono flex-shrink-0">
+                  <span className="text-xs text-teal-200 font-mono flex-shrink-0">
                     {activeComplaint.status === 'RESOLVED' ? 'Closed' : `ETA: ~${activeComplaint.etaMinutes || 15}m`}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
+              <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70] flex-shrink-0">
-                    <CheckCircle2 className="w-4 h-4 text-[#2d7a70]" />
+                  <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70] flex-shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#2d7a70]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-slate-800 truncate">No active grievances logged</p>
@@ -1239,7 +1239,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </div>
                 <button
                   onClick={() => pushView('CATEGORIES')}
-                  className="px-3 py-1 bg-teal-50 hover:bg-teal-100 text-[#115e59] border border-teal-200 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
+                  className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-[#115e59] border border-teal-200 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
                 >
                   + Report
                 </button>
@@ -1247,20 +1247,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             )}
 
             {/* 3. Dashboard Quick Action 2x2 Grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               {/* Card 1: Post a Complaint */}
               <div
                 onClick={() => pushView('CATEGORIES')}
-                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <FileText className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <FileText className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition leading-snug">
                     Post a Complaint
                   </h3>
-                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                  <p className="text-xs text-slate-500 leading-snug mt-1">
                     We are committed to receiving your complaint
                   </p>
                 </div>
@@ -1269,16 +1269,16 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 2: My Active Complaints */}
               <div
                 onClick={() => pushView('COMPLAINTS')}
-                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Clock className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Clock className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition">
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition leading-snug">
                     My Complaints ({citizenComplaints.length})
                   </h3>
-                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                  <p className="text-xs text-slate-500 leading-snug mt-1">
                     Track live resolution & field work orders
                   </p>
                 </div>
@@ -1287,21 +1287,21 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 3: SBM Public Toilet Locator */}
               <div
                 onClick={() => pushView('FACILITIES')}
-                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
-                  <span className="text-xl">🚻</span>
+                <div className="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg">
+                  <span>🚻</span>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition">
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition leading-snug">
                       SBM Toilet Locator
                     </h3>
                     <span className="text-[10px] font-extrabold bg-cyan-600 text-white px-1.5 py-0.2 rounded-full">
                       {publicFacilities.length}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                  <p className="text-xs text-slate-500 leading-snug mt-1">
                     Find, inspect & rate nearby clean toilets
                   </p>
                 </div>
@@ -1312,82 +1312,31 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => {
                   setShowSurvekshanModal(true);
                 }}
-                className="bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col justify-between h-36 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Sparkles className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition leading-snug">
                     Swachh Survekshan
                   </h3>
-                  <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                  <p className="text-xs text-slate-500 leading-snug mt-1">
                     Answer simple questions & feedback
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* 4. Active Swachhata Cleanliness Drives & CTU Campaigns */}
-            <div className="bg-white rounded-2xl p-4 border border-teal-200/90 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#2d7a70] flex items-center justify-center font-bold">
-                    🌿
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Ward 4 Cleanliness Drives & SBM Campaigns</h3>
-                    <p className="text-[11px] text-slate-500">Citizen volunteer drives & spot cleanups</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
-                  Active Drives
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {SAMPLE_CAMPAIGNS.map((camp) => (
-                  <div
-                    key={camp.id}
-                    onClick={() => {
-                      setSelectedDriveCampaign(camp);
-                      setShowDriveModal(true);
-                    }}
-                    className="p-3 rounded-xl border border-teal-100 bg-teal-50/50 hover:bg-teal-50 hover:border-teal-300 transition flex items-center justify-between gap-3 cursor-pointer group"
-                  >
-                    <div className="min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-teal-950 group-hover:text-[#2d7a70] truncate">
-                          {camp.title}
-                        </span>
-                        <span className="text-[9px] font-extrabold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded shrink-0">
-                          {camp.dateStr.split(',')[0]}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {camp.locationName} • {camp.timeStr}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 bg-[#2d7a70] group-hover:bg-[#23635b] text-white text-xs font-bold rounded-lg shrink-0 shadow-xs transition"
-                    >
-                      Join Drive
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Officer & Staff Access Strip */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
+            <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70]">
-                  <Building className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70]">
+                  <Building className="w-3.5 h-3.5" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-900">Municipal Officer Desk</p>
-                  <p className="text-[11px] text-slate-500">Ward Sanitary Inspector & Assistant Engineer Portal</p>
+                  <p className="text-[11px] text-slate-500">Ward Sanitary Inspector & AE Portal</p>
                 </div>
               </div>
               <button

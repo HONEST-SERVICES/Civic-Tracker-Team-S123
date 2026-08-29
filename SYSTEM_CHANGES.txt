@@ -28,11 +28,23 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 - Integrated Swachh Bharat Mission (SBM) Public Toilet locator with citizen star-rating synchronization and live review submissions.
 
 4. CITIZEN ACTION CARD REFINEMENT & MOBILE BOTTOM NAVIGATION:
-- Refactored the 4 main Citizen Action Cards ("Post a Complaint", "My Complaints", "SBM Toilet Locator", "Swachh Survekshan") to pure white cards (`bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md`) with dedicated 44x44px square icon containers in soft pastel tints (`bg-blue-50 text-blue-600`, `bg-amber-50 text-amber-600`, `bg-cyan-50 text-cyan-600`, `bg-emerald-50 text-emerald-600`).
+- Refactored the 4 main Citizen Action Cards ("Post a Complaint", "My Complaints", "SBM Toilet Locator", "Swachh Survekshan") to pure white cards (`bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md`) with dedicated 36x36px square icon containers in soft pastel tints (`bg-blue-50 text-blue-600`, `bg-amber-50 text-amber-600`, `bg-cyan-50 text-cyan-600`, `bg-emerald-50 text-emerald-600`).
 - Upgraded Mobile Bottom Navigation Bar to crisp `bg-white/95 backdrop-blur-md border-t border-slate-200/80` with elevated dark-slate circular center action button (`bg-slate-900 text-white shadow-md hover:bg-slate-800`) and clean `text-xs font-medium` typography.
 - Maintained `pb-28` safe bottom scroll padding for all citizen view flows.
 
-5. PRODUCTION CIVIC AUTH & ONBOARDING PORTAL:
+5. MOBILE VIEWPORT SPACING & ABOVE-THE-FOLD LOCK:
+- Streamlined vertical container spacing to `space-y-2.5` and `px-4 py-3`.
+- Reduced Welcome Card padding to `py-2.5 px-4` with compact `w-9 h-9` avatar and `text-sm font-bold` heading.
+- Optimized Active Incident Banner padding to `py-2 px-3.5` with concise ticket IDs, compact status badges, and `px-2.5 py-1 text-xs` Track button.
+- Adjusted 4 Quick Action cards to compact `h-32` height with `p-3.5` padding, `w-9 h-9` icons, and `leading-snug text-xs` subtext to guarantee all 4 cards fit cleanly above the fold on mobile viewports.
+- Removed Cleanliness Drives from the Home view to guarantee zero card clipping above the bottom bar.
+
+6. DEDICATED EVENTS & SBM CAMPAIGNS TAB:
+- Migrated Ward Cleanliness Drives & SBM Campaigns to a full-screen dedicated `EventsView` under the "Events" bottom nav tab.
+- Integrated search, dynamic filter chips (`All Drives`, `Upcoming`, `Registered`, `Past`), interactive volunteer sign-up toggle with SBM Karma Points (+50), safety kit details, and drive modal inspector.
+- Preserved `pb-28` safe bottom scroll padding for an unobstructed mobile navigation experience.
+
+7. PRODUCTION CIVIC AUTH & ONBOARDING PORTAL:
 - Standardized onboarding card centered on clean `#f8fafc` canvas with "CivicPulse" title and "Autonomous Municipal Redressal & Smart Governance" subtitle.
 - Implemented Google SSO (`bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 border border-slate-300 rounded-xl`) and Mobile OTP authentication with +91 country prefix.
 - Integrated "MoHUA Civic Tech Standard • Role-Protected & Encrypted" security badge and explicit terms agreement statement.

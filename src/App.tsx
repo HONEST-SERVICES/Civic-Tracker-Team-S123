@@ -30,6 +30,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { SwachhataAuthScreen } from './components/SwachhataAuthScreen';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './components/SwachhataDriveModal';
+import { EventsView } from './components/EventsView';
 import { executeAutonomousDispatch } from './services/geminiService';
 import { 
   subscribeToScopedComplaints,
@@ -831,6 +832,17 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            ) : citizenTab === 'EVENTS' ? (
+              <EventsView
+                onSelectCampaign={(camp) => {
+                  setSelectedDriveCampaign(camp);
+                  setShowDriveModal(true);
+                }}
+                onOpenCampaignModal={(camp) => {
+                  setSelectedDriveCampaign(camp);
+                  setShowDriveModal(true);
+                }}
+              />
             ) : (
               <CitizenPortal
                 incidents={incidents}
