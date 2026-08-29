@@ -1573,10 +1573,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 1: File Grievance */}
               <div
                 onClick={() => pushView('CATEGORIES')}
-                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <PlusCircle className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-2 shadow-xs relative overflow-hidden">
+                  <FileText className="w-6 h-6 text-blue-600 absolute" />
+                  <img
+                    src="/icon-file-grievance.png"
+                    alt="File Grievance"
+                    className="w-full h-full object-contain relative z-10"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-blue-600 transition">
@@ -1591,10 +1599,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 2: Track Grievances */}
               <div
                 onClick={() => pushView('COMPLAINTS')}
-                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Clock3 className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-2 shadow-xs relative overflow-hidden">
+                  <Clock3 className="w-6 h-6 text-amber-600 absolute" />
+                  <img
+                    src="/icon-track-grievances.png"
+                    alt="Track Grievances"
+                    className="w-full h-full object-contain relative z-10"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-amber-700 transition">
@@ -1609,10 +1625,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 3: Public Facilities */}
               <div
                 onClick={() => pushView('FACILITIES')}
-                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
               >
-                <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-                  <MapPin className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-2 shadow-xs relative overflow-hidden">
+                  <MapPin className="w-6 h-6 text-teal-600 absolute" />
+                  <img
+                    src="/icon-public-facilities.png"
+                    alt="Public Facilities"
+                    className="w-full h-full object-contain relative z-10"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-teal-700 transition">
@@ -1629,10 +1653,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => {
                   setShowSurvekshanModal(true);
                 }}
-                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-2 shadow-xs relative overflow-hidden">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 absolute" />
+                  <img
+                    src="/icon-citizen-survey.png"
+                    alt="Citizen Survey"
+                    className="w-full h-full object-contain relative z-10"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-emerald-600 transition">

@@ -241,5 +241,21 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
   * Retained maps exclusively where functional: inline GPS pin picker inside "File Grievance" form (`GooglePinPickerMap`) and SBM Toilet Locator (`FACILITIES`) directory with Google Maps routing.
 
 =======================================================
-Status: Production-Ready GovTech Release (Light Theme Locked & Seamless Demo Toggle Active)
+22. CUSTOM PUBLIC IMAGE ASSETS FOR 4 CITIZEN ACTION CARDS:
+=======================================================
+- Refactored Citizen Action Card Icon Containers (`CitizenPortal.tsx`):
+  * Updated the 4 Quick Action cards to load custom brand icon assets from `/public/`:
+    1. File Grievance: `/icon-file-grievance.png` (Fallback: Lucide `FileText`)
+    2. Track Grievances: `/icon-track-grievances.png` (Fallback: Lucide `Clock3`)
+    3. Public Facilities: `/icon-public-facilities.png` (Fallback: Lucide `MapPin`)
+    4. Citizen Survey: `/icon-citizen-survey.png` (Fallback: Lucide `CheckCircle2`)
+- Modern Square Icon Framing & Error Resilience:
+  * Replaced circle/pill containers with a clean square frame (`w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-2 shadow-xs relative overflow-hidden`).
+  * Structured image elements with `onError={(e) => { e.currentTarget.style.display = 'none'; }}` over position-absolute Lucide fallback icons, ensuring zero broken image glyphs if asset files are missing or unpopulated.
+- Preserved Surface & Typographic Proportions:
+  * Maintained high-contrast white card surfaces (`bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm hover:border-slate-300 hover:shadow-md transition-all cursor-pointer`).
+  * Preserved typography hierarchy: Title (`font-bold text-slate-900 text-sm tracking-tight`), Subtitle (`font-normal text-slate-500 text-xs leading-relaxed mt-1`).
+
+=======================================================
+Status: Production-Ready GovTech Release (Custom Icon Asset Pipeline Active)
 =======================================================
