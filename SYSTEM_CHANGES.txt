@@ -288,3 +288,21 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 =======================================================
 Status: Production-Ready Mobile GIS Desk & Graphic Action Cards Complete
 =======================================================
+
+=======================================================
+25. STREAMLINED MOBILE GIS COMMAND VIEW & HARMONIZED ACTION CARDS:
+=======================================================
+- Streamlined Mobile GIS Command Desk (`MunicipalOfficerCommandCenter.tsx`):
+  * Consolidated mobile sub-view switcher into top segmented tabs (`bg-slate-100 p-1 rounded-xl grid grid-cols-3 gap-1 text-xs font-semibold`): `[ 🗺️ Map ] | [ 📋 Queue (X) ] | [ ⚡ Dispatch ]`.
+  * Removed redundant top external status filter bar on mobile Map sub-view; retained floating in-map priority chip bar `[ All | P1 | P2 | P3 | 🚻 SBM Toilets ]` directly inside the map canvas overlay.
+  * Maximized map canvas viewport on mobile: `h-[calc(100vh-12rem)] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative bg-slate-100`.
+- Citizen Quick Action Cards Integrated Banner (`CitizenPortal.tsx`):
+  * Replaced inner square frames with seamless integrated top graphic banner frame: `w-full h-20 rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/60 border border-slate-100 flex items-center justify-center mb-2 overflow-hidden`.
+  * Formatted graphic assets cleanly: `<img src="/icon-file-grievance.png" className="h-14 w-14 object-contain transition-transform hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />` with Lucide vector fallback icon.
+  * Applied card typography: Title (`text-sm font-bold text-slate-900 leading-snug tracking-tight`), Subtitle (`text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2`).
+- Ward Governance & Telemetry Metrics Mobile Responsiveness (`MunicipalGovernanceView.tsx`):
+  * Configured telemetry metric chips in a clean 2x2 grid (`grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2`) with balanced padding (`p-3 bg-slate-50 border border-slate-200 rounded-xl`).
+
+=======================================================
+Status: Production-Ready Streamlined Mobile GIS & Harmonized Cards Complete
+=======================================================

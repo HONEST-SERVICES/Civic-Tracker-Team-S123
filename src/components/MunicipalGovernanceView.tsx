@@ -389,25 +389,25 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                 </div>
 
                 {/* Ward Metrics Summary Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Sub-Locations</span>
                     <p className="text-base font-bold text-slate-800 mt-0.5">{activeWard.subAreas.length}</p>
                   </div>
 
-                  <div className="p-3 bg-teal-50/60 rounded-xl border border-teal-200">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="text-[10px] text-[#2d7a70] uppercase font-bold tracking-wider">Active Crews</span>
                     <p className="text-base font-bold text-teal-900 mt-0.5">{activeWard.activeCrewsCount || 1} Deployed</p>
                   </div>
 
-                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="text-[10px] text-blue-700 uppercase font-bold tracking-wider">Assigned Officer</span>
                     <p className="text-xs font-bold text-blue-950 mt-1 truncate">
                       {activeWard.activeOfficerName || 'Unassigned'}
                     </p>
                   </div>
 
-                  <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-200">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="text-[10px] text-purple-700 uppercase font-bold tracking-wider">GIS Center</span>
                     <p className="text-xs font-mono font-bold text-purple-950 mt-1">
                       {activeWard.lat.toFixed(2)}, {activeWard.lng.toFixed(2)}
