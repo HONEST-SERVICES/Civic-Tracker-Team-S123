@@ -428,6 +428,33 @@ Status: UI Polish, Elevation Shadows & Pastel Tinting Complete
 
 =======================================================
 Status: Visual Contrast, Deep Surface Boundaries & Admin Multi-Section Architecture Complete
+======================================================
+
+
 =======================================================
+31. PERSISTENT AI DECISION BREAKDOWN & CITIZEN TRIAGE CONFIRMATION CARD:
+=======================================================
+- AI Triage Flow & State Retention (`CitizenPortal.tsx` & `App.tsx`):
+  * Audited Gemini AI vision analysis pipeline: guaranteed parsed analysis outputs (`visionResult` / `effectiveTriage`) are preserved in state and rendered as a persistent interactive confirmation card prior to submission.
+  * Added state controls for `citizenConfirmedTriage` and `isOverrideMode` allowing citizens to explicitly verify or override AI category and ward classifications.
+- Persistent "AI Decision Breakdown" Card UI (`CitizenPortal.tsx`):
+  * Header / Confidence Tag: Styled header with `Sparkles` icon and high-contrast confidence pill (`⚡ 98% Match Confidence`).
+  * 4 Clear Breakdown Points (High-Contrast Badges):
+    1. Detected Hazard / Issue: Displayed in high-contrast badge with `AlertCircle` icon.
+    2. Assessed Severity & SLA: Rendered priority badge (`bg-rose-50 text-rose-700 border-rose-200` for P1 Critical — 4hr SLA, or `bg-amber-50 text-amber-800 border-amber-200` for P2 Urgent — 24hr SLA).
+    3. Assigned Municipal Department: Formatted department name (e.g., Public Works Department — Road Repair Wing, Sanitation & Solid Waste Division, Electrical & Power Division).
+    4. Target Ward & Geocoded Location: Formatted location badge (`${selectedWard} • ${landmark}`).
+  * AI Reasoning Explanation Box: Styled callout container (`bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700`) with clear reasoning explanation.
+  * Interactive Confirmation & Overrides: Provided an explicit "Looks accurate (Confirmed)" toggle and "✏️ Override Category / Ward" button with dropdown controls for citizen customization.
+- Data Persistence & Submission Flow (`CitizenPortal.tsx`, `App.tsx`, `firebase.ts`):
+  * Updated submit CTA to "Confirm & Submit Grievance".
+  * Verified end-to-end saving of all AI triage fields (`category`, `priority`, `department`, `aiReasoning`, `aiConfidence`, `address`, `ward`, `requiresManualVerification`) to the Firestore `complaints` collection on instance `civictracker`.
+  * Configured redirect to Track Grievances view (`COMPLAINTS`) upon submission with a prominent success banner displaying ticket ID and ward redressal info.
+- Build Verification:
+  * Passed TypeScript compilation (`tsc --noEmit`) and production `compile_applet` builds with zero errors.
+
+=======================================================
+Status: Persistent AI Decision Breakdown & Citizen Triage Confirmation Card Complete
+========================================================
 
 

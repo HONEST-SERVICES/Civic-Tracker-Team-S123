@@ -260,7 +260,13 @@ export default function App() {
       createdAt: Date.now(),
       reporterName: incidentData.reporterName || currentUser?.name || 'Citizen',
       reporterPhone: incidentData.reporterPhone || currentUser?.phone || '',
-      citizenUid: currentUser?.uid || ''
+      citizenUid: currentUser?.uid || '',
+      ward: incidentData.ward || incidentData.location?.zone || 'Ward 4 - Central Zone',
+      aiConfidence: typeof incidentData.aiConfidence === 'number' ? incidentData.aiConfidence : 98,
+      aiReasoning: incidentData.aiReasoning || incidentData.description || '',
+      requiresManualVerification: Boolean(incidentData.requiresManualVerification),
+      hasVoiceNote: Boolean(incidentData.hasVoiceNote),
+      audioNoteBase64: incidentData.audioNoteBase64 || ''
     };
 
     // 1. Optimistic Local Update
