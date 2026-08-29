@@ -153,8 +153,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       // Search Query
       if (facilitySearchQuery.trim()) {
         const q = facilitySearchQuery.toLowerCase().trim();
-        const matchName = fac.name.toLowerCase().includes(q);
-        const matchAddr = fac.location.address.toLowerCase().includes(q);
+        const matchName = fac.name?.toLowerCase().includes(q) ?? false;
+        const matchAddr = fac.location?.address?.toLowerCase().includes(q) ?? false;
         const matchWard = (fac.ward || '').toLowerCase().includes(q);
         const matchFeat = (fac.features || []).some(f => f.toLowerCase().includes(q));
         if (!matchName && !matchAddr && !matchWard && !matchFeat) return false;
@@ -163,8 +163,14 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       return true;
     }).sort((a, b) => {
       // Sort nearest first
-      const distA = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, a.location.lat, a.location.lng);
-      const distB = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, b.location.lat, b.location.lng);
+      const latA = a.location?.lat ?? 31.2530;
+      const lngA = a.location?.lng ?? 75.7030;
+      const latB = b.location?.lat ?? 31.2530;
+      const lngB = b.location?.lng ?? 75.7030;
+      const centerLat = selectedCoords?.lat ?? 31.2530;
+      const centerLng = selectedCoords?.lng ?? 75.7030;
+      const distA = calculateDistanceKm(centerLat, centerLng, latA, lngA);
+      const distB = calculateDistanceKm(centerLat, centerLng, latB, lngB);
       return distA - distB;
     });
   }, [publicFacilities, facilityFilterState, facilitySearchQuery, selectedCoords]);
@@ -554,7 +560,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             {/* 2-Column Grid of Facilities */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredFacilities.map((fac) => {
-                const distKm = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, fac.location.lat, fac.location.lng);
+                const facLat = fac.location?.lat ?? 31.2530;
+                const facLng = fac.location?.lng ?? 75.7030;
+                const curLat = selectedCoords?.lat ?? 31.2530;
+                const curLng = selectedCoords?.lng ?? 75.7030;
+                const distKm = calculateDistanceKm(curLat, curLng, facLat, facLng);
                 const walkMins = Math.max(2, Math.round(distKm * 12));
 
                 return (
@@ -571,7 +581,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <h4 className="font-bold text-slate-900 text-sm truncate">{fac.name}</h4>
                           <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
                             <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
-                            <span className="truncate">{fac.location.address || fac.ward}</span>
+                            <span className="truncate">{fac.location?.address || fac.ward}</span>
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-[#115e59] border border-teal-200">
@@ -693,7 +703,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
+                              const fLat = fac.location?.lat ?? 31.2530;
+                              const fLng = fac.location?.lng ?? 75.7030;
+                              setSelectedCoords({ lat: fLat, lng: fLng });
                               setFocusedFacility(fac);
                               pushView('HOME');
                               setTimeout(() => {
@@ -707,7 +719,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           </button>
 
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location.lat},${fac.location.lng}`}
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location?.lat ?? 31.2530},${fac.location?.lng ?? 75.7030}`}
                             target="_blank"
                             rel="noreferrer"
                             className="px-3 py-1.5 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
@@ -1992,7 +2004,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             ) : (
               <div className="space-y-3">
                 {filteredFacilities.map((fac) => {
-                  const distKm = calculateDistanceKm(selectedCoords.lat, selectedCoords.lng, fac.location.lat, fac.location.lng);
+                  const facLat = fac.location?.lat ?? 31.2530;
+                  const facLng = fac.location?.lng ?? 75.7030;
+                  const curLat = selectedCoords?.lat ?? 31.2530;
+                  const curLng = selectedCoords?.lng ?? 75.7030;
+                  const distKm = calculateDistanceKm(curLat, curLng, facLat, facLng);
                   const walkMins = Math.max(2, Math.round(distKm * 12));
 
                   return (
@@ -2011,7 +2027,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             </div>
                             <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
                               <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                              <span className="truncate">{fac.location.address || fac.ward}</span>
+                              <span className="truncate">{fac.location?.address || fac.ward}</span>
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
@@ -2136,7 +2152,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                setSelectedCoords({ lat: fac.location.lat, lng: fac.location.lng });
+                                const fLat = fac.location?.lat ?? 31.2530;
+                                const fLng = fac.location?.lng ?? 75.7030;
+                                setSelectedCoords({ lat: fLat, lng: fLng });
                                 setFocusedFacility(fac);
                                 setCurrentView('HOME');
                                 if (onNavigate) onNavigate('HOME');
@@ -2151,7 +2169,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             </button>
 
                             <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location.lat},${fac.location.lng}`}
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location?.lat ?? 31.2530},${fac.location?.lng ?? 75.7030}`}
                               target="_blank"
                               rel="noreferrer"
                               className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
@@ -2314,7 +2332,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <p className="font-semibold text-slate-900">Incident Details</p>
                 <p className="text-slate-600">{trackedIncident.description}</p>
                 <p className="text-slate-500 font-mono text-[11px] pt-1">
-                  Location: {trackedIncident.location.address} ({trackedIncident.location.lat.toFixed(4)}°, {trackedIncident.location.lng.toFixed(4)}°)
+                  Location: {trackedIncident.location?.address || 'Ward 4 - Central Zone'} ({(trackedIncident.location?.lat ?? 31.2530).toFixed(4)}°, {(trackedIncident.location?.lng ?? 75.7030).toFixed(4)}°)
                 </p>
               </div>
             </div>

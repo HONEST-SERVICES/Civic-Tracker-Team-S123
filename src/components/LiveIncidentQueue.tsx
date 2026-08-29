@@ -77,16 +77,16 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
   };
 
   return (
-    <div className="h-64 sm:h-72 border-t border-slate-200 bg-white flex flex-col overflow-hidden text-sm font-sans select-none">
+    <div className="w-full h-full bg-white flex flex-col overflow-hidden text-sm font-sans select-none">
       {/* Queue Header */}
-      <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+      <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">
             Live Incident Queue & SLA Monitor
           </h3>
           <span className="text-xs text-slate-500 font-semibold">
-            ({incidents.filter(i => i.status !== 'RESOLVED').length} Active Tickets)
+            ({incidents.filter(i => i.status !== 'RESOLVED').length} Active)
           </span>
         </div>
 

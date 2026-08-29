@@ -120,5 +120,29 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 - Applied `object-contain` and retina-safe responsiveness to guarantee crisp, undistorted brand display across all screen resolutions.
 
 =======================================================
+15. MUNICIPAL OFFICER COMMAND CENTER REFACTOR & DUAL-ENGINE MAPS:
+=======================================================
+- Automated Dual-Engine Mapping Pipeline:
+  * Removed disruptive "Google Maps Platform Integration / Enter API Key" blocking modal completely.
+  * Implemented an automatic dual-engine mapping pipeline in `GoogleTacticalMap.tsx`:
+    1. Attempts Google Maps JS API execution.
+    2. Seamlessly falls back to an interactive Leaflet/OpenStreetMap layer (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`) on key/billing/referrer errors without any UI interruptions.
+  * Interactive incident pins render immediately centered on Ward 4 coordinates (Red for P1 Critical, Amber for P2 Urgent, Blue for P3 Normal, Green for Resolved & Fleet Units, Cyan for SBM Toilets).
+- Streamlined Single GovTech Top Navigation Bar:
+  * Eliminated double stacked header bars in `App.tsx` and `MunicipalOfficerCommandCenter.tsx`.
+  * Single pure white GovTech top bar (`bg-white border-b border-slate-200/90 h-16 px-6 flex items-center justify-between`):
+    - Left: Official CivicPulse logo (`/logo.png`), "CivicPulse Command HQ" title, and user info pill.
+    - Center: Clean view toggle buttons ([ GIS Command Map ] | [ Ward Governance ] | [ Profile ]).
+    - Right: Ward selector dropdown, "Manage Staff", and "Switch to Citizen" buttons.
+- Strict 3-Column Desktop Non-Scrolling Grid:
+  * Main layout: `h-[calc(100vh-4rem)] grid grid-cols-12 gap-4 p-4 bg-slate-50 overflow-hidden`.
+  * Column 1 (col-span-3): Filters & KPIs with jurisdiction summary, telemetry counters, and status/dept filters.
+  * Column 2 (col-span-5): Center Map & Live Incident Table:
+    - Top (55% height): Interactive GIS Tactical Map with rounded corners.
+    - Bottom (45% height): Live Incident Queue table with scrollable body (`overflow-y-auto`) and unclipped headers.
+  * Column 3 (col-span-4): Incident Action Desk with photo attachment container, AI triage notes, field crew dispatch assignments, and inspect/verify resolution modal.
+- Visual Cleanup: Replaced dark green containers with slate/navy surfaces (`bg-slate-900` primary buttons, `bg-slate-50` field containers) and maintained real-time Firestore synchronization.
+
+=======================================================
 Status: Production-Ready GovTech Release
 =======================================================

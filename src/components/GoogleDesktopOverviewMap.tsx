@@ -62,8 +62,8 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
 
         const initialCenter = focusedLocation 
           ? focusedLocation 
-          : focusedFacility 
-          ? { lat: focusedFacility.location.lat, lng: focusedFacility.location.lng }
+          : focusedFacility?.location 
+          ? { lat: focusedFacility.location.lat ?? 31.2530, lng: focusedFacility.location.lng ?? 75.7030 }
           : { lat: 31.2530, lng: 75.7030 };
 
         const map = new maps.Map(mapContainerRef.current, {
@@ -100,9 +100,12 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    if (focusedFacility) {
+    if (focusedFacility?.location) {
       setShowSbmFacilities(true);
-      const pos = { lat: focusedFacility.location.lat, lng: focusedFacility.location.lng };
+      const pos = { 
+        lat: focusedFacility.location.lat ?? 31.2530, 
+        lng: focusedFacility.location.lng ?? 75.7030 
+      };
       map.panTo(pos);
       map.setZoom(16);
 
@@ -117,7 +120,7 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
               ${focusedFacility.location.address || focusedFacility.ward}
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; color: #d97706;">
-              <span>⭐ ${focusedFacility.rating.toFixed(1)} / 5.0</span>
+              <span>⭐ ${(focusedFacility.rating ?? 5).toFixed(1)} / 5.0</span>
               <span style="color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${focusedFacility.status}</span>
             </div>
             <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
@@ -128,7 +131,7 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
         infoWindowRef.current.setPosition(pos);
         infoWindowRef.current.open(map);
       }
-    } else if (focusedLocation) {
+    } else if (focusedLocation && typeof focusedLocation.lat === 'number') {
       map.panTo(focusedLocation);
       map.setZoom(16);
     }
@@ -157,6 +160,9 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
     markersRef.current = [];
 
     incidents.forEach((inc) => {
+      if (!inc.location) return;
+      const incLat = inc.location.lat ?? 31.2530;
+      const incLng = inc.location.lng ?? 75.7030;
       const isResolved = inc.status === 'RESOLVED';
       const isCritical = inc.priority === 'P1_CRITICAL';
       const isUrgent = inc.priority === 'P2_URGENT';
@@ -164,7 +170,7 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
       const color = isResolved ? '#10b981' : isCritical ? '#ef4444' : isUrgent ? '#f59e0b' : '#3b82f6';
 
       const marker = new google.maps.Marker({
-        position: { lat: inc.location.lat, lng: inc.location.lng },
+        position: { lat: incLat, lng: incLng },
         map,
         title: inc.title,
         icon: {
@@ -190,14 +196,17 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
     const map = mapInstanceRef.current;
     if (!map || !window.google?.maps) return;
 
-    facilityMarkersRef.current.forEach((m) => m.setMap(null));
+    facilityMarkersRef.current.forEach((m) => m.marker.setMap(null));
     facilityMarkersRef.current = [];
 
     if (!showSbmFacilities) return;
 
     facilities.forEach((fac) => {
+      if (!fac.location) return;
+      const facLat = fac.location.lat ?? 31.2530;
+      const facLng = fac.location.lng ?? 75.7030;
       const marker = new google.maps.Marker({
-        position: { lat: fac.location.lat, lng: fac.location.lng },
+        position: { lat: facLat, lng: facLng },
         map,
         title: `${fac.name} (${fac.rating}★)`,
         icon: {
@@ -215,7 +224,7 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
       });
 
       marker.addListener('click', () => {
-        const pos = { lat: fac.location.lat, lng: fac.location.lng };
+        const pos = { lat: facLat, lng: facLng };
         map.panTo(pos);
         map.setZoom(16);
 
@@ -230,7 +239,7 @@ export const GoogleDesktopOverviewMap: React.FC<GoogleDesktopOverviewMapProps> =
                 ${fac.location.address || fac.ward}
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; color: #d97706;">
-                <span>⭐ ${fac.rating.toFixed(1)} / 5.0</span>
+                <span>⭐ ${(fac.rating ?? 5).toFixed(1)} / 5.0</span>
                 <span style="color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${fac.status}</span>
               </div>
               <div style="font-size: 10px; color: #64748b; margin-top: 4px;">

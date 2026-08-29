@@ -484,164 +484,168 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans overflow-hidden select-none">
-      {/* 1. TOP HEADER (Ultra-Clean Minimalist Civic Header) */}
-      <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/80 shadow-xs relative z-40">
-        {/* Left: CivicPulse Logo & Title */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <img 
-            src="/logo.png" 
-            alt="CivicPulse Logo" 
-            className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-lg flex-shrink-0"
-            referrerPolicy="no-referrer"
-          />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">CivicPulse</span>
-              <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
-                Live Matrix
-              </span>
+    const isOfficerCommandView = (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && citizenTab !== 'PROFILE';
+
+    return (
+      <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans overflow-hidden select-none">
+        {/* 1. TOP HEADER (Rendered for Citizen, Crew, Volunteers and Profile views) */}
+        {!isOfficerCommandView && (
+          <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/80 shadow-xs relative z-40">
+            {/* Left: CivicPulse Logo & Title */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img 
+                src="/logo.png" 
+                alt="CivicPulse Logo" 
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-lg flex-shrink-0"
+                referrerPolicy="no-referrer"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">CivicPulse</span>
+                  <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
+                    Live Matrix
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 truncate hidden md:block font-normal">
+                  Civic Grievance Redressal & Field Dispatch Matrix
+                </p>
+              </div>
             </div>
-            <p className="text-[10px] text-slate-500 truncate hidden md:block font-normal">
-              Civic Grievance Redressal & Field Dispatch Matrix
-            </p>
-          </div>
-        </div>
 
-        {/* Center: Live Municipal Sync Status Badge (Desktop) */}
-        <div className="hidden lg:flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
-            <Radio className="w-3 h-3 text-emerald-500 animate-pulse" strokeWidth={1.75} />
-            <span>Civic Network Online</span>
-          </div>
-        </div>
+            {/* Center: Live Municipal Sync Status Badge (Desktop) */}
+            <div className="hidden lg:flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
+                <Radio className="w-3 h-3 text-emerald-500 animate-pulse" strokeWidth={1.75} />
+                <span>Civic Network Online</span>
+              </div>
+            </div>
 
-        {/* Right: Clean Profile Avatar / Sign In Action */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          {!authLoading && !currentUser ? (
-            <button
-              id="header-signin-btn"
-              onClick={() => setShowAuthModal(true)}
-              className="bg-slate-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold hover:bg-slate-800 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </button>
-          ) : (
-            /* User Profile Menu Trigger */
-            <div className="relative">
-              <button
-                id="header-profile-btn"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                title="User Profile & Settings"
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
-              >
-                {currentUser?.photoURL ? (
-                  <img
-                    src={currentUser.photoURL}
-                    alt={currentUser.name}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <UserCircle className="w-5 h-5 text-slate-600" strokeWidth={1.75} />
-                )}
-              </button>
-
-              {/* Profile Dropdown Drawer */}
-              {showProfileMenu && currentUser && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
-                  <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 font-bold overflow-hidden">
-                      {currentUser?.photoURL ? (
-                        <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <User className="w-5 h-5 text-blue-600" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
-                      <div className="mt-0.5">
-                        <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                          {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{currentUser.email || currentUser.phone}</p>
-                    </div>
-                  </div>
-
-                  <div className="py-2 space-y-1">
-                    <button
-                      id="menu-profile-btn"
-                      onClick={() => {
-                        setCitizenTab('PROFILE');
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
-                    >
-                      <User className="w-4 h-4 text-orange-600" />
-                      <span>My Profile & ID</span>
-                    </button>
-
-                    <button
-                      id="menu-gemini-btn"
-                      onClick={() => {
-                        setShowGeminiAssistant(true);
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
-                    >
-                      <Sparkles className="w-4 h-4 text-blue-600" />
-                      <span>Gemini AI Copilot</span>
-                    </button>
-
-                    <button
-                      id="menu-settings-btn"
-                      onClick={() => {
-                        setShowSettingsModal(true);
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
-                    >
-                      <Settings className="w-4 h-4 text-slate-500" />
-                      <span>Preferences & Settings</span>
-                    </button>
-
-                    {userRole === 'SUPER_ADMIN' && (
-                      <button
-                        id="menu-staff-btn"
-                        onClick={() => {
-                          setShowStaffManagementModal(true);
-                          setShowProfileMenu(false);
-                        }}
-                        className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
-                      >
-                        <Users className="w-4 h-4 text-slate-500" />
-                        <span>Staff Delegations</span>
-                      </button>
+            {/* Right: Clean Profile Avatar / Sign In Action */}
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              {!authLoading && !currentUser ? (
+                <button
+                  id="header-signin-btn"
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-slate-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold hover:bg-slate-800 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+              ) : (
+                /* User Profile Menu Trigger */
+                <div className="relative">
+                  <button
+                    id="header-profile-btn"
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    title="User Profile & Settings"
+                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
+                  >
+                    {currentUser?.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt={currentUser.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <UserCircle className="w-5 h-5 text-slate-600" strokeWidth={1.75} />
                     )}
-                  </div>
+                  </button>
 
-                  <div className="pt-2 border-t border-slate-100">
-                    <button
-                      id="menu-signout-btn"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        handleSignOut();
-                      }}
-                      className="w-full text-left px-2.5 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center gap-2 font-semibold cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4 text-rose-500" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
+                  {/* Profile Dropdown Drawer */}
+                  {showProfileMenu && currentUser && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
+                      <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 font-bold overflow-hidden">
+                          {currentUser?.photoURL ? (
+                            <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <User className="w-5 h-5 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
+                          <div className="mt-0.5">
+                            <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5">{currentUser.email || currentUser.phone}</p>
+                        </div>
+                      </div>
+
+                      <div className="py-2 space-y-1">
+                        <button
+                          id="menu-profile-btn"
+                          onClick={() => {
+                            setCitizenTab('PROFILE');
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <User className="w-4 h-4 text-orange-600" />
+                          <span>My Profile & ID</span>
+                        </button>
+
+                        <button
+                          id="menu-gemini-btn"
+                          onClick={() => {
+                            setShowGeminiAssistant(true);
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <Sparkles className="w-4 h-4 text-blue-600" />
+                          <span>Gemini AI Copilot</span>
+                        </button>
+
+                        <button
+                          id="menu-settings-btn"
+                          onClick={() => {
+                            setShowSettingsModal(true);
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                        >
+                          <Settings className="w-4 h-4 text-slate-500" />
+                          <span>Preferences & Settings</span>
+                        </button>
+
+                        {userRole === 'SUPER_ADMIN' && (
+                          <button
+                            id="menu-staff-btn"
+                            onClick={() => {
+                              setShowStaffManagementModal(true);
+                              setShowProfileMenu(false);
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                          >
+                            <Users className="w-4 h-4 text-slate-500" />
+                            <span>Staff Delegations</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100">
+                        <button
+                          id="menu-signout-btn"
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            handleSignOut();
+                          }}
+                          className="w-full text-left px-2.5 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center gap-2 font-semibold cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4 text-rose-500" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </header>
+          </header>
+        )}
 
       {/* 2. MAIN APPLICATION WORKSPACE ROUTED STRICTLY BY FIRESTORE RBAC */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
