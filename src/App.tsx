@@ -31,6 +31,7 @@ import { AuthModal } from './components/AuthModal';
 import { SwachhataAuthScreen } from './components/SwachhataAuthScreen';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './components/SwachhataDriveModal';
 import { EventsView } from './components/EventsView';
+import { ProfileView } from './components/ProfileView';
 import { executeAutonomousDispatch } from './services/geminiService';
 import { 
   subscribeToScopedComplaints,
@@ -569,6 +570,18 @@ export default function App() {
 
                   <div className="py-2 space-y-1">
                     <button
+                      id="menu-profile-btn"
+                      onClick={() => {
+                        setCitizenTab('PROFILE');
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                    >
+                      <User className="w-4 h-4 text-orange-600" />
+                      <span>My Profile & ID</span>
+                    </button>
+
+                    <button
                       id="menu-gemini-btn"
                       onClick={() => {
                         setShowGeminiAssistant(true);
@@ -630,325 +643,360 @@ export default function App() {
       {/* 2. MAIN APPLICATION WORKSPACE ROUTED STRICTLY BY FIRESTORE RBAC */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         
-        {/* VIEW A: WARD OFFICER & SUPER ADMIN COMMAND DESK */}
-        {(userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && (
-          <MunicipalOfficerCommandCenter
-            incidents={incidents}
-            units={units}
-            selectedIncident={selectedIncident}
-            selectedUnit={selectedUnit}
-            onSelectIncident={setSelectedIncident}
-            onSelectUnit={setSelectedUnit}
-            onUpdateIncidentStatus={handleUpdateIncidentStatus}
-            onUpdateUnitStatus={handleUpdateUnitStatus}
-            onAssignCrew={handleAssignCrew}
-            onReRouteDepartment={handleReRouteDepartment}
-            onAdjustPriority={handleAdjustPriority}
-            onLogout={handleSignOut}
-            currentUser={currentUser}
-            onOpenStaffManagement={() => setShowStaffManagementModal(true)}
-          />
-        )}
-
-        {/* VIEW B: FIELD CREW & FIELD CONTRACTOR WORK ORDERS */}
-        {(userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') && (
-          <FieldCrewWorkOrders
-            incidents={incidents}
-            currentUser={currentUser}
-            onUpdateIncidentStatus={(id, st, proofUrl, notes) => handleUpdateIncidentStatus(id, st, proofUrl, notes)}
-          />
-        )}
-
-        {/* VIEW C: SWACHHATA DOOT & VOLUNTEER HUB */}
-        {(userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT') && (
-          <div className="flex-1 overflow-y-auto">
-            <VolunteerPortal
-              incidents={incidents}
+        {/* GLOBAL PROFILE VIEW: Rendered whenever PROFILE tab is selected by any role */}
+        {citizenTab === 'PROFILE' ? (
+          <div className="flex-1 overflow-hidden">
+            <ProfileView
               currentUser={currentUser}
+              onSignOut={handleSignOut}
+              onSwitchToTacticalDesk={() => setCitizenTab('HOME')}
+              onOpenStaffManagement={() => setShowStaffManagementModal(true)}
+              onOpenAuthModal={() => setShowAuthModal(true)}
+              onOpenSettingsModal={() => setShowSettingsModal(true)}
+              onOpenGeminiCopilot={() => setShowGeminiAssistant(true)}
             />
           </div>
-        )}
-
-        {/* VIEW D: SWACHH SURVEKSHAN NATIONAL QUALITY AUDIT DESK */}
-        {userRole === 'SWACHH_SURVEKSHAN_AUDITOR' && (
-          <div className="flex-1 overflow-y-auto">
-            <SwachhSurvekshanAuditorDesk
-              incidents={incidents}
-              currentUser={currentUser}
-            />
-          </div>
-        )}
-
-        {/* VIEW E: CITIZEN SWACHHATA PORTAL */}
-        {userRole === 'CITIZEN' && (
-          <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
-            {citizenTab === 'EVENTS' ? (
-              <div className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto space-y-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#115e59]">
-                      <Calendar className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-900">Ward 4 Cleanliness Drives & SBM Events</h3>
-                      <p className="text-xs text-slate-500">Community participation initiatives in Central Zone</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5 pt-2">
-                    <div 
-                      onClick={() => {
-                        setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[0]);
-                        setShowDriveModal(true);
-                      }}
-                      className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-50 flex items-center justify-between transition cursor-pointer group"
-                    >
-                      <div>
-                        <p className="font-bold text-xs text-teal-900 group-hover:text-[#115e59]">Sunday Mega Plastic-Free Market Drive</p>
-                        <p className="text-[11px] text-teal-700">Verad Gate Market • Sunday 07:00 AM • 48 Registered</p>
-                      </div>
-                      <span className="text-xs font-bold text-white bg-[#115e59] group-hover:bg-[#0f4f4b] px-2.5 py-1 rounded-lg transition shadow-xs">Join Drive</span>
-                    </div>
-
-                    <div 
-                      onClick={() => {
-                        setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[1]);
-                        setShowDriveModal(true);
-                      }}
-                      className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition cursor-pointer group"
-                    >
-                      <div>
-                        <p className="font-bold text-xs text-slate-800 group-hover:text-slate-900">Ward 4 Stormwater Drain Awareness Campaign</p>
-                        <p className="text-[11px] text-slate-500">Community Hall, Sector 3 • Friday 05:00 PM • 32 Registered</p>
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">View Campaign</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : citizenTab === 'PROFILE' ? (
-              <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
-                <div className="w-full max-w-2xl bg-white rounded-2xl p-5 md:p-8 border border-slate-200 shadow-sm space-y-6">
-                  {currentUser ? (
-                    <>
-                      <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 text-center sm:text-left">
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                          <div className="w-20 h-20 rounded-full overflow-hidden bg-orange-50 border-2 border-orange-500/40 flex items-center justify-center text-2xl font-bold text-orange-600 shrink-0 shadow-xs">
-                            {currentUser.photoURL ? (
-                              <img
-                                src={currentUser.photoURL}
-                                alt={currentUser.name}
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <span>{currentUser.name?.charAt(0) || 'C'}</span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="text-lg font-bold text-slate-900 truncate">{currentUser.name}</h3>
-                            <p className="text-xs text-slate-500 truncate mt-0.5">
-                              {currentUser.phone || currentUser.email || 'citizen@swachhbharat.gov.in'}
-                            </p>
-                            <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
-                              <span className="text-[11px] font-bold text-orange-800 bg-orange-100/70 px-3 py-1 rounded-full border border-orange-200/60">
-                                {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
-                              </span>
-                              {currentUser.assignedWard && (
-                                <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                                  {currentUser.assignedWard}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={handleSignOut}
-                          className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 border border-slate-200"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
-
-                      {/* Citizen / Officer Metadata Grid */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                          Citizen Verification & Deployment Info
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
-                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                            <span className="text-slate-500 font-medium block text-[11px]">Assigned Ward</span>
-                            <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                              {currentUser.assignedWard || 'Ward 4 - Central Zone'}
-                            </span>
-                          </div>
-                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                            <span className="text-slate-500 font-medium block text-[11px]">Account Status</span>
-                            <span className="font-bold text-emerald-700 text-sm mt-0.5 block">
-                              Verified Official Record ✓
-                            </span>
-                          </div>
-                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                            <span className="text-slate-500 font-medium block text-[11px]">Primary Contact</span>
-                            <span className="font-bold text-slate-900 text-sm mt-0.5 block truncate">
-                              {currentUser.phone || currentUser.email || 'Registered Citizen'}
-                            </span>
-                          </div>
-                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                            <div>
-                              <span className="text-slate-500 font-medium block text-[11px]">System Status</span>
-                              <span className="font-bold text-slate-900 text-sm mt-0.5 block">Redressal Online</span>
-                            </div>
-                            <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200 text-xs inline-flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              Online ✓
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-6 space-y-4">
-                      <div className="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-slate-700 shadow-xs">
-                        <UserCircle className="w-10 h-10 text-slate-600" strokeWidth={1.5} />
-                      </div>
-                      <div className="max-w-md mx-auto space-y-1.5">
-                        <h3 className="text-lg font-bold text-slate-900">CivicPulse Citizen Profile</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          Sign in to access your personal grievance history, track resolution timelines, and submit verified feedback to municipal officers.
-                        </p>
-                      </div>
-                      <div className="pt-2">
-                        <button
-                          onClick={() => setShowAuthModal(true)}
-                          className="w-full max-w-sm mx-auto min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <LogIn className="w-4 h-4" />
-                          <span>Sign In to CivicPulse</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-2 space-y-3">
-                    {currentUser && (
-                      <button
-                        onClick={() => setShowAuthModal(true)}
-                        className="w-full min-h-[48px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Shield className="w-4 h-4 text-blue-400" />
-                        <span>Switch Account / Sign In with Another Profile</span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => setShowSettingsModal(true)}
-                      className="w-full min-h-[44px] bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200 shadow-xs"
-                    >
-                      <Settings className="w-4 h-4 text-slate-600" />
-                      <span>Preferences & Settings</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : citizenTab === 'EVENTS' ? (
-              <EventsView
-                onSelectCampaign={(camp) => {
-                  setSelectedDriveCampaign(camp);
-                  setShowDriveModal(true);
-                }}
-                onOpenCampaignModal={(camp) => {
-                  setSelectedDriveCampaign(camp);
-                  setShowDriveModal(true);
-                }}
-              />
-            ) : (
-              <CitizenPortal
+        ) : (
+          <>
+            {/* VIEW A: WARD OFFICER & SUPER ADMIN COMMAND DESK */}
+            {(userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && (
+              <MunicipalOfficerCommandCenter
                 incidents={incidents}
-                onSubmitIncident={handleDispatchIncident}
-                isDispatching={isDispatching}
-                activeScreen={citizenTab === 'FORM' ? 'FORM' : citizenTab === 'CATEGORIES' ? 'CATEGORIES' : citizenTab === 'COMPLAINTS' ? 'COMPLAINTS' : citizenTab === 'FACILITIES' ? 'FACILITIES' : 'HOME'}
-                onNavigate={(scr) => setCitizenTab(scr)}
+                units={units}
+                selectedIncident={selectedIncident}
+                selectedUnit={selectedUnit}
+                onSelectIncident={setSelectedIncident}
+                onSelectUnit={setSelectedUnit}
+                onUpdateIncidentStatus={handleUpdateIncidentStatus}
+                onUpdateUnitStatus={handleUpdateUnitStatus}
+                onAssignCrew={handleAssignCrew}
+                onReRouteDepartment={handleReRouteDepartment}
+                onAdjustPriority={handleAdjustPriority}
+                onLogout={handleSignOut}
                 currentUser={currentUser}
-                onOpenAuth={() => setShowAuthModal(true)}
+                onOpenStaffManagement={() => setShowStaffManagementModal(true)}
+                onOpenProfile={() => setCitizenTab('PROFILE')}
               />
             )}
-          </div>
+
+            {/* VIEW B: FIELD CREW & FIELD CONTRACTOR WORK ORDERS */}
+            {(userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') && (
+              <FieldCrewWorkOrders
+                incidents={incidents}
+                currentUser={currentUser}
+                onUpdateIncidentStatus={(id, st, proofUrl, notes) => handleUpdateIncidentStatus(id, st, proofUrl, notes)}
+              />
+            )}
+
+            {/* VIEW C: SWACHHATA DOOT & VOLUNTEER HUB */}
+            {(userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT') && (
+              <div className="flex-1 overflow-y-auto">
+                <VolunteerPortal
+                  incidents={incidents}
+                  currentUser={currentUser}
+                />
+              </div>
+            )}
+
+            {/* VIEW D: SWACHH SURVEKSHAN NATIONAL QUALITY AUDIT DESK */}
+            {userRole === 'SWACHH_SURVEKSHAN_AUDITOR' && (
+              <div className="flex-1 overflow-y-auto">
+                <SwachhSurvekshanAuditorDesk
+                  incidents={incidents}
+                  currentUser={currentUser}
+                />
+              </div>
+            )}
+
+            {/* VIEW E: CITIZEN SWACHHATA PORTAL */}
+            {userRole === 'CITIZEN' && (
+              <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
+                {citizenTab === 'EVENTS' ? (
+                  <div className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto space-y-4">
+                    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#115e59]">
+                          <Calendar className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sm text-slate-900">Ward 4 Cleanliness Drives & SBM Events</h3>
+                          <p className="text-xs text-slate-500">Community participation initiatives in Central Zone</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5 pt-2">
+                        <div 
+                          onClick={() => {
+                            setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[0]);
+                            setShowDriveModal(true);
+                          }}
+                          className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-50 flex items-center justify-between transition cursor-pointer group"
+                        >
+                          <div>
+                            <p className="font-bold text-xs text-teal-900 group-hover:text-[#115e59]">Sunday Mega Plastic-Free Market Drive</p>
+                            <p className="text-[11px] text-teal-700">Verad Gate Market • Sunday 07:00 AM • 48 Registered</p>
+                          </div>
+                          <span className="text-xs font-bold text-white bg-[#115e59] group-hover:bg-[#0f4f4b] px-2.5 py-1 rounded-lg transition shadow-xs">Join Drive</span>
+                        </div>
+
+                        <div 
+                          onClick={() => {
+                            setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[1]);
+                            setShowDriveModal(true);
+                          }}
+                          className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition cursor-pointer group"
+                        >
+                          <div>
+                            <p className="font-bold text-xs text-slate-800 group-hover:text-slate-900">Ward 4 Stormwater Drain Awareness Campaign</p>
+                            <p className="text-[11px] text-slate-500">Community Hall, Sector 3 • Friday 05:00 PM • 32 Registered</p>
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">View Campaign</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <CitizenPortal
+                    incidents={incidents}
+                    onSubmitIncident={handleDispatchIncident}
+                    isDispatching={isDispatching}
+                    activeScreen={citizenTab === 'FORM' ? 'FORM' : citizenTab === 'CATEGORIES' ? 'CATEGORIES' : citizenTab === 'COMPLAINTS' ? 'COMPLAINTS' : citizenTab === 'FACILITIES' ? 'FACILITIES' : 'HOME'}
+                    onNavigate={(scr) => setCitizenTab(scr)}
+                    currentUser={currentUser}
+                    onOpenAuth={() => setShowAuthModal(true)}
+                  />
+                )}
+              </div>
+            )}
+          </>
         )}
       </main>
 
-      {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Ultra-Clean Minimalist Styling) */}
-      {userRole === 'CITIZEN' && (
-        <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2">
-          {/* Tab 1: Home */}
-          <button
-            onClick={() => setCitizenTab('HOME')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-              citizenTab === 'HOME' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-            }`}
-          >
-            <Home className="w-5 h-5" />
-            <span>Home</span>
-          </button>
-
-          {/* Tab 2: Events / Activity */}
-          <button
-            onClick={() => setCitizenTab('EVENTS')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-              citizenTab === 'EVENTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-            }`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Events</span>
-          </button>
-
-          {/* Center Elevated Floating (+) Button */}
-          <div className="flex-1 flex justify-center -mt-6">
+      {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Role-Tailored for Citizens & Staff) */}
+      <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2">
+        {userRole === 'CITIZEN' ? (
+          <>
+            {/* Tab 1: Home */}
             <button
+              id="mobile-nav-home"
+              onClick={() => setCitizenTab('HOME')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'HOME' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <Home className="w-5 h-5" />
+              <span>Home</span>
+            </button>
+
+            {/* Tab 2: Events / Activity */}
+            <button
+              id="mobile-nav-events"
+              onClick={() => setCitizenTab('EVENTS')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'EVENTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span>Events</span>
+            </button>
+
+            {/* Center Elevated Floating (+) Button */}
+            <div className="flex-1 flex justify-center -mt-6">
+              <button
+                id="mobile-nav-post-complaint"
+                onClick={() => {
+                  if (!currentUser) {
+                    setShowAuthModal(true);
+                  } else {
+                    setCitizenTab('CATEGORIES');
+                  }
+                }}
+                title="Post a Complaint"
+                className="w-12 h-12 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-50 transition-all cursor-pointer"
+              >
+                <Plus className="w-6 h-6 stroke-[3]" />
+              </button>
+            </div>
+
+            {/* Tab 3: Complaints */}
+            <button
+              id="mobile-nav-complaints"
               onClick={() => {
                 if (!currentUser) {
                   setShowAuthModal(true);
                 } else {
-                  setCitizenTab('CATEGORIES');
+                  setCitizenTab('COMPLAINTS');
                 }
               }}
-              title="Post a Complaint"
-              className="w-12 h-12 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-50 transition-all cursor-pointer"
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
             >
-              <Plus className="w-6 h-6 stroke-[3]" />
+              <ClipboardList className="w-5 h-5" />
+              <span>Complaints</span>
             </button>
-          </div>
 
-          {/* Tab 3: Complaints */}
-          <button
-            onClick={() => {
-              if (!currentUser) {
-                setShowAuthModal(true);
-              } else {
-                setCitizenTab('COMPLAINTS');
-              }
-            }}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-              citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-            }`}
-          >
-            <ClipboardList className="w-5 h-5" />
-            <span>Complaints</span>
-          </button>
+            {/* Tab 4: Profile */}
+            <button
+              id="mobile-nav-profile"
+              onClick={() => setCitizenTab('PROFILE')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+          </>
+        ) : (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') ? (
+          <>
+            {/* Officer Tab 1: GIS Tactical Desk */}
+            <button
+              id="mobile-officer-nav-desk"
+              onClick={() => setCitizenTab('HOME')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab !== 'PROFILE' ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <Building2 className="w-5 h-5" />
+              <span>GIS Desk</span>
+            </button>
 
-          {/* Tab 4: Profile */}
-          <button
-            onClick={() => setCitizenTab('PROFILE')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-              citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-            }`}
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-      )}
+            {/* Officer Tab 2: Manage Staff */}
+            <button
+              id="mobile-officer-nav-staff"
+              onClick={() => setShowStaffManagementModal(true)}
+              className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-slate-500 hover:text-slate-700 font-medium"
+            >
+              <Users className="w-5 h-5" />
+              <span>Staff</span>
+            </button>
+
+            {/* Officer Tab 3: Gemini Copilot */}
+            <button
+              id="mobile-officer-nav-copilot"
+              onClick={() => setShowGeminiAssistant(true)}
+              className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span>AI Copilot</span>
+            </button>
+
+            {/* Officer Tab 4: Profile */}
+            <button
+              id="mobile-officer-nav-profile"
+              onClick={() => setCitizenTab('PROFILE')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+          </>
+        ) : (userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') ? (
+          <>
+            {/* Crew Tab 1: Work Orders */}
+            <button
+              id="mobile-crew-nav-orders"
+              onClick={() => setCitizenTab('HOME')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab !== 'PROFILE' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <Truck className="w-5 h-5" />
+              <span>Work Orders</span>
+            </button>
+
+            {/* Crew Tab 2: AI Dispatch Assistant */}
+            <button
+              id="mobile-crew-nav-copilot"
+              onClick={() => setShowGeminiAssistant(true)}
+              className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-slate-500 hover:text-slate-700 font-medium"
+            >
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              <span>Copilot</span>
+            </button>
+
+            {/* Crew Tab 3: Profile */}
+            <button
+              id="mobile-crew-nav-profile"
+              onClick={() => setCitizenTab('PROFILE')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+          </>
+        ) : (userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT') ? (
+          <>
+            {/* Volunteer Tab 1: Hub */}
+            <button
+              id="mobile-volunteer-nav-hub"
+              onClick={() => setCitizenTab('HOME')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab !== 'PROFILE' ? 'text-teal-700 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <Award className="w-5 h-5" />
+              <span>Volunteer Hub</span>
+            </button>
+
+            {/* Volunteer Tab 2: Cleanliness Drives */}
+            <button
+              id="mobile-volunteer-nav-drives"
+              onClick={() => {
+                setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[0]);
+                setShowDriveModal(true);
+              }}
+              className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-slate-500 hover:text-slate-700 font-medium"
+            >
+              <Calendar className="w-5 h-5" />
+              <span>Drives</span>
+            </button>
+
+            {/* Volunteer Tab 3: Profile */}
+            <button
+              id="mobile-volunteer-nav-profile"
+              onClick={() => setCitizenTab('PROFILE')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Auditor / Other Role Tab 1: Desk */}
+            <button
+              id="mobile-auditor-nav-desk"
+              onClick={() => setCitizenTab('HOME')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab !== 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <Building2 className="w-5 h-5" />
+              <span>Audit Desk</span>
+            </button>
+
+            {/* Auditor Tab 2: Profile */}
+            <button
+              id="mobile-auditor-nav-profile"
+              onClick={() => setCitizenTab('PROFILE')}
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+          </>
+        )}
+      </nav>
 
       {/* 4. MODALS */}
       {/* Staff Management Modal */}

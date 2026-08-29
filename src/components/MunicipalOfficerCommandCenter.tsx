@@ -24,12 +24,14 @@ import {
   Lock, 
   Crown,
   Layers,
-  Map as MapIcon
+  Map as MapIcon,
+  User
 } from 'lucide-react';
 import { CrisisIncident, MunicipalUnit, UnitStatus, DepartmentType, PriorityLevel, UserProfile } from '../types';
 import { ZONES, SWACHHATA_CATEGORIES } from '../mockData';
 import { GoogleTacticalMap } from './GoogleTacticalMap';
 import { MunicipalGovernanceView } from './MunicipalGovernanceView';
+import { ProfileView } from './ProfileView';
 
 interface MunicipalOfficerCommandCenterProps {
   incidents: CrisisIncident[];
@@ -46,6 +48,8 @@ interface MunicipalOfficerCommandCenterProps {
   onLogout?: () => void;
   currentUser?: UserProfile | null;
   onOpenStaffManagement?: () => void;
+  onOpenProfile?: () => void;
+  initialTab?: 'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE';
 }
 
 export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCenterProps> = ({
@@ -62,12 +66,14 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   onAdjustPriority,
   onLogout,
   currentUser,
-  onOpenStaffManagement
+  onOpenStaffManagement,
+  onOpenProfile,
+  initialTab = 'COMMAND_DESK'
 }) => {
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const hasWardManagePerm = isSuperAdmin || (currentUser?.permissions?.includes('MANAGE_WARDS') || currentUser?.permissions?.includes('ALL_ACCESS'));
   const defaultWard = currentUser?.assignedWard || 'Ward 4 - Central Zone';
-  const [activeTab, setActiveTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG'>('COMMAND_DESK');
+  const [activeTab, setActiveTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE'>(initialTab);
   const [selectedWard, setSelectedWard] = useState<string>(defaultWard);
   const [filterDepartment, setFilterDepartment] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
@@ -153,6 +159,18 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
               <span>Ward Config & Governance</span>
             </button>
           )}
+
+          <button
+            onClick={() => setActiveTab('PROFILE')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'PROFILE'
+                ? 'bg-white text-[#2d7a70] shadow-xs'
+                : 'text-teal-100 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Profile</span>
+          </button>
         </div>
 
         {/* Quick Ward / Action Switchers */}
@@ -210,7 +228,19 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
         </div>
       )}
 
-      {/* RENDER TAB 2: OPERATIONAL GIS COMMAND MAP & ACTION DESK (BALANCED 3-COLUMN DESKTOP WORKSPACE) */}
+      {/* RENDER TAB 2: PROFILE VIEW FOR OFFICERS & ADMIN */}
+      {activeTab === 'PROFILE' && (
+        <div className="flex-1 flex overflow-hidden">
+          <ProfileView
+            currentUser={currentUser || null}
+            onSignOut={onLogout || (() => {})}
+            onSwitchToTacticalDesk={() => setActiveTab('COMMAND_DESK')}
+            onOpenStaffManagement={onOpenStaffManagement}
+          />
+        </div>
+      )}
+
+      {/* RENDER TAB 3: OPERATIONAL GIS COMMAND MAP & ACTION DESK (BALANCED 3-COLUMN DESKTOP WORKSPACE) */}
       {activeTab === 'COMMAND_DESK' && (
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
           
