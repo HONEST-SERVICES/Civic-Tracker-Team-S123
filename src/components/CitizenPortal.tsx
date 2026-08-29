@@ -38,8 +38,10 @@ import {
   Navigation2,
   X,
   RefreshCw,
-  Volume2
+  Volume2,
+  Smartphone
 } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 export function formatTicketId(id?: string): string {
   if (!id) return 'Ticket #5247';
@@ -90,6 +92,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
   const [avatarStatusMsg, setAvatarStatusMsg] = useState<string | null>(null);
+  const { canInstall, isInstalled, triggerInstall } = usePWAInstall();
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1588,6 +1591,27 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* PWA App Install Banner */}
+              {canInstall && (
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-3 px-4 shadow-sm border border-slate-700 flex items-center justify-between gap-3 animate-in fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-white tracking-tight truncate">📱 Install CivicPulse App</h4>
+                      <p className="text-[10px] text-slate-300 truncate font-normal">Add to Home Screen for offline resilience & fast ops</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={triggerInstall}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-xs border border-blue-400/30 flex items-center gap-1"
+                  >
+                    <span>Install</span>
+                  </button>
+                </div>
+              )}
 
               {/* 2. Refined Active Ticket Banner / Empty State */}
               {activeComplaint ? (

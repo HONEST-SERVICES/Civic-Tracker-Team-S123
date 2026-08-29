@@ -28,8 +28,11 @@ import {
   Mail,
   FileCheck,
   Camera,
-  Loader2
+  Loader2,
+  Smartphone,
+  Download
 } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 import { UserProfile, UserRole } from '../types';
 import { 
   getCurrentLanguage, 
@@ -110,6 +113,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
   const [photoNotice, setPhotoNotice] = useState<string | null>(null);
+  const { canInstall, isInstalled, triggerInstall } = usePWAInstall();
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -352,6 +356,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <ChevronRight className="w-4 h-4 text-blue-600 group-hover:translate-x-0.5 transition-transform" />
             </button>
           )}
+
+          {/* PWA App Installation Button / Card */}
+          <div className="p-3 rounded-xl bg-slate-900 text-white border border-slate-800 text-left transition flex items-center justify-between group shadow-xs col-span-1 sm:col-span-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs text-white flex items-center gap-1.5">
+                  <span>📱 Install CivicPulse App</span>
+                  {isInstalled && (
+                    <span className="text-[10px] bg-emerald-500/30 text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/40">
+                      Installed
+                    </span>
+                  )}
+                </h4>
+                <p className="text-[10px] text-slate-300 mt-0.5 truncate">
+                  {isInstalled
+                    ? 'CivicPulse standalone web app active'
+                    : 'Add to Home Screen for full-screen offline mobile ops'}
+                </p>
+              </div>
+            </div>
+            {!isInstalled && (
+              <button
+                onClick={triggerInstall}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-xs border border-blue-400/30 flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Install</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

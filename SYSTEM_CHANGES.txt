@@ -330,3 +330,25 @@ Status: Production-Ready Streamlined Mobile GIS & Harmonized Cards Complete
 Status: Interactive Custom Profile Picture Upload & Dynamic Avatar Sync Complete
 =======================================================
 
+=======================================================
+27. PRODUCTION PWA SUPPORT (MANIFEST, SERVICE WORKER & INSTALL FLOW):
+=======================================================
+- Web App Manifest Configuration (`public/manifest.json`):
+  * Defined PWA manifest with standalone display, portrait orientation, `#ffffff` background, `#0f172a` theme color, government/productivity categories, and maskable PNG icons (192x192 & 512x512).
+- HTML Head PWA Directives (`index.html`):
+  * Linked `/manifest.json`, theme color `<meta name="theme-color" content="#0f172a" />`, `<meta name="mobile-web-app-capable" content="yes" />`, `<meta name="apple-mobile-web-app-capable" content="yes" />`, and `apple-touch-icon`.
+- Lightweight Offline Resilience Service Worker (`public/sw.js`):
+  * Implemented cache-first / network-first fallback for core static app shell assets (`index.html`, `manifest.json`, icons, logos).
+  * Explicitly bypassed Service Worker caching for Firebase Auth, Firestore real-time REST/WebSockets (*.googleapis.com, firestore.googleapis.com), Google Maps API (*.google.com, *.gstatic.com), and `/api/*` proxy endpoints to ensure zero latency/staleness on live data.
+  * Added auto `skipWaiting()` and `clients.claim()` lifecycle event handlers.
+- Service Worker Registration & Deferred Install Prompt (`src/main.tsx`, `src/hooks/usePWAInstall.ts`):
+  * Registered SW on window load in `src/main.tsx`.
+  * Created `usePWAInstall` hook listening for `beforeinstallprompt` and `appinstalled` events.
+  * Added clean `📱 Install CivicPulse App` interactive install banners in `CitizenPortal.tsx` and `ProfileView.tsx`.
+- Cloudflare Pages Headers (`public/_headers`):
+  * Configured MIME types for `/manifest.json` (`application/manifest+json; charset=utf-8`) and `/sw.js` (`application/javascript; charset=utf-8, Cache-Control: no-cache`).
+
+=======================================================
+Status: Production PWA Support & Install Flow Complete
+=======================================================
+
