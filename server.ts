@@ -93,6 +93,10 @@ async function startServer() {
     if (!ai) {
       // Deterministic realistic civic fallback if no API key is set
       return res.json({
+        isCivicIssue: true,
+        rejectionReason: "",
+        aiConfidence: 96,
+        aiReasoning: "Localized asphalt void and rim-impact damage identified on high-density municipal transit corridor, necessitating Public Works intervention.",
         category: "DEEP_POTHOLE",
         hazardName: "Road Surface Pothole & Asphalt Degradation",
         severity: "URGENT",
@@ -119,6 +123,22 @@ async function startServer() {
       const visionSchema = {
         type: Type.OBJECT,
         properties: {
+          isCivicIssue: {
+            type: Type.BOOLEAN,
+            description: "Set to TRUE if image depicts a valid municipal civic issue or hazard (pothole, garbage dump, overflow, manhole, waterlogging, outage, downed line). Set to FALSE if photo is a selfie, person portrait, casual non-civic object, pet, or indoor household item."
+          },
+          rejectionReason: {
+            type: Type.STRING,
+            description: "If isCivicIssue is FALSE, state concise reason (e.g., 'No structural hazard or municipal issue detected. Media appears to be a personal selfie or indoor photo.')"
+          },
+          aiConfidence: {
+            type: Type.NUMBER,
+            description: "Percentage confidence score (0 to 100) matching visual defect to category"
+          },
+          aiReasoning: {
+            type: Type.STRING,
+            description: "1-sentence concise explanation of why this severity, category, and department were selected"
+          },
           category: {
             type: Type.STRING,
             description: "Category: DEEP_POTHOLE, GARBAGE_DUMP, GARBAGE_VEHICLE, SWEEPING_NOT_DONE, OPEN_MANHOLES, WATERLOGGING, STREETLIGHT_OUTAGE, PUBLIC_TOILET_CLEANING, STRUCTURAL_SINKHOLE, FLOODING_WATER_MAIN, DOWNED_POWER_LINE, or TRAFFIC_SIGNAL_FAILURE"
@@ -167,6 +187,7 @@ async function startServer() {
           }
         },
         required: [
+          "isCivicIssue",
           "category",
           "hazardName",
           "severity",
@@ -181,7 +202,10 @@ async function startServer() {
       };
 
       const systemPrompt = `You are the Swachhata-MoHUA Municipal AI Vision Inspector.
-Analyze the uploaded citizen photo of a civic issue (e.g. pothole, garbage dump, overflow, open manhole, waterlogging, broken street light, downed line).
+Analyze the uploaded photo carefully.
+FIRST: Determine if the photo clearly shows a valid municipal civic issue/hazard (pothole, road damage, garbage dump, overflow, open manhole, waterlogging, broken street light, downed electrical line, etc.).
+If the photo is a selfie, portrait of a person, indoor room/furniture, pet, vehicle dashboard, or non-civic object, set isCivicIssue: false and state rejectionReason: "No structural hazard or municipal issue detected."
+If the photo IS a valid civic issue, set isCivicIssue: true, aiConfidence: 95-99, and provide a 1-sentence aiReasoning explaining why this severity level and department were selected.
 Extract structured diagnostic data adhering to the schema. Categorize precisely and evaluate public safety risk (0-100).`;
 
       const response = await callGeminiWithFallback(ai, {

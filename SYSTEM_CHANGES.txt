@@ -144,5 +144,102 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 - Visual Cleanup: Replaced dark green containers with slate/navy surfaces (`bg-slate-900` primary buttons, `bg-slate-50` field containers) and maintained real-time Firestore synchronization.
 
 =======================================================
-Status: Production-Ready GovTech Release
+16. AGENTIC AI TRIAGE HUD & NON-ISSUE VALIDATION GATE:
+=======================================================
+- Agentic AI Reasoning & Triage HUD (`CitizenPortal.tsx`):
+  * When a citizen uploads an image, renders a step-by-step animated "Agentic Analysis" HUD:
+    1. "Scanning Visual Artifacts..."
+    2. "Assessing Structural Hazard Severity..."
+    3. "Matching Municipal Department Jurisdiction..."
+  * Renders an interactive "AI Decision Breakdown" card upon Gemini vision completion:
+    - Detected Hazard: Category title with high-confidence match tag.
+    - Assessed Severity: Priority tag with actionable rationale.
+    - Auto-Routed Department: Recommended division & crew unit.
+- Non-Issue Validation Gate & Citizen Modal:
+  * When Gemini detects non-civic media (e.g. selfies, pets, documents, clean roads, cars):
+    - Renders a warning dialog explaining why the media was flagged.
+    - Options: "Upload Different Photo" or "Submit for Manual Officer Verification".
+  * Submissions flagged for manual triage persist with `status: 'PENDING_MANUAL_TRIAGE'`, `requiresManualVerification: true`, and `isCivicIssue: false`.
+- Officer Desk Manual Verification Queue (`MunicipalOfficerCommandCenter.tsx`):
+  * Added a dedicated "Manual Verification Queue" filter button displaying the badge count of tickets awaiting manual triage.
+  * In the Incident Detail panel, officers can view the AI rejection reason and perform 1-click actions:
+    - "Approve & Route Ticket": Moves ticket to `OPEN` status, sets `requiresManualVerification: false` and `isCivicIssue: true`, and approves dispatch.
+    - "Dismiss Non-Civic Image": Resolves/dismisses the ticket with notes.
+
+=======================================================
+17. HIGH-PRECISION REVERSE GEOCODING & INTELLIGENT ADDRESS AUTO-FILL:
+=======================================================
+- Multi-Tiered Reverse Geocoding Engine (`src/services/locationService.ts`):
+  * Integrates OpenStreetMap Nominatim API with Google Maps Geocoding fallback to resolve coordinates (lat/lng) into structured street names, localities, municipal wards, and postal codes.
+  * Features 4-second timeout protection and fallback to GPS pin format so citizens can submit grievances without network lockup.
+- Intelligent Address Auto-Fill & GPS Capture:
+  * Dragging pin on Google Map or clicking "Use My GPS" triggers automated reverse geocoding to auto-populate the street address field in real-time.
+  * Automatically selects the nearest municipal ward boundary while preserving citizen manual override.
+
+=======================================================
+18. MULTIMODAL GRIEVANCE DESCRIPTION (VOICE-TO-TEXT & AUDIO RECORDING):
+=======================================================
+- Native Web Speech API Voice-to-Text Dictation (`src/components/VoiceGrievanceInput.tsx`):
+  * Live Speech Recognition Engine (`webkitSpeechRecognition` / `SpeechRecognition`) transcribing spoken grievance descriptions directly into the description box in real-time.
+  * Multi-language support matching India locales: English (`en-IN`), Hindi (`hi-IN`), and Telugu (`te-IN`).
+  * Dictation UI state: Pulsing red/amber badge with animated equalizer audio waveform bars ("Listening... speak clearly near your device") and 1-tap stop/finish action.
+  * Graceful fallback: Disables voice dictation seamlessly if browser lacks SpeechRecognition support or mic permission is denied.
+- HTML5 MediaRecorder Audio Voice Note Attachment:
+  * 30-second audio note recorder using `navigator.mediaDevices.getUserMedia` and `MediaRecorder`.
+  * Live timer count (`00:01 / 00:30`) and interactive playback preview chip with Play/Pause, duration counter, and Trash icon to re-record.
+  * Base64 audio compression and persistence (`hasVoiceNote: true`, `audioNoteBase64`) saved directly to Firestore instance `civictracker` under `complaints`.
+  * Rendered "Voice Note" badge on citizen grievance tracking cards.
+
+=======================================================
+19. GLOBAL DARK/LIGHT THEME PERSISTENCE & DYNAMIC I18N LOCALIZATION ENGINE:
+=======================================================
+- Global Theme Provider Engine (`src/context/ThemeContext.tsx`):
+  * Manages active theme state (`theme: 'light' | 'dark' | 'system'`).
+  * Synchronizes directly with `document.documentElement.classList`: appends `dark` class to `<html>` and updates `color-scheme: dark`.
+  * Persists user preference to `localStorage` key `civicpulse_theme` with automated system theme listener.
+  * Instant Theme Toggle controls in main header (Sun/Moon icon) and Profile view.
+- Comprehensive Dark Mode Tailwind Utility Classes:
+  * Backgrounds: `bg-slate-50 dark:bg-slate-950`
+  * Card Surfaces: `bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800`
+  * Primary Text: `text-slate-900 dark:text-slate-100`
+  * Subtitles & Labels: `text-slate-500 dark:text-slate-400`
+  * Inputs & Controls: `bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white`
+  * Styled layouts across Header, Mobile Bottom Navigation, Citizen Portal, Profile View, Live Incident Queue, and Municipal Officer Command Desk.
+- Dynamic i18n Localization Context (`src/context/LanguageContext.tsx`):
+  * Application-wide `LanguageProvider` managing active locale state with zero reload latency.
+  * Comprehensive language support: English (`en`), Hindi (`hi`), and Telugu (`te`).
+  * Instant pill toggles ([English] | [हिन्दी] | [తెలుగు]) integrated into header and profile settings.
+  * Automatic fallback to key string if translation is missing, ensuring zero runtime undefined issues.
+
+=======================================================
+20. REMOVAL OF UNSTABLE DARK MODE & LOCK TO CLEAN LIGHT GOVTECH THEME:
+=======================================================
+- Theme Engine Lock (`src/context/ThemeContext.tsx`):
+  * Completely removed dark mode toggling logic and locked `theme: 'light'` permanently.
+  * Unconditionally removes `.dark` class from `document.documentElement` on mount and sets `color-scheme: light`.
+  * Hardcodes `localStorage.setItem('civicpulse_theme', 'light')`.
+  * Removed manual Dark/Light theme toggle buttons from Top Header bar and Profile preferences.
+- Uniform Crisp Light GovTech Styling:
+  * Removed all `dark:*` Tailwind utility class overrides across `App.tsx`, `MunicipalOfficerCommandCenter.tsx`, `LiveIncidentQueue.tsx`, `CitizenPortal.tsx`, and `ProfileView.tsx`.
+  * Main Dashboard Framing: Crisp light slate canvas (`bg-slate-100`).
+  * Header & Navigation: Clean white navbar (`bg-white border-b border-slate-200/90`).
+  * Command Center Cards & Tables: High-contrast white card surfaces (`bg-white border border-slate-200/90 rounded-2xl shadow-sm`).
+  * Live Queue Table: Crisp white background (`bg-white divide-y divide-slate-100`), clear headers (`bg-slate-50 text-slate-700 font-semibold`), high-contrast text (`text-slate-800`), and clean row selection highlights (`bg-blue-50/80`).
+  * Action Desk & Ticket Selector: Inactive ticket chips (`bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100`), Active ticket chip (`bg-blue-600 text-white font-semibold shadow-sm border border-blue-600`), and crisp light status badges (`bg-blue-50 text-blue-700 border border-blue-200`).
+
+=======================================================
+21. SEAMLESS "OFFICER CITIZEN-MODE" TOGGLE & CITIZEN TAB CONSOLIDATION:
+=======================================================
+- Seamless View Mode Switch (No Session Termination):
+  * Updated "Switch to Citizen" button in `MunicipalOfficerCommandCenter.tsx` header to invoke a non-destructive view-state callback (`onSwitchToCitizen`) instead of terminating the Firebase Auth session.
+  * Added `isOfficerCitizenMode` state in `App.tsx` that seamlessly toggles the UI into Citizen view while preserving authenticated officer/admin state and context.
+  * Added a prominent top indicator pill during Officer Citizen Mode: "Viewing as Citizen (Officer Mode) • Active Session Preserved [ Switch Back to Command HQ ]", allowing instantaneous toggle back to Command HQ during live judge demonstrations.
+  * Added view toggle button in the profile dropdown drawer for fast view switching.
+- Citizen View Navigation & Map Streamlining:
+  * Consolidated Citizen interface to strictly include Home (4 Action Grid Cards & Live Ticket Status), Events (Ward Cleanliness Drives & SBM Campaigns), Complaints (Track Grievances & Status Timeline), and Profile.
+  * Removed redundant standalone "Geospatial Map" overview card from the Citizen Portal desktop view.
+  * Retained maps exclusively where functional: inline GPS pin picker inside "File Grievance" form (`GooglePinPickerMap`) and SBM Toilet Locator (`FACILITIES`) directory with Google Maps routing.
+
+=======================================================
+Status: Production-Ready GovTech Release (Light Theme Locked & Seamless Demo Toggle Active)
 =======================================================

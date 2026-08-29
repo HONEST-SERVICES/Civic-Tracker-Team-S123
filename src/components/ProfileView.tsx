@@ -31,11 +31,12 @@ import {
 import { UserProfile, UserRole } from '../types';
 import { 
   getCurrentLanguage, 
-  setLanguage, 
   SUPPORTED_LANGUAGES, 
   LanguageCode, 
   t 
 } from '../utils/translations';
+import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProfileViewProps {
   currentUser: UserProfile | null;
@@ -97,64 +98,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenSettingsModal,
   onOpenGeminiCopilot
 }) => {
-  const [currentLang, setCurrentLang] = useState<LanguageCode>(getCurrentLanguage());
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
-  const [pushNotifications, setPushNotifications] = useState<boolean>(true);
+  const { language, setLanguage } = useLanguage();
   const [languageChangeNotice, setLanguageChangeNotice] = useState<string | null>(null);
-
-  // Initialize preferences from localStorage
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('swachhata_user_preferences');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.theme === 'dark') {
-          setThemeMode('dark');
-        }
-        if (typeof parsed.pushNotifications === 'boolean') {
-          setPushNotifications(parsed.pushNotifications);
-        }
-        if (parsed.language) {
-          setCurrentLang(parsed.language);
-        }
-      }
-    } catch (e) {
-      console.warn('Profile preference read warning:', e);
-    }
-  }, []);
 
   const handleLanguageChange = (lang: LanguageCode) => {
     setLanguage(lang);
-    setCurrentLang(lang);
-    try {
-      const raw = localStorage.getItem('swachhata_user_preferences');
-      const parsed = raw ? JSON.parse(raw) : {};
-      parsed.language = lang;
-      localStorage.setItem('swachhata_user_preferences', JSON.stringify(parsed));
-    } catch (e) {
-      console.warn('Could not persist language:', e);
-    }
-
     const langName = lang === 'hi' ? 'हिन्दी' : lang === 'te' ? 'తెలుగు' : 'English';
     setLanguageChangeNotice(`Language set to ${langName}`);
     setTimeout(() => setLanguageChangeNotice(null), 3000);
-  };
-
-  const handleToggleTheme = (mode: 'light' | 'dark') => {
-    setThemeMode(mode);
-    if (mode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    try {
-      const raw = localStorage.getItem('swachhata_user_preferences');
-      const parsed = raw ? JSON.parse(raw) : {};
-      parsed.theme = mode;
-      localStorage.setItem('swachhata_user_preferences', JSON.stringify(parsed));
-    } catch (e) {
-      console.warn('Could not persist theme:', e);
-    }
   };
 
   // Safe user properties with fallbacks
@@ -419,7 +370,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </label>
           <div className="grid grid-cols-3 gap-2">
             {SUPPORTED_LANGUAGES.map((lang) => {
-              const isActive = currentLang === lang.code;
+              const isActive = language === lang.code;
               return (
                 <button
                   key={lang.code}
@@ -438,40 +389,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </button>
               );
             })}
-          </div>
-        </div>
-
-        {/* Theme Preferences */}
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-            <Sun className="w-3.5 h-3.5 text-amber-500" />
-            <span>Display Theme Preference</span>
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              id="profile-theme-light"
-              onClick={() => handleToggleTheme('light')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                themeMode === 'light'
-                  ? 'bg-amber-50 border border-amber-300 text-amber-900 font-bold shadow-xs'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-              }`}
-            >
-              <Sun className="w-3.5 h-3.5 text-amber-600" />
-              <span>GovTech Light (Default)</span>
-            </button>
-            <button
-              id="profile-theme-dark"
-              onClick={() => handleToggleTheme('dark')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                themeMode === 'dark'
-                  ? 'bg-slate-900 text-white font-bold shadow-xs'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5 text-slate-400" />
-              <span>Night Mode</span>
-            </button>
           </div>
         </div>
 

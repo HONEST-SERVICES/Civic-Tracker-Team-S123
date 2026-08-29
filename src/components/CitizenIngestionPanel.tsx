@@ -15,10 +15,13 @@ import {
   HelpCircle,
   Eye,
   Info,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Navigation
 } from 'lucide-react';
 import { HazardCategory, PriorityLevel, CrisisIncident, ScannerData } from '../types';
 import { ZONES } from '../mockData';
+import { reverseGeocodeCoordinates, getCurrentUserLocation } from '../services/locationService';
+import { VoiceGrievanceInput } from './VoiceGrievanceInput';
 
 interface CitizenIngestionPanelProps {
   onSubmitIncident: (incidentData: Partial<CrisisIncident>) => void;
@@ -92,6 +95,10 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
   const [lat, setLat] = useState<number>(31.253);
   const [lng, setLng] = useState<number>(75.703);
   const [reporterName, setReporterName] = useState<string>('Citizen Mobile App #509');
+  const [voiceNoteData, setVoiceNoteData] = useState<{ hasVoiceNote: boolean; audioNoteBase64: string }>({
+    hasVoiceNote: false,
+    audioNoteBase64: ''
+  });
   
   // Clean Image Preview State
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>(SAMPLE_HAZARD_PREVIEWS[0].url);
@@ -136,6 +143,40 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
     }
   };
 
+  const [isGeocoding, setIsGeocoding] = useState<boolean>(false);
+
+  const autoGeocode = async (targetLat: number, targetLng: number) => {
+    setIsGeocoding(true);
+    try {
+      const geo = await reverseGeocodeCoordinates(targetLat, targetLng);
+      if (geo && geo.formattedAddress) {
+        setAddress(geo.formattedAddress);
+      }
+      if (geo && geo.wardId) {
+        setSelectedZone(geo.wardId);
+      }
+    } catch (err) {
+      console.warn('Geocoding notice:', err);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleGPSCapture = async () => {
+    setIsGeocoding(true);
+    try {
+      const coords = await getCurrentUserLocation();
+      setLat(coords.lat);
+      setLng(coords.lng);
+      await autoGeocode(coords.lat, coords.lng);
+      onSelectZone(selectedZone, coords.lat, coords.lng);
+    } catch (err) {
+      console.warn('GPS capture notice:', err);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
   const handleZoneChange = (zoneId: string) => {
     setSelectedZone(zoneId);
     const z = ZONES.find(item => item.id === zoneId);
@@ -144,8 +185,8 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
       const newLng = Number((z.lng + (Math.random() - 0.5) * 0.003).toFixed(5));
       setLat(newLat);
       setLng(newLng);
-      setAddress(`${z.name} - Point ${Math.floor(Math.random() * 80 + 10)}`);
       onSelectZone(zoneId, newLat, newLng);
+      autoGeocode(newLat, newLng);
     }
   };
 
@@ -170,6 +211,8 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
     const newIncident: Partial<CrisisIncident> = {
       title: title.trim() || `${category.replace(/_/g, ' ')} Issue`,
       description: description.trim(),
+      hasVoiceNote: voiceNoteData.hasVoiceNote,
+      audioNoteBase64: voiceNoteData.audioNoteBase64,
       category,
       priority,
       status: 'OPEN',
@@ -361,18 +404,33 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
 
         {/* Section 3: Location & GPS Tagging */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-red-400" />
-            <span>Location & GPS Tagging</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-red-400" />
+              <span>Location & Reverse Geocoding</span>
+            </label>
+            <button
+              type="button"
+              onClick={handleGPSCapture}
+              disabled={isGeocoding}
+              className="flex items-center gap-1 text-[11px] font-semibold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 px-2 py-0.5 rounded transition cursor-pointer"
+            >
+              {isGeocoding ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Navigation className="w-3 h-3" />
+              )}
+              <span>{isGeocoding ? 'Geocoding...' : 'GPS Auto-Fill'}</span>
+            </button>
+          </div>
 
           <div className="space-y-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
             <div>
-              <span className="text-[11px] text-slate-400 font-medium">Municipal Sector:</span>
+              <span className="text-[11px] text-slate-400 font-medium">Municipal Sector / Ward:</span>
               <select
                 value={selectedZone}
                 onChange={(e) => handleZoneChange(e.target.value)}
-                className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:outline-none focus:border-blue-500"
+                className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 {ZONES.map((z) => (
                   <option key={z.id} value={z.id}>
@@ -382,36 +440,38 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
               </select>
             </div>
 
-            <div className="text-xs text-slate-300 font-medium">
-              <span className="text-slate-400">Auto-detected GPS: </span>
-              <span className="text-slate-200">{selectedZone}, Main Trunk Road (Lat: {lat}, Lng: {lng})</span>
+            <div className="text-xs text-slate-300 font-medium flex items-center justify-between">
+              <div>
+                <span className="text-slate-400">Coordinates: </span>
+                <span className="text-blue-400 font-mono">{lat.toFixed(4)}° N, {lng.toFixed(4)}° E</span>
+              </div>
+              {isGeocoding && (
+                <span className="text-[10px] text-teal-400 animate-pulse">
+                  Lookup running...
+                </span>
+              )}
             </div>
 
             <div>
-              <span className="text-[11px] text-slate-400 font-medium">Street Address / Landmark:</span>
+              <span className="text-[11px] text-slate-400 font-medium">Street Address / Landmark (Auto-filled):</span>
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. Sector 4 / Main Boulevard & 4th Avenue"
+                placeholder="e.g. Cinema Road, Outside Verad Gate, Ward 4"
                 className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
         </div>
 
-        {/* Section 4: Citizen Notes & Severity Description */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-slate-400" />
-            <span>Incident Description & Citizen Notes</span>
-          </label>
-          <textarea
-            rows={3}
+        {/* Section 4: Citizen Notes & Multimodal Voice Description */}
+        <div className="space-y-1 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <VoiceGrievanceInput
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Provide relevant details regarding traffic disruption, pedestrian risk, depth or standing water..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 resize-none font-sans"
+            onChange={setDescription}
+            onAudioChange={setVoiceNoteData}
+            placeholder="Provide relevant details or tap 'Voice Dictation' to speak..."
           />
         </div>
 

@@ -77,7 +77,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
   };
 
   return (
-    <div className="w-full h-full bg-white flex flex-col overflow-hidden text-sm font-sans select-none">
+    <div className="w-full h-full bg-white flex flex-col overflow-hidden text-sm font-sans select-none text-slate-900">
       {/* Queue Header */}
       <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
       <div className="flex-1 overflow-y-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
+            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-700 uppercase tracking-wider sticky top-0 z-10">
               <th className="py-2 px-3">Ticket ID & Priority</th>
               <th className="py-2 px-3">Category & Title</th>
               <th className="py-2 px-3">Location</th>
@@ -108,7 +108,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
               <th className="py-2 px-3 text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-xs">
+          <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
             {incidents.map((incident) => {
               const isSelected = selectedIncident?.id === incident.id;
               const isResolved = incident.status === 'RESOLVED';
@@ -119,7 +119,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
                   onClick={() => onSelectIncident(incident)}
                   className={`cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-teal-50/80'
+                      ? 'bg-blue-50/80'
                       : 'hover:bg-slate-50'
                   }`}
                 >
@@ -158,7 +158,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
                   <td className="py-2.5 px-3">
                     {incident.assignedUnitName ? (
                       <div className="flex items-center gap-1.5 text-slate-800">
-                        <Truck className="w-3.5 h-3.5 text-[#115e59] shrink-0" />
+                        <Truck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                         <span className="truncate max-w-[140px] font-semibold">{incident.assignedUnitName}</span>
                       </div>
                     ) : (

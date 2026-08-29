@@ -30,13 +30,18 @@ export const TRANSLATIONS = {
     
     // Core Actions & Navigation
     postAComplaint: 'Post a Complaint',
+    fileGrievance: 'File Grievance',
     myComplaints: 'My Complaints',
+    trackGrievances: 'Track Grievances',
+    publicFacilities: 'Public Facilities',
+    citizenSurvey: 'Citizen Survey',
     sbmToiletLocator: 'SBM Toilet Locator',
     swachhSurvekshan: 'Swachh Survekshan',
     welcome: 'Welcome',
     assigned: 'Assigned',
     inProgress: 'In Progress',
     resolved: 'Resolved',
+    pendingManualReview: 'Pending Manual Review',
     submitGrievance: 'Submit Grievance',
     allTickets: 'All Complaints',
     openPending: 'Open / Pending',
@@ -52,6 +57,12 @@ export const TRANSLATIONS = {
     language: 'Language',
     selectLanguage: 'Select Language',
     settings: 'Preferences & Settings',
+    takePhoto: 'Take Photo',
+    uploadGallery: 'Upload Gallery',
+    tapToSpeak: 'Tap to Speak',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    themeSystem: 'System',
     
     // Search & Inputs
     searchPlaceholder: 'Search complaints, amenities, or ward...',
@@ -94,13 +105,18 @@ export const TRANSLATIONS = {
     
     // Core Actions & Navigation
     postAComplaint: 'शिकायत दर्ज करें',
+    fileGrievance: 'शिकायत दर्ज करें',
     myComplaints: 'मेरी शिकायतें',
+    trackGrievances: 'शिकायतें ट्रैक करें',
+    publicFacilities: 'सार्वजनिक सुविधाएं',
+    citizenSurvey: 'नागरिक सर्वेक्षण',
     sbmToiletLocator: 'एसबीएम शौचालय खोजें',
     swachhSurvekshan: 'स्वच्छ सर्वेक्षण',
     welcome: 'स्वागत है',
     assigned: 'आवंटित',
     inProgress: 'प्रगति पर है',
     resolved: 'समाधान हुआ',
+    pendingManualReview: 'लंबित मैनुअल समीक्षा',
     submitGrievance: 'शिकायत सबमिट करें',
     allTickets: 'सभी शिकायतें',
     openPending: 'लंबित',
@@ -116,6 +132,12 @@ export const TRANSLATIONS = {
     language: 'भाषा',
     selectLanguage: 'भाषा चुनें',
     settings: 'प्राथमिकताएं एवं सेटिंग्स',
+    takePhoto: 'फोटो लें',
+    uploadGallery: 'गैलरी अपलोड करें',
+    tapToSpeak: 'बोलने के लिए टैप करें',
+    themeLight: 'लाइट',
+    themeDark: 'डार्क',
+    themeSystem: 'सिस्टम',
     
     // Search & Inputs
     searchPlaceholder: 'शिकायत, सुविधाएं या वार्ड खोजें...',
@@ -158,14 +180,19 @@ export const TRANSLATIONS = {
     
     // Core Actions & Navigation
     postAComplaint: 'ఫిర్యాదు నమోదు చేయండి',
+    fileGrievance: 'ఫిర్యాదు నమోదు చేయండి',
     myComplaints: 'నా ఫిర్యాదులు',
+    trackGrievances: 'ఫిర్యాదులను ట్రాక్ చేయండి',
+    publicFacilities: 'ప్రజా సౌకర్యాలు',
+    citizenSurvey: 'పౌర సర్వే',
     sbmToiletLocator: 'ఎస్.బి.ఎమ్ శౌచాలయ లొకేటర్',
     swachhSurvekshan: 'స్వచ్ఛ సర్వేక్షణ్',
     welcome: 'స్వాగతం',
     assigned: 'కేటాయించబడింది',
     inProgress: 'పురోగతిలో ఉంది',
     resolved: 'పరిష్కరించబడింది',
-    submitGrievance: 'ఫిర్యాదు సమర్పించండి',
+    pendingManualReview: 'మాన్యువల్ సమీక్షలో పెండింగ్',
+    submitGrievance: 'ఫिర్యాదు సమర్పించండి',
     allTickets: 'అన్ని ఫిర్యాదులు',
     openPending: 'పెండింగ్',
     dispatched: 'రవాణా చేయబడింది',
@@ -180,6 +207,12 @@ export const TRANSLATIONS = {
     language: 'భాష',
     selectLanguage: 'భాషను ఎంచుకోండి',
     settings: 'ప్రాధాన్యతలు & సెట్టింగ్‌లు',
+    takePhoto: 'ఫోటో తీయండి',
+    uploadGallery: 'గ్యాలరీ అప్‌లోడ్ చేయండి',
+    tapToSpeak: 'మాట్లాడటానికి ట్యాప్ చేయండి',
+    themeLight: 'లైట్',
+    themeDark: 'డార్క్',
+    themeSystem: 'సిస్టమ్',
     
     // Search & Inputs
     searchPlaceholder: 'ఫిర్యాదులు, సౌకర్యాలు లేదా వార్డును శోధించండి...',
@@ -217,14 +250,15 @@ export const TRANSLATIONS = {
 
 export type TranslationKey = keyof typeof TRANSLATIONS.en;
 
-const LANGUAGE_STORAGE_KEY = 'app_language';
+const PRIMARY_LANG_KEY = 'civicpulse_lang';
+const SECONDARY_LANG_KEY = 'app_language';
 
 /**
  * Retrieve current active language from localStorage
  */
 export function getCurrentLanguage(): LanguageCode {
   try {
-    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const saved = localStorage.getItem(PRIMARY_LANG_KEY) || localStorage.getItem(SECONDARY_LANG_KEY);
     if (saved === 'en' || saved === 'hi' || saved === 'te') {
       return saved;
     }
@@ -239,7 +273,8 @@ export function getCurrentLanguage(): LanguageCode {
  */
 export function setLanguage(lang: LanguageCode): void {
   try {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    localStorage.setItem(PRIMARY_LANG_KEY, lang);
+    localStorage.setItem(SECONDARY_LANG_KEY, lang);
     window.dispatchEvent(new CustomEvent('language_changed', { detail: lang }));
   } catch (e) {
     console.warn('Could not persist language to localStorage:', e);

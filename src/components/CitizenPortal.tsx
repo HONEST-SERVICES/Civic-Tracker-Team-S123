@@ -37,7 +37,8 @@ import {
   ExternalLink,
   Navigation2,
   X,
-  RefreshCw
+  RefreshCw,
+  Volume2
 } from 'lucide-react';
 
 export function formatTicketId(id?: string): string {
@@ -51,13 +52,14 @@ export function formatTicketId(id?: string): string {
   }
   return `Ticket #${id.slice(-4)}`;
 }
-import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile, PublicFacility } from '../types';
-import { SWACHHATA_CATEGORIES, INITIAL_PUBLIC_FACILITIES } from '../mockData';
+import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile, PublicFacility, IncidentStatus } from '../types';
+import { SWACHHATA_CATEGORIES, INITIAL_PUBLIC_FACILITIES, ZONES } from '../mockData';
 import { analyzeHazardWithGeminiVision } from '../services/geminiService';
+import { reverseGeocodeCoordinates, getClosestWard, getCurrentUserLocation } from '../services/locationService';
 import { subscribeToPublicFacilities, ratePublicFacility } from '../services/firebase';
 import { GooglePinPickerMap } from './GooglePinPickerMap';
 import { GooglePlacesAutocompleteInput } from './GooglePlacesAutocompleteInput';
-import { GoogleDesktopOverviewMap } from './GoogleDesktopOverviewMap';
+import { VoiceGrievanceInput } from './VoiceGrievanceInput';
 import { compressImage } from '../utils/imageCompressor';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './SwachhataDriveModal';
 
@@ -122,11 +124,75 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(null);
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
 
-  // Selected Pin Coordinates on Map
+  // Agentic AI Triage & Verification State
+  const [analysisStep, setAnalysisStep] = useState<number>(1);
+  const [showNonCivicWarning, setShowNonCivicWarning] = useState<boolean>(false);
+  const [requiresManualReview, setRequiresManualReview] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isAnalyzingVision) {
+      setAnalysisStep(1);
+      return;
+    }
+    const timer1 = setTimeout(() => setAnalysisStep(2), 1200);
+    const timer2 = setTimeout(() => setAnalysisStep(3), 2600);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isAnalyzingVision]);
+
+  // Selected Pin Coordinates & Municipal Ward State
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
     lat: 31.2530,
     lng: 75.7030
   });
+  const [selectedWard, setSelectedWard] = useState<string>('Ward 4 - Central Zone');
+  const [isGeocoding, setIsGeocoding] = useState<boolean>(false);
+  const [grievanceDescription, setGrievanceDescription] = useState<string>('');
+  const [voiceNoteData, setVoiceNoteData] = useState<{ hasVoiceNote: boolean; audioNoteBase64: string }>({
+    hasVoiceNote: false,
+    audioNoteBase64: ''
+  });
+
+  // Auto-reverse geocode on pin move or place select
+  const handleUpdateCoordsAndGeocode = async (coords: { lat: number; lng: number }) => {
+    setSelectedCoords(coords);
+    setIsGeocoding(true);
+    try {
+      const geo = await reverseGeocodeCoordinates(coords.lat, coords.lng);
+      if (geo && geo.formattedAddress) {
+        setLandmark(geo.formattedAddress);
+      }
+      if (geo && geo.ward) {
+        setSelectedWard(geo.ward);
+      }
+    } catch (err) {
+      console.warn('Reverse geocode error:', err);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  // Capture high-precision GPS position with automatic reverse geocoding
+  const handleCaptureGPSLocation = async () => {
+    setIsGeocoding(true);
+    try {
+      const coords = await getCurrentUserLocation();
+      setSelectedCoords(coords);
+      const geo = await reverseGeocodeCoordinates(coords.lat, coords.lng);
+      if (geo && geo.formattedAddress) {
+        setLandmark(geo.formattedAddress);
+      }
+      if (geo && geo.ward) {
+        setSelectedWard(geo.ward);
+      }
+    } catch (err) {
+      console.warn('GPS capture error:', err);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   // Calculate real-time distance from user's current pin in km
   const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -212,6 +278,144 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     onNavigate?.(view);
   };
 
+  const renderAgenticHUD = () => (
+    <div className="p-3.5 bg-slate-900 text-white rounded-xl space-y-2.5 border border-slate-700 shadow-md animate-fade-in">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-orange-400 animate-spin" />
+          <span className="font-bold text-xs uppercase tracking-wider text-orange-300">Agentic AI Triage HUD</span>
+        </div>
+        <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Gemini 3.7 Flash</span>
+      </div>
+      <div className="space-y-1.5 text-xs">
+        <div className={`flex items-center gap-2 transition-all ${analysisStep >= 1 ? 'text-orange-200 font-bold' : 'text-slate-400 opacity-50'}`}>
+          {analysisStep > 1 ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400 shrink-0" />}
+          <span>Step 1: Scanning Visual Artifacts...</span>
+        </div>
+        <div className={`flex items-center gap-2 transition-all ${analysisStep >= 2 ? 'text-orange-200 font-bold' : 'text-slate-400 opacity-50'}`}>
+          {analysisStep > 2 ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : analysisStep === 2 ? <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400 shrink-0" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-600 shrink-0" />}
+          <span>Step 2: Assessing Structural Hazard Severity...</span>
+        </div>
+        <div className={`flex items-center gap-2 transition-all ${analysisStep >= 3 ? 'text-orange-200 font-bold' : 'text-slate-400 opacity-50'}`}>
+          {analysisStep === 3 ? <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400 shrink-0" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-600 shrink-0" />}
+          <span>Step 3: Matching Municipal Department Jurisdiction...</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAIDecisionBreakdown = () => {
+    if (!visionResult || isAnalyzingVision) return null;
+    return (
+      <div className="p-3.5 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl space-y-2 text-xs text-slate-800 shadow-xs animate-fade-in">
+        <div className="flex items-center justify-between border-b border-orange-200/80 pb-1.5">
+          <div className="flex items-center gap-1.5 font-bold text-orange-950">
+            <Sparkles className="w-4 h-4 text-orange-600" />
+            <span>AI Decision Breakdown</span>
+          </div>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+            {visionResult.aiConfidence || 98}% match
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-800">
+          <div className="bg-white/90 p-2 rounded-lg border border-orange-100">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">Detected Hazard</span>
+            <span className="font-bold text-slate-900 text-xs block truncate" title={visionResult.hazardName}>
+              {visionResult.hazardName}
+            </span>
+          </div>
+
+          <div className="bg-white/90 p-2 rounded-lg border border-orange-100">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">Assessed Severity</span>
+            <span className={`font-bold text-xs inline-flex items-center gap-1 ${
+              visionResult.priority === 'P1_CRITICAL' ? 'text-rose-700' : visionResult.priority === 'P2_URGENT' ? 'text-amber-700' : 'text-blue-700'
+            }`}>
+              {visionResult.priority === 'P1_CRITICAL' ? 'P1 Critical' : visionResult.priority === 'P2_URGENT' ? 'P2 Urgent' : 'P3 Scheduled'} — {visionResult.severity || 'Urgent'}
+            </span>
+          </div>
+
+          <div className="bg-white/90 p-2 rounded-lg border border-orange-100">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">Auto-Routed Dept</span>
+            <span className="font-bold text-slate-900 text-xs block truncate">
+              {visionResult.recommendedDepartment ? visionResult.recommendedDepartment.replace(/_/g, ' ') : 'PUBLIC WORKS'}
+            </span>
+          </div>
+        </div>
+
+        {(visionResult.aiReasoning || visionResult.hazardDescription) && (
+          <div className="bg-white/80 p-2 rounded-lg border border-orange-200/80 text-[11px] text-slate-700 leading-relaxed">
+            <span className="font-bold text-orange-950">AI Reasoning: </span>
+            {visionResult.aiReasoning || visionResult.hazardDescription}
+          </div>
+        )}
+
+        {requiresManualReview && (
+          <div className="p-2 bg-amber-100 border border-amber-300 rounded-lg text-[11px] text-amber-900 font-medium flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+            <span>Submitted for Manual Review Queue on Officer Desk.</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderNonCivicWarningModal = () => {
+    if (!showNonCivicWarning) return null;
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-scale-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-base text-slate-900">No Civic Issue Detected</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                No civic issue detected in this photo. Please ensure your photo clearly captures road damage, sanitation issues, or municipal hazards.
+              </p>
+              {visionResult?.rejectionReason && (
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-700 font-medium mt-2">
+                  <span className="font-bold text-slate-900">AI Feedback: </span>
+                  {visionResult.rejectionReason}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => {
+                setPhotoUrl(null);
+                setVisionResult(null);
+                setCompressionStats(null);
+                setShowNonCivicWarning(false);
+                setRequiresManualReview(false);
+                setTimeout(() => cameraInputRef.current?.click(), 100);
+              }}
+              className="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Camera className="w-4 h-4 text-orange-400" />
+              <span>Retake Photo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowNonCivicWarning(false);
+                setRequiresManualReview(true);
+              }}
+              className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Submit for Manual Review</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const popView = () => {
     if (trackedIncident) {
       setTrackedIncident(null);
@@ -273,6 +477,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         if (visionData.category && SWACHHATA_CATEGORIES.some(c => c.id === visionData.category)) {
           setSelectedCategory(visionData.category);
         }
+
+        if (visionData.isCivicIssue === false) {
+          setShowNonCivicWarning(true);
+        } else {
+          setShowNonCivicWarning(false);
+          setRequiresManualReview(false);
+        }
       } catch (err) {
         console.warn('Vision analysis notice:', err);
       } finally {
@@ -316,29 +527,39 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       const randomTicketNum = Math.floor(1000 + Math.random() * 9000);
       const uniqueId = `Ticket #${randomTicketNum}`;
 
+      const isUnverified = requiresManualReview || visionResult?.isCivicIssue === false;
+      const status: IncidentStatus = isUnverified ? 'PENDING_MANUAL_TRIAGE' : 'OPEN';
+
       const incidentData: Partial<CrisisIncident> = {
         id: uniqueId,
         title: visionResult?.hazardName || catObj?.name || 'Civic Infrastructure Complaint',
-        description: landmark ? `${landmark}. Citizen reported via Swachhata-MoHUA.` : 'Citizen reported civic grievance.',
+        description: grievanceDescription.trim() || (landmark ? `${landmark}. Citizen reported via Swachhata-MoHUA.` : 'Citizen reported civic grievance.'),
+        hasVoiceNote: voiceNoteData.hasVoiceNote,
+        audioNoteBase64: voiceNoteData.audioNoteBase64,
         category: selectedCategory,
         priority,
-        status: 'OPEN',
+        status,
         department,
         riskScore,
         location: {
           lat: selectedCoords.lat,
           lng: selectedCoords.lng,
-          zone: 'Ward 4 - Sector 4',
-          address: landmark || 'Ward 4, G.T. Road'
+          zone: selectedWard,
+          address: landmark || `GPS Pin: [${selectedCoords.lat.toFixed(4)}°, ${selectedCoords.lng.toFixed(4)}°] (${selectedWard})`
         },
         imageUrl: photoUrl || 'https://images.unsplash.com/photo-1584463699031-c4c0b629c135?auto=format&fit=crop&w=800&q=80',
         reporterName: reporterName || 'Sangit',
         reporterPhone: reporterPhone || '',
         citizenUid: currentUser?.uid || '',
-        ward: 'Ward 4 - Central Zone',
+        ward: selectedWard,
         createdAt: Date.now(),
         aiSummary: visionResult?.hazardDescription,
         actionDirectives: visionResult?.safetyDirectives,
+        isCivicIssue: visionResult?.isCivicIssue !== undefined ? visionResult.isCivicIssue : !isUnverified,
+        rejectionReason: visionResult?.rejectionReason || '',
+        aiConfidence: visionResult?.aiConfidence || 96,
+        aiReasoning: visionResult?.aiReasoning || visionResult?.hazardDescription || '',
+        requiresManualVerification: isUnverified,
         scannerData: visionResult ? {
           detectedAnomalies: visionResult.anomaliesDetected || [visionResult.hazardName],
           boundingBoxes: [],
@@ -358,6 +579,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       setVisionResult(null);
       setCompressionStats(null);
       setLandmark('');
+      setGrievanceDescription('');
+      setVoiceNoteData({ hasVoiceNote: false, audioNoteBase64: '' });
       setCurrentView('HOME');
       onNavigate?.('HOME');
       setTimeout(() => setSubmittedSuccess(false), 8000);
@@ -915,40 +1138,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         </div>
                       </div>
 
-                      {/* Vision Result Diagnostic Card */}
-                      {visionResult && !isAnalyzingVision && (
-                        <div className="p-3 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 font-bold text-orange-900">
-                              <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-                              <span>Automated Verification & Triage</span>
-                            </div>
-                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                              visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80
-                                ? 'bg-red-600 text-white'
-                                : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-orange-600 text-white'
-                            }`}>
-                              PRIORITY: {visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80 ? 'CRITICAL' : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60 ? 'HIGH' : 'MEDIUM'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] font-semibold text-slate-900">
-                            {visionResult.hazardName}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
-                            <span className="bg-white/80 border border-orange-200 px-1.5 py-0.5 rounded font-medium">
-                              Department: {visionResult.recommendedDepartment}
-                            </span>
-                            <span className="bg-white/80 border border-orange-200 px-1.5 py-0.5 rounded font-medium">
-                              Assigned Unit: {visionResult.recommendedCrew}
-                            </span>
-                            <span className="bg-white/80 border border-orange-200 px-1.5 py-0.5 rounded font-medium">
-                              Estimated Time: ~{visionResult.estimatedRepairTimeMinutes}m
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                      {/* Vision Triage & HUD Cards */}
+                      {isAnalyzingVision && renderAgenticHUD()}
+                      {visionResult && !isAnalyzingVision && renderAIDecisionBreakdown()}
                     </div>
                   ) : (
                     <div
@@ -1016,41 +1208,97 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   />
                 </div>
 
-                {/* Draggable Location Pin & Address */}
-                <div className="space-y-1.5">
+                {/* Draggable Location Pin & Address with Reverse Geocoding */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700">
                       Location Pin (Drag on Google Map):
                     </label>
-                    <span className="text-[11px] font-mono text-orange-600 font-semibold">
-                      {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCaptureGPSLocation}
+                        disabled={isGeocoding}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                        title="Auto-detect high-precision GPS coordinates"
+                      >
+                        {isGeocoding ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-teal-600" />
+                        ) : (
+                          <Navigation className="w-3 h-3 text-teal-600" />
+                        )}
+                        <span>{isGeocoding ? 'Geocoding...' : 'Use My GPS'}</span>
+                      </button>
+                      <span className="text-[11px] font-mono text-orange-600 font-semibold">
+                        {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
+                      </span>
+                    </div>
                   </div>
 
                   <GooglePinPickerMap
                     coords={selectedCoords}
-                    onCoordsChange={setSelectedCoords}
-                    onAddressDiscovered={(address) => setLandmark(address)}
+                    onCoordsChange={handleUpdateCoordsAndGeocode}
+                    onAddressDiscovered={(address, wardName) => {
+                      setLandmark(address);
+                      if (wardName) setSelectedWard(wardName);
+                    }}
                     className="w-full h-36 rounded-xl border border-slate-200 overflow-hidden relative z-0"
                   />
+
+                  {/* Auto-detected Municipal Ward Selector */}
+                  <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                      <MapPin className="w-3.5 h-3.5 text-[#2d7a70]" />
+                      <span>Municipal Ward:</span>
+                    </div>
+                    <select
+                      value={selectedWard}
+                      onChange={(e) => setSelectedWard(e.target.value)}
+                      className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2d7a70] text-xs cursor-pointer"
+                    >
+                      {ZONES.map((z) => (
+                        <option key={z.id} value={z.name}>
+                          {z.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {/* Street / Landmark input with Google Places Autocomplete */}
+                {/* Street / Landmark input with Reverse Geocode Auto-fill */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Street / Landmark Description (Google Places):
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Location / Landmark Description:
+                    </label>
+                    {isGeocoding && (
+                      <span className="text-[10px] text-teal-700 font-semibold animate-pulse flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        <span>Auto-filling address...</span>
+                      </span>
+                    )}
+                  </div>
                   <GooglePlacesAutocompleteInput
                     value={landmark}
                     onChange={setLandmark}
-                    onPlaceSelect={(coords, formattedAddress) => {
-                      setSelectedCoords(coords);
-                      setLandmark(formattedAddress);
+                    onPlaceSelect={(coords) => {
+                      handleUpdateCoordsAndGeocode(coords);
                     }}
-                    placeholder="e.g. Cinema Road, Outside Verad Gate, Ward 4"
+                    placeholder="e.g. Cinema Road, Outside Verad Gate, Sector 4"
                     required
                   />
+                  <p className="text-[10px] text-slate-500">
+                    Auto-filled via Reverse Geocoding pipeline. You may freely edit or append landmark details.
+                  </p>
                 </div>
+
+                {/* Multimodal Grievance Description & Voice-to-Text */}
+                <VoiceGrievanceInput
+                  value={grievanceDescription}
+                  onChange={setGrievanceDescription}
+                  onAudioChange={setVoiceNoteData}
+                  placeholder="Describe hazard details or tap 'Voice Dictation' to speak in English/Hindi/Telugu..."
+                />
 
                 {/* Citizen Name & Phone */}
                 <div className="grid grid-cols-2 gap-3">
@@ -1176,30 +1424,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </div>
             )}
 
-            {/* 2. Ward 4 Live Grievance Map */}
-            <div id="ward-overview-map" className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-orange-600" />
-                  <span>Ward 4 Real-Time Geospatial Map</span>
-                </h3>
-                <span className="text-xs text-slate-500 font-medium">
-                  {incidents.filter(i => i.status !== 'RESOLVED').length} Active Hazards
-                </span>
-              </div>
-
-              <GoogleDesktopOverviewMap
-                incidents={incidents}
-                onSelectIncident={(inc) => setTrackedIncident(inc)}
-                focusedFacility={focusedFacility}
-                className="w-full h-56 rounded-xl border border-slate-200 overflow-hidden relative z-0"
-              />
-              <p className="text-[11px] text-slate-500">
-                Click any marker on the map to inspect live redressal stage and crew notes.
-              </p>
-            </div>
-
-            {/* 3. Live Registered Complaints List */}
+            {/* 2. Live Registered Complaints List */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-900">
@@ -1604,39 +1829,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       </div>
                     </div>
 
-                    {/* Vision Diagnostic Assessment */}
-                    {visionResult && !isAnalyzingVision && (
-                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-bold text-blue-950">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Automated Verification & Triage</span>
-                          </div>
-                          <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                            visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80
-                              ? 'bg-red-600 text-white'
-                              : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-blue-600 text-white'
-                          }`}>
-                            PRIORITY: {visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80 ? 'CRITICAL' : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60 ? 'HIGH' : 'MEDIUM'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] font-semibold text-slate-900">
-                          {visionResult.hazardName}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
-                          <span className="bg-white/80 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
-                            Department: {visionResult.recommendedDepartment}
-                          </span>
-                          <span className="bg-white/80 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
-                            Assigned Unit: {visionResult.recommendedCrew}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
+                      {/* Vision Triage & HUD Cards */}
+                      {isAnalyzingVision && renderAgenticHUD()}
+                      {visionResult && !isAnalyzingVision && renderAIDecisionBreakdown()}
+                    </div>
+                  ) : (
                   <div
                     onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                     onDragLeave={() => setIsDragOver(false)}
@@ -1703,42 +1900,98 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 />
               </div>
 
-              {/* Location & GPS Google Map Box */}
-              <div className="space-y-1.5">
+              {/* Location & GPS Google Map Box with Reverse Geocoding */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     Incident Location Pin (Google Map)
                   </label>
-                  <span className="text-xs font-mono text-blue-600 font-semibold">
-                    {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCaptureGPSLocation}
+                      disabled={isGeocoding}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-0.5 rounded-lg transition cursor-pointer"
+                      title="Auto-detect high-precision GPS coordinates"
+                    >
+                      {isGeocoding ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-teal-600" />
+                      ) : (
+                        <Navigation className="w-3 h-3 text-teal-600" />
+                      )}
+                      <span>{isGeocoding ? 'Geocoding...' : 'Use My GPS'}</span>
+                    </button>
+                    <span className="text-xs font-mono text-blue-600 font-semibold">
+                      {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
+                    </span>
+                  </div>
                 </div>
 
                 <GooglePinPickerMap
                   coords={selectedCoords}
-                  onCoordsChange={setSelectedCoords}
+                  onCoordsChange={handleUpdateCoordsAndGeocode}
+                  onAddressDiscovered={(address, wardName) => {
+                    setLandmark(address);
+                    if (wardName) setSelectedWard(wardName);
+                  }}
                   className="w-full h-44 rounded-xl border border-slate-200 overflow-hidden relative z-0"
                 />
-                <p className="text-[11px] text-slate-500">
-                  Drag the pin or click on the map to set the exact street location.
-                </p>
+
+                {/* Auto-detected Municipal Ward Selector */}
+                <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <MapPin className="w-3.5 h-3.5 text-[#2d7a70]" />
+                    <span>Municipal Ward:</span>
+                  </div>
+                  <select
+                    value={selectedWard}
+                    onChange={(e) => setSelectedWard(e.target.value)}
+                    className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2d7a70] text-xs cursor-pointer"
+                  >
+                    {ZONES.map((z) => (
+                      <option key={z.id} value={z.name}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Landmark Input with Google Places */}
+              {/* Landmark Input with Google Places & Reverse Geocode Auto-fill */}
               <div className="space-y-1">
-                <label className="block text-xs font-bold text-slate-700">Street / Landmark Description (Google Places)</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Street / Landmark Description (Google Places):
+                  </label>
+                  {isGeocoding && (
+                    <span className="text-[10px] text-teal-700 font-semibold animate-pulse flex items-center gap-1">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      <span>Auto-filling address...</span>
+                    </span>
+                  )}
+                </div>
                 <GooglePlacesAutocompleteInput
                   value={landmark}
                   onChange={setLandmark}
-                  onPlaceSelect={(coords, formattedAddress) => {
-                    setSelectedCoords(coords);
-                    setLandmark(formattedAddress);
+                  onPlaceSelect={(coords) => {
+                    handleUpdateCoordsAndGeocode(coords);
                   }}
-                  placeholder="e.g. Cinema Road, Outside Verad Gate, Ward 4"
+                  placeholder="e.g. Cinema Road, Outside Verad Gate, Sector 4"
                   className="h-11 text-sm"
                   required
                 />
+                <p className="text-[10px] text-slate-500">
+                  Auto-filled via Reverse Geocoding API pipeline. You may freely edit or append landmark details.
+                </p>
               </div>
+
+              {/* Multimodal Grievance Description & Voice-to-Text */}
+              <VoiceGrievanceInput
+                value={grievanceDescription}
+                onChange={setGrievanceDescription}
+                onAudioChange={setVoiceNoteData}
+                placeholder="Describe hazard details or tap 'Voice Dictation' to speak in English/Hindi/Telugu..."
+              />
 
               {/* Citizen Details */}
               <div className="grid grid-cols-2 gap-3">
@@ -1855,6 +2108,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             <span className="text-xs text-slate-500 font-medium truncate max-w-[160px]">
                               {ticket.location.address}
                             </span>
+                            {ticket.hasVoiceNote && (
+                              <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                                <Volume2 className="w-2.5 h-2.5 text-teal-700" />
+                                <span>Voice Note</span>
+                              </span>
+                            )}
                           </div>
                           <h4 className="text-sm font-bold text-slate-900 mt-1">
                             {ticket.title}
@@ -2430,6 +2689,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Non-Civic Warning Gate Dialog */}
+      {renderNonCivicWarningModal()}
     </div>
   );
 };

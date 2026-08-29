@@ -11,7 +11,9 @@ import {
   Map as MapIcon, 
   User, 
   LogOut,
-  Radio
+  Eye,
+  Radio,
+  AlertTriangle
 } from 'lucide-react';
 import { CrisisIncident, MunicipalUnit, UnitStatus, DepartmentType, PriorityLevel, UserProfile } from '../types';
 import { ZONES } from '../mockData';
@@ -33,6 +35,7 @@ interface MunicipalOfficerCommandCenterProps {
   onReRouteDepartment?: (incidentId: string, dept: DepartmentType) => void;
   onAdjustPriority?: (incidentId: string, priority: PriorityLevel) => void;
   onLogout?: () => void;
+  onSwitchToCitizen?: () => void;
   currentUser?: UserProfile | null;
   onOpenStaffManagement?: () => void;
   onOpenProfile?: () => void;
@@ -50,6 +53,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   onUpdateUnitStatus,
   onAssignCrew,
   onLogout,
+  onSwitchToCitizen,
   currentUser,
   onOpenStaffManagement,
   onOpenProfile,
@@ -61,7 +65,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   const [activeTab, setActiveTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE'>(initialTab);
   const [selectedWard, setSelectedWard] = useState<string>(defaultWard);
   const [filterDepartment, setFilterDepartment] = useState<string>('ALL');
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'PENDING_MANUAL_TRIAGE'>('ALL');
   const [proofPhotoUrl, setProofPhotoUrl] = useState<string>('https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80');
   const [officerNoteInput, setOfficerNoteInput] = useState<string>('');
   const [showResolveModal, setShowResolveModal] = useState<boolean>(false);
@@ -73,11 +77,17 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
     }
   }, [currentUser, isSuperAdmin]);
 
+  // Count manual triage items
+  const manualTriageCount = incidents.filter(i => i.requiresManualVerification || i.status === 'PENDING_MANUAL_TRIAGE' || i.isCivicIssue === false).length;
+
   // Filter incidents for officer desk
   const filteredIncidents = incidents.filter((inc) => {
-    if (filterStatus === 'OPEN' && inc.status === 'RESOLVED') return false;
+    if (filterStatus === 'PENDING_MANUAL_TRIAGE') {
+      return Boolean(inc.requiresManualVerification || inc.status === 'PENDING_MANUAL_TRIAGE' || inc.isCivicIssue === false);
+    }
+    if (filterStatus === 'OPEN' && (inc.status === 'RESOLVED' || inc.status === 'PENDING_MANUAL_TRIAGE')) return false;
     if (filterStatus === 'RESOLVED' && inc.status !== 'RESOLVED') return false;
-    if (filterStatus === 'IN_PROGRESS' && (inc.status === 'OPEN' || inc.status === 'RESOLVED')) return false;
+    if (filterStatus === 'IN_PROGRESS' && (inc.status === 'OPEN' || inc.status === 'RESOLVED' || inc.status === 'PENDING_MANUAL_TRIAGE')) return false;
     if (filterDepartment !== 'ALL' && inc.department !== filterDepartment) return false;
     return true;
   });
@@ -204,13 +214,14 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
             </button>
           )}
 
-          {/* Switch back to Citizen View */}
-          {onLogout && (
+          {/* Switch back to Citizen View (No Logout) */}
+          {(onSwitchToCitizen || onLogout) && (
             <button
-              onClick={onLogout}
+              onClick={onSwitchToCitizen || onLogout}
               className="h-9 px-3 sm:px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition"
+              title="View App as a Citizen without logging out"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <Eye className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Switch to Citizen</span>
             </button>
           )}
@@ -238,7 +249,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
 
       {/* RENDER TAB 3: OPERATIONAL 3-COLUMN DESKTOP GRID */}
       {activeTab === 'COMMAND_DESK' && (
-        <div className="h-[calc(100vh-4rem)] grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 bg-slate-50 overflow-hidden">
+        <div className="h-[calc(100vh-4rem)] grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 bg-slate-100 text-slate-900 overflow-hidden">
           
           {/* COLUMN 1: LEFT FILTERS & KPIS (3 Cols) */}
           <div className="col-span-12 lg:col-span-3 h-full flex flex-col justify-between bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm overflow-y-auto">
@@ -318,6 +329,26 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                     </button>
                   ))}
                 </div>
+
+                {/* Dedicated Manual Verification Queue Trigger */}
+                <button
+                  onClick={() => setFilterStatus('PENDING_MANUAL_TRIAGE')}
+                  className={`w-full mt-1.5 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                    filterStatus === 'PENDING_MANUAL_TRIAGE'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Manual Verification Queue</span>
+                  </div>
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    filterStatus === 'PENDING_MANUAL_TRIAGE' ? 'bg-white text-amber-900' : 'bg-amber-200 text-amber-900'
+                  }`}>
+                    {manualTriageCount}
+                  </span>
+                </button>
               </div>
 
               {/* Department Filter */}
@@ -393,7 +424,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                     Incident Action Desk
                   </h3>
                 </div>
-                <span className="text-xs font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
                   {filteredIncidents.length} in Queue
                 </span>
               </div>
@@ -406,10 +437,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                     <button
                       key={ticket.id}
                       onClick={() => onSelectIncident(ticket)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-mono transition cursor-pointer shrink-0 ${
                         isSelected
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
+                          ? 'bg-blue-600 text-white font-semibold shadow-sm border border-blue-600'
+                          : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       {ticket.id}
@@ -465,6 +496,51 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                           className="max-h-48 w-full object-cover rounded-xl border border-slate-200"
                           referrerPolicy="no-referrer"
                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual Triage Gate Officer Action Card */}
+                  {(activeTicket.requiresManualVerification || activeTicket.status === 'PENDING_MANUAL_TRIAGE' || activeTicket.isCivicIssue === false) && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl space-y-2.5 shadow-xs">
+                      <div className="flex items-center gap-2 text-amber-950 font-bold text-xs">
+                        <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                        <span>Manual Triage Gate: Flagged Non-Civic Media</span>
+                      </div>
+                      <p className="text-xs text-amber-900 leading-relaxed">
+                        {activeTicket.rejectionReason || 'Media was flagged during AI analysis as potentially non-civic or ambiguous. Officer verification required before crew dispatch.'}
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => {
+                            onUpdateIncidentStatus(
+                              activeTicket.id, 
+                              'OPEN', 
+                              undefined, 
+                              'Verified manually by officer. Approved for dispatch.',
+                              { requiresManualVerification: false, isCivicIssue: true }
+                            );
+                          }}
+                          className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Approve & Route Ticket</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            onUpdateIncidentStatus(
+                              activeTicket.id, 
+                              'RESOLVED', 
+                              undefined, 
+                              'Dismissed during manual triage: Non-civic visual submission.',
+                              { requiresManualVerification: false, isCivicIssue: false }
+                            );
+                          }}
+                          className="flex-1 py-2 px-3 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>Dismiss Non-Civic Image</span>
+                        </button>
                       </div>
                     </div>
                   )}

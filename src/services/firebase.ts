@@ -462,7 +462,9 @@ export function mapDocToIncident(id: string, data: any): CrisisIncident {
   // Normalize status
   let status: CrisisIncident['status'] = 'OPEN';
   const rawStatus = (data.status || '').toUpperCase();
-  if (rawStatus === 'RESOLVED') {
+  if (data.requiresManualVerification || rawStatus === 'PENDING MANUAL TRIAGE' || rawStatus === 'PENDING_MANUAL_TRIAGE') {
+    status = 'PENDING_MANUAL_TRIAGE';
+  } else if (rawStatus === 'RESOLVED') {
     status = 'RESOLVED';
   } else if (rawStatus === 'IN REMEDIATION' || rawStatus === 'IN_PROGRESS' || rawStatus === 'IN_REMEDIATION') {
     status = 'IN_PROGRESS';
@@ -536,14 +538,21 @@ export function mapDocToIncident(id: string, data: any): CrisisIncident {
     verifiedByVolunteers: data.verifiedByVolunteers || [],
     auditorNotes: data.auditorNotes || '',
     auditorComplianceScore: data.auditorComplianceScore,
-    actionDirectives: data.actionDirectives || []
+    actionDirectives: data.actionDirectives || [],
+    isCivicIssue: data.isCivicIssue !== undefined ? data.isCivicIssue : true,
+    rejectionReason: data.rejectionReason || '',
+    aiConfidence: typeof data.aiConfidence === 'number' ? data.aiConfidence : undefined,
+    aiReasoning: data.aiReasoning || '',
+    requiresManualVerification: Boolean(data.requiresManualVerification)
   };
 }
 
 // Convert CrisisIncident to Firestore payload
 export function mapIncidentToFirestore(incident: Partial<CrisisIncident>) {
   let displayStatus = "Registered";
-  if (incident.status === 'RESOLVED') {
+  if (incident.requiresManualVerification || incident.status === 'PENDING_MANUAL_TRIAGE') {
+    displayStatus = "Pending Manual Triage";
+  } else if (incident.status === 'RESOLVED') {
     displayStatus = "Resolved";
   } else if (incident.status === 'IN_PROGRESS') {
     displayStatus = "In Remediation";
@@ -580,6 +589,14 @@ export function mapIncidentToFirestore(incident: Partial<CrisisIncident>) {
     verifiedByVolunteers: Array.isArray(incident.verifiedByVolunteers) ? incident.verifiedByVolunteers : [],
     auditorNotes: incident.auditorNotes || '',
     auditorComplianceScore: typeof incident.auditorComplianceScore === 'number' ? incident.auditorComplianceScore : null,
+    isCivicIssue: incident.isCivicIssue !== undefined ? incident.isCivicIssue : true,
+    rejectionReason: incident.rejectionReason || '',
+    aiConfidence: typeof incident.aiConfidence === 'number' ? incident.aiConfidence : null,
+    aiReasoning: incident.aiReasoning || '',
+    requiresManualVerification: Boolean(incident.requiresManualVerification),
+    hasVoiceNote: Boolean(incident.hasVoiceNote),
+    audioNoteUrl: incident.audioNoteUrl || '',
+    audioNoteBase64: incident.audioNoteBase64 || '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };

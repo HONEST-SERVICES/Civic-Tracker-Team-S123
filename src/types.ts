@@ -34,7 +34,7 @@ export interface PublicFacility {
 
 export type PriorityLevel = 'P1_CRITICAL' | 'P2_URGENT' | 'P3_SCHEDULED';
 
-export type IncidentStatus = 'OPEN' | 'DISPATCHED' | 'IN_PROGRESS' | 'RESOLVED';
+export type IncidentStatus = 'OPEN' | 'DISPATCHED' | 'IN_PROGRESS' | 'RESOLVED' | 'PENDING_MANUAL_TRIAGE';
 
 export type DepartmentType = 'PUBLIC_WORKS' | 'SANITATION' | 'WATER_SUPPLY' | 'ELECTRICITY' | 'HEALTH_SBM';
 
@@ -116,6 +116,10 @@ export interface GeminiVisionResult {
   safetyDirectives: string[];
   anomaliesDetected?: string[];
   analyzedWithGemini?: boolean;
+  isCivicIssue?: boolean;
+  rejectionReason?: string;
+  aiConfidence?: number;
+  aiReasoning?: string;
 }
 
 export interface CrisisIncident {
@@ -158,6 +162,14 @@ export interface CrisisIncident {
   verifiedByVolunteers?: string[];
   auditorNotes?: string;
   auditorComplianceScore?: number;
+  isCivicIssue?: boolean;
+  rejectionReason?: string;
+  aiConfidence?: number;
+  aiReasoning?: string;
+  requiresManualVerification?: boolean;
+  hasVoiceNote?: boolean;
+  audioNoteUrl?: string;
+  audioNoteBase64?: string;
 }
 
 export interface MunicipalUnit {

@@ -68,8 +68,13 @@ import {
   Users, 
   Crown,
   Award,
-  Activity
+  Activity,
+  Globe,
+  Eye,
+  Building
 } from 'lucide-react';
+import { useTheme } from './context/ThemeContext';
+import { useLanguage } from './context/LanguageContext';
 
 function getDisplayRoleName(role: UserRole, ward?: string | null): string {
   switch (role) {
@@ -92,6 +97,8 @@ function getDisplayRoleName(role: UserRole, ward?: string | null): string {
 }
 
 export default function App() {
+  const { language, setLanguage, t } = useLanguage();
+
   // Authentication & Current User Profile (Determined solely by Firebase Auth + Firestore role)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
@@ -111,25 +118,9 @@ export default function App() {
   const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
   const [selectedDriveCampaign, setSelectedDriveCampaign] = useState<CleanlinessCampaign>(SAMPLE_CAMPAIGNS[0]);
 
-  // Synchronize Interface Theme from Local Storage
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('swachhata_user_preferences');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.theme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-    } catch (e) {
-      console.warn('Theme init notice:', e);
-    }
-  }, []);
-
   // Citizen Mobile Tab Navigation: 'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE' | 'FACILITIES'
   const [citizenTab, setCitizenTab] = useState<'HOME' | 'EVENTS' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'PROFILE' | 'FACILITIES'>('HOME');
+  const [isOfficerCitizenMode, setIsOfficerCitizenMode] = useState<boolean>(false);
 
   const [selectedIncident, setSelectedIncident] = useState<CrisisIncident | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<MunicipalUnit | null>(null);
@@ -358,14 +349,16 @@ export default function App() {
     incidentId: string, 
     newStatus: CrisisIncident['status'],
     resolutionProofUrl?: string,
-    resolutionNotes?: string
+    resolutionNotes?: string,
+    extraUpdates?: Partial<CrisisIncident>
   ) => {
     try {
       await updateComplaintInFirestore(incidentId, {
         status: newStatus,
         resolutionProofUrl,
         resolutionNotes,
-        resolvedAt: newStatus === 'RESOLVED' ? Date.now() : undefined
+        resolvedAt: newStatus === 'RESOLVED' ? Date.now() : undefined,
+        ...extraUpdates
       });
     } catch (err) {
       console.warn('Firestore incident status update err:', err);
@@ -378,7 +371,8 @@ export default function App() {
           status: newStatus,
           resolutionProofUrl: resolutionProofUrl || inc.resolutionProofUrl,
           resolutionNotes: resolutionNotes || inc.resolutionNotes,
-          resolvedAt: newStatus === 'RESOLVED' ? Date.now() : inc.resolvedAt
+          resolvedAt: newStatus === 'RESOLVED' ? Date.now() : inc.resolvedAt,
+          ...extraUpdates
         };
       }
       return inc;
@@ -390,7 +384,8 @@ export default function App() {
         status: newStatus,
         resolutionProofUrl: resolutionProofUrl || prev.resolutionProofUrl,
         resolutionNotes: resolutionNotes || prev.resolutionNotes,
-        resolvedAt: newStatus === 'RESOLVED' ? Date.now() : prev.resolvedAt
+        resolvedAt: newStatus === 'RESOLVED' ? Date.now() : prev.resolvedAt,
+        ...extraUpdates
       } : null);
     }
   };
@@ -484,13 +479,33 @@ export default function App() {
     );
   }
 
-    const isOfficerCommandView = (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && citizenTab !== 'PROFILE';
+    const isOfficerCommandView = (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && citizenTab !== 'PROFILE' && !isOfficerCitizenMode;
 
     return (
-      <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans overflow-hidden select-none">
+      <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans overflow-hidden select-none text-slate-900">
+        {/* Floating/Header Pill for Officer Citizen Mode */}
+        {isOfficerCitizenMode && userRole !== 'CITIZEN' && (
+          <div className="bg-amber-500 text-slate-950 px-4 py-2 flex items-center justify-between text-xs font-bold shadow-md relative z-50 border-b border-amber-600">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-950 animate-pulse shrink-0"></span>
+              <span className="tracking-tight font-extrabold text-slate-950 truncate">
+                Viewing as Citizen (Officer Mode) • Active Session Preserved
+              </span>
+            </div>
+            <button
+              id="switch-back-to-command-hq-btn"
+              onClick={() => setIsOfficerCitizenMode(false)}
+              className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold text-[11px] shadow-xs cursor-pointer transition flex items-center gap-1.5 shrink-0 ml-2"
+            >
+              <Building className="w-3.5 h-3.5 text-amber-400" />
+              <span>Switch Back to Command HQ</span>
+            </button>
+          </div>
+        )}
+
         {/* 1. TOP HEADER (Rendered for Citizen, Crew, Volunteers and Profile views) */}
         {!isOfficerCommandView && (
-          <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/80 shadow-xs relative z-40">
+          <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/90 shadow-xs relative z-40">
             {/* Left: CivicPulse Logo & Title */}
             <div className="flex items-center gap-2.5 min-w-0">
               <img 
@@ -501,22 +516,59 @@ export default function App() {
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">CivicPulse</span>
+                  <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">{t('appName')}</span>
                   <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
                     Live Matrix
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-500 truncate hidden md:block font-normal">
-                  Civic Grievance Redressal & Field Dispatch Matrix
+                  {t('appSubtitle')}
                 </p>
               </div>
             </div>
 
-            {/* Center: Live Municipal Sync Status Badge (Desktop) */}
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
+            {/* Center: Live Municipal Sync & Quick Controls (Desktop & Mobile) */}
+            <div className="flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs mr-2">
                 <Radio className="w-3 h-3 text-emerald-500 animate-pulse" strokeWidth={1.75} />
-                <span>Civic Network Online</span>
+                <span>{t('online')}</span>
+              </div>
+
+              {/* Language Selector Pills */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-full border border-slate-200">
+                <button
+                  id="header-lang-en"
+                  onClick={() => setLanguage('en')}
+                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full transition cursor-pointer ${
+                    language === 'en'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  id="header-lang-hi"
+                  onClick={() => setLanguage('hi')}
+                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full transition cursor-pointer ${
+                    language === 'hi'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  हिन्दी
+                </button>
+                <button
+                  id="header-lang-te"
+                  onClick={() => setLanguage('te')}
+                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full transition cursor-pointer ${
+                    language === 'te'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  తెలుగు
+                </button>
               </div>
             </div>
 
@@ -624,6 +676,21 @@ export default function App() {
                             <span>Staff Delegations</span>
                           </button>
                         )}
+
+                        {userRole !== 'CITIZEN' && (
+                          <button
+                            id="menu-toggle-view-btn"
+                            onClick={() => {
+                              setIsOfficerCitizenMode(!isOfficerCitizenMode);
+                              setShowProfileMenu(false);
+                              setCitizenTab('HOME');
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs text-amber-900 bg-amber-50 hover:bg-amber-100/80 rounded-lg transition flex items-center gap-2 font-bold cursor-pointer border border-amber-200/80"
+                          >
+                            <Eye className="w-4 h-4 text-amber-600" />
+                            <span>{isOfficerCitizenMode ? 'Switch to Command HQ' : 'Switch to Citizen View'}</span>
+                          </button>
+                        )}
                       </div>
 
                       <div className="pt-2 border-t border-slate-100">
@@ -656,7 +723,10 @@ export default function App() {
             <ProfileView
               currentUser={currentUser}
               onSignOut={handleSignOut}
-              onSwitchToTacticalDesk={() => setCitizenTab('HOME')}
+              onSwitchToTacticalDesk={() => {
+                setIsOfficerCitizenMode(false);
+                setCitizenTab('HOME');
+              }}
               onOpenStaffManagement={() => setShowStaffManagementModal(true)}
               onOpenAuthModal={() => setShowAuthModal(true)}
               onOpenSettingsModal={() => setShowSettingsModal(true)}
@@ -666,7 +736,7 @@ export default function App() {
         ) : (
           <>
             {/* VIEW A: WARD OFFICER & SUPER ADMIN COMMAND DESK */}
-            {(userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && (
+            {!isOfficerCitizenMode && (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') && (
               <MunicipalOfficerCommandCenter
                 incidents={incidents}
                 units={units}
@@ -680,6 +750,10 @@ export default function App() {
                 onReRouteDepartment={handleReRouteDepartment}
                 onAdjustPriority={handleAdjustPriority}
                 onLogout={handleSignOut}
+                onSwitchToCitizen={() => {
+                  setIsOfficerCitizenMode(true);
+                  setCitizenTab('HOME');
+                }}
                 currentUser={currentUser}
                 onOpenStaffManagement={() => setShowStaffManagementModal(true)}
                 onOpenProfile={() => setCitizenTab('PROFILE')}
@@ -687,7 +761,7 @@ export default function App() {
             )}
 
             {/* VIEW B: FIELD CREW & FIELD CONTRACTOR WORK ORDERS */}
-            {(userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') && (
+            {!isOfficerCitizenMode && (userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') && (
               <FieldCrewWorkOrders
                 incidents={incidents}
                 currentUser={currentUser}
@@ -696,7 +770,7 @@ export default function App() {
             )}
 
             {/* VIEW C: SWACHHATA DOOT & VOLUNTEER HUB */}
-            {(userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT') && (
+            {!isOfficerCitizenMode && (userRole === 'VOLUNTEER' || userRole === 'SWACHHATA_DOOT') && (
               <div className="flex-1 overflow-y-auto">
                 <VolunteerPortal
                   incidents={incidents}
@@ -706,7 +780,7 @@ export default function App() {
             )}
 
             {/* VIEW D: SWACHH SURVEKSHAN NATIONAL QUALITY AUDIT DESK */}
-            {userRole === 'SWACHH_SURVEKSHAN_AUDITOR' && (
+            {!isOfficerCitizenMode && userRole === 'SWACHH_SURVEKSHAN_AUDITOR' && (
               <div className="flex-1 overflow-y-auto">
                 <SwachhSurvekshanAuditorDesk
                   incidents={incidents}
@@ -716,7 +790,7 @@ export default function App() {
             )}
 
             {/* VIEW E: CITIZEN SWACHHATA PORTAL */}
-            {userRole === 'CITIZEN' && (
+            {(userRole === 'CITIZEN' || isOfficerCitizenMode) && (
               <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
                 {citizenTab === 'EVENTS' ? (
                   <div className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto space-y-4">
@@ -780,7 +854,7 @@ export default function App() {
       </main>
 
       {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Role-Tailored for Citizens & Staff) */}
-      <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2">
+      <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2 text-slate-900">
         {userRole === 'CITIZEN' ? (
           <>
             {/* Tab 1: Home */}
@@ -792,7 +866,7 @@ export default function App() {
               }`}
             >
               <Home className="w-5 h-5" />
-              <span>Home</span>
+              <span>{t('home')}</span>
             </button>
 
             {/* Tab 2: Events / Activity */}
@@ -804,7 +878,7 @@ export default function App() {
               }`}
             >
               <Calendar className="w-5 h-5" />
-              <span>Events</span>
+              <span>{t('events')}</span>
             </button>
 
             {/* Center Elevated Floating (+) Button */}

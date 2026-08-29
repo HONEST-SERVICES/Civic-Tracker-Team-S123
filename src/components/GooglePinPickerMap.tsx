@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGoogleMapsApi } from '../services/googleMapsLoader';
+import { reverseGeocodeCoordinates } from '../services/locationService';
 
 interface GooglePinPickerMapProps {
   coords: { lat: number; lng: number };
   onCoordsChange: (coords: { lat: number; lng: number }) => void;
-  onAddressDiscovered?: (formattedAddress: string) => void;
+  onAddressDiscovered?: (formattedAddress: string, wardName?: string, wardId?: string) => void;
   className?: string;
 }
 
@@ -17,19 +18,17 @@ export const GooglePinPickerMap: React.FC<GooglePinPickerMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
-  // Helper to reverse geocode coordinates to street landmark
-  const reverseGeocode = (lat: number, lng: number) => {
-    if (!onAddressDiscovered || !geocoderRef.current) return;
+  // Helper to reverse geocode coordinates to street landmark using locationService
+  const reverseGeocode = async (lat: number, lng: number) => {
+    if (!onAddressDiscovered) return;
     try {
-      geocoderRef.current.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === 'OK' && results && results[0]) {
-          onAddressDiscovered(results[0].formatted_address);
-        }
-      });
+      const geoResult = await reverseGeocodeCoordinates(lat, lng);
+      if (geoResult && geoResult.formattedAddress) {
+        onAddressDiscovered(geoResult.formattedAddress, geoResult.ward, geoResult.wardId);
+      }
     } catch (e) {
-      console.warn('Reverse geocoding error:', e);
+      console.warn('Reverse geocoding notice:', e);
     }
   };
 
@@ -40,8 +39,6 @@ export const GooglePinPickerMap: React.FC<GooglePinPickerMapProps> = ({
       .then((maps) => {
         if (!isMounted || !mapContainerRef.current) return;
         if (mapInstanceRef.current) return;
-
-        geocoderRef.current = new maps.Geocoder();
 
         const map = new maps.Map(mapContainerRef.current, {
           center: coords,
@@ -92,7 +89,6 @@ export const GooglePinPickerMap: React.FC<GooglePinPickerMapProps> = ({
       if (markerRef.current) markerRef.current.setMap(null);
       markerRef.current = null;
       mapInstanceRef.current = null;
-      geocoderRef.current = null;
     };
   }, []);
 
