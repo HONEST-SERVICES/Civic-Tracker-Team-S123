@@ -306,3 +306,27 @@ Status: Production-Ready Mobile GIS Desk & Graphic Action Cards Complete
 =======================================================
 Status: Production-Ready Streamlined Mobile GIS & Harmonized Cards Complete
 =======================================================
+
+=======================================================
+26. INTERACTIVE PROFILE PICTURE UPLOAD & GREETING AVATAR SYNCHRONIZATION:
+=======================================================
+- Dynamic Greeting Avatar Synchronization (`CitizenPortal.tsx`):
+  * Replaced static vector icon in the "Welcome, [User Name]" card header with a photo-aware avatar component.
+  * Rendered photo URL avatar: `<img src={currentUser.photoURL} alt={currentUser.displayName || currentUser.name || 'Citizen'} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-200" />` when user photo exists.
+  * Rendered user initials fallback: `getUserInitials(currentUser?.name)` on a high-contrast slate gradient container (`bg-gradient-to-br from-slate-800 to-slate-900 text-white font-bold flex items-center justify-center w-12 h-12 rounded-full text-base`) when no photo is present.
+  * Added small interactive camera badge in the corner (`w-4 h-4 bg-blue-600 rounded-full text-white flex items-center justify-center shadow-xs border border-white translate-x-1 translate-y-1` with Lucide `Camera` / `Loader2` indicator).
+- Client-Side Canvas Compression & Multi-Storage Profile Update Pipeline:
+  * Implemented `updateUserProfilePhoto` in `src/services/firebase.ts` and image compression via `compressImage` in `src/utils/imageCompressor.ts`.
+  * Accepts any custom image file selected from native camera or gallery picker.
+  * Compresses avatar payload via HTML5 Canvas to 256x256 max dimensions and JPEG quality 0.75 (<40 KB base64 payload).
+  * Updates Firebase Auth user profile (`updateProfile(auth.currentUser, { photoURL })`).
+  * Updates user document in Firestore DB `civictracker` under `users/{uid}` with `photoURL` and `updatedAt` server timestamp.
+  * Instantly synchronizes user state across the Welcome Greeting Card, Top Navigation Bar header avatar, and Profile view.
+- Unified Avatar & Initials Helper (`src/utils/userUtils.ts`):
+  * Extracted `getUserInitials` utility to generate consistent 2-letter uppercase initials (e.g., "AP" for Avinash Peela).
+  * Synchronized profile photo picker across `CitizenPortal.tsx` and `ProfileView.tsx`.
+
+=======================================================
+Status: Interactive Custom Profile Picture Upload & Dynamic Avatar Sync Complete
+=======================================================
+

@@ -387,6 +387,35 @@ export async function updateUserRoleAndWard(
 }
 
 /**
+ * Update current user's photoURL in Firebase Auth and Firestore instance `civictracker` under `users/{uid}`
+ */
+export async function updateUserProfilePhoto(photoBase64: string, uid?: string): Promise<string> {
+  const currentAuthUser = auth.currentUser;
+  const targetUid = uid || currentAuthUser?.uid;
+  
+  if (currentAuthUser && currentAuthUser.uid === targetUid) {
+    try {
+      await updateProfile(currentAuthUser, { photoURL: photoBase64 });
+      console.log("[Firebase Auth] Profile photoURL updated successfully.");
+    } catch (e) {
+      console.warn("[Firebase Auth] updateProfile photoURL warning:", e);
+    }
+  }
+  
+  if (targetUid) {
+    try {
+      const userRef = doc(db, "users", targetUid);
+      await setDoc(userRef, { photoURL: photoBase64, updatedAt: serverTimestamp() }, { merge: true });
+      console.log(`[Firestore DB: civictracker] User document users/${targetUid} photoURL updated successfully.`);
+    } catch (e) {
+      console.warn("[Firestore DB: civictracker] user doc photoURL update warning:", e);
+    }
+  }
+
+  return photoBase64;
+}
+
+/**
  * Fetch all registered users
  */
 export async function fetchAllUsers(): Promise<UserProfile[]> {

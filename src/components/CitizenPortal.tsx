@@ -56,12 +56,13 @@ import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVi
 import { SWACHHATA_CATEGORIES, INITIAL_PUBLIC_FACILITIES, ZONES } from '../mockData';
 import { analyzeHazardWithGeminiVision } from '../services/geminiService';
 import { reverseGeocodeCoordinates, getClosestWard, getCurrentUserLocation } from '../services/locationService';
-import { subscribeToPublicFacilities, ratePublicFacility } from '../services/firebase';
+import { subscribeToPublicFacilities, ratePublicFacility, updateUserProfilePhoto } from '../services/firebase';
 import { GooglePinPickerMap } from './GooglePinPickerMap';
 import { GooglePlacesAutocompleteInput } from './GooglePlacesAutocompleteInput';
 import { VoiceGrievanceInput } from './VoiceGrievanceInput';
 import { compressImage } from '../utils/imageCompressor';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './SwachhataDriveModal';
+import { getUserInitials } from '../utils/userUtils';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -72,6 +73,7 @@ interface CitizenPortalProps {
   onNavigate?: (screen: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES') => void;
   currentUser?: UserProfile | null;
   onOpenAuth?: () => void;
+  onUpdateUserProfile?: (updatedProfile: UserProfile) => void;
 }
 
 export const CitizenPortal: React.FC<CitizenPortalProps> = ({
@@ -82,8 +84,43 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   activeScreen = 'HOME',
   onNavigate,
   currentUser,
-  onOpenAuth
+  onOpenAuth,
+  onUpdateUserProfile
 }) => {
+  const profileFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
+  const [avatarStatusMsg, setAvatarStatusMsg] = useState<string | null>(null);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingAvatar(true);
+      setAvatarStatusMsg('Compressing & updating profile picture...');
+      
+      const compressed = await compressImage(file, 256, 256, 0.75);
+      const photoURL = compressed.compressedBase64;
+
+      await updateUserProfilePhoto(photoURL, currentUser?.uid);
+
+      if (currentUser && onUpdateUserProfile) {
+        onUpdateUserProfile({
+          ...currentUser,
+          photoURL
+        });
+      }
+
+      setAvatarStatusMsg('Profile photo updated successfully!');
+      setTimeout(() => setAvatarStatusMsg(null), 3000);
+    } catch (err) {
+      console.error('Failed to update avatar:', err);
+      setAvatarStatusMsg('Failed to update avatar photo.');
+      setTimeout(() => setAvatarStatusMsg(null), 3000);
+    } finally {
+      setIsUploadingAvatar(false);
+      if (e.target) e.target.value = '';
+    }
+  };
   const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>(activeScreen);
   const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>>([activeScreen]);
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
@@ -1492,18 +1529,56 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         {currentView === 'HOME' && (
           <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between pb-24 px-4 pt-3 gap-3.5">
             <div className="space-y-3">
+              {/* Hidden file input for custom profile picture upload */}
+              <input
+                type="file"
+                ref={profileFileInputRef}
+                accept="image/*"
+                onChange={handleAvatarFileChange}
+                className="hidden"
+              />
+
               {/* 1. Compact Header Welcome Card */}
               <div className="bg-white rounded-2xl py-2.5 px-4 shadow-sm border border-slate-200/90 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <UserCircle className="w-5 h-5 text-slate-700" strokeWidth={1.5} />
+                  {/* Dynamic Photo-Aware Avatar Component */}
+                  <div
+                    onClick={() => profileFileInputRef.current?.click()}
+                    className="relative flex-shrink-0 cursor-pointer group"
+                    title="Tap to change profile picture"
+                  >
+                    {currentUser?.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt={(currentUser as any)?.displayName || currentUser.name || 'Citizen'}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-200"
+                      />
+                    ) : (
+                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white font-bold flex items-center justify-center w-12 h-12 rounded-full text-base">
+                        {getUserInitials(currentUser?.name || (currentUser as any)?.displayName || 'Avinash Peela')}
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 rounded-full text-white flex items-center justify-center shadow-xs border border-white translate-x-1 translate-y-1 group-hover:bg-blue-700 transition-colors">
+                      {isUploadingAvatar ? (
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      ) : (
+                        <Camera className="w-2.5 h-2.5" />
+                      )}
+                    </div>
                   </div>
+
                   <div className="min-w-0">
                     <h2 className="text-sm font-bold text-slate-900 tracking-tight truncate">
                       {currentUser?.name ? `Welcome, ${currentUser.name}` : 'Welcome to CivicPulse'}
                     </h2>
                     <p className="text-[11px] text-slate-500 truncate font-normal">
-                      {currentUser ? "Here are today's actions for you" : 'Swachh Bharat Citizen Redressal Portal'}
+                      {avatarStatusMsg ? (
+                        <span className="text-blue-600 font-semibold">{avatarStatusMsg}</span>
+                      ) : currentUser ? (
+                        "Here are today's actions for you"
+                      ) : (
+                        'Swachh Bharat Citizen Redressal Portal'
+                      )}
                     </p>
                   </div>
                 </div>

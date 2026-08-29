@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, 
   UserCircle, 
@@ -26,7 +26,9 @@ import {
   Layers,
   Phone,
   Mail,
-  FileCheck
+  FileCheck,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { 
@@ -37,6 +39,9 @@ import {
 } from '../utils/translations';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { compressImage } from '../utils/imageCompressor';
+import { updateUserProfilePhoto } from '../services/firebase';
+import { getUserInitials } from '../utils/userUtils';
 
 interface ProfileViewProps {
   currentUser: UserProfile | null;
@@ -46,6 +51,7 @@ interface ProfileViewProps {
   onOpenAuthModal?: () => void;
   onOpenSettingsModal?: () => void;
   onOpenGeminiCopilot?: () => void;
+  onUpdateUserProfile?: (updatedProfile: UserProfile) => void;
 }
 
 export function getDisplayRoleName(role?: UserRole, ward?: string | null): string {
@@ -96,10 +102,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenStaffManagement,
   onOpenAuthModal,
   onOpenSettingsModal,
-  onOpenGeminiCopilot
+  onOpenGeminiCopilot,
+  onUpdateUserProfile
 }) => {
   const { language, setLanguage } = useLanguage();
   const [languageChangeNotice, setLanguageChangeNotice] = useState<string | null>(null);
+  const profileFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingPhoto(true);
+      setPhotoNotice('Compressing & updating profile photo...');
+      const result = await compressImage(file, 256, 256, 0.75);
+      const photoURL = result.compressedBase64;
+
+      await updateUserProfilePhoto(photoURL, currentUser?.uid);
+
+      if (currentUser && onUpdateUserProfile) {
+        onUpdateUserProfile({
+          ...currentUser,
+          photoURL
+        });
+      }
+
+      setPhotoNotice('Profile picture updated successfully!');
+      setTimeout(() => setPhotoNotice(null), 3000);
+    } catch (err) {
+      console.error('Failed to upload profile photo:', err);
+      setPhotoNotice('Photo update failed.');
+      setTimeout(() => setPhotoNotice(null), 3000);
+    } finally {
+      setIsUploadingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const handleLanguageChange = (lang: LanguageCode) => {
     setLanguage(lang);
@@ -133,22 +174,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="w-full h-full overflow-y-auto bg-slate-100 font-sans pb-28 px-4 pt-4 space-y-4 max-w-3xl mx-auto">
       
-      {/* Language Change Notification Toast */}
-      {languageChangeNotice && (
+      {/* Language / Photo Change Notification Toast */}
+      {(languageChangeNotice || photoNotice) && (
         <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{languageChangeNotice}</span>
+            <span>{photoNotice || languageChangeNotice}</span>
           </div>
         </div>
       )}
 
       {/* 1. USER HEADER (Clean GovTech Identity Card) */}
       <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+        {/* Hidden input for profile picture picker */}
+        <input
+          type="file"
+          ref={profileFileInputRef}
+          accept="image/*"
+          onChange={handlePhotoUpload}
+          className="hidden"
+        />
+
         <div className="flex items-start gap-3.5">
-          {/* Avatar / Profile Badge */}
-          <div className="relative shrink-0">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-blue-700 font-bold text-xl sm:text-2xl overflow-hidden shadow-xs">
+          {/* Avatar / Profile Badge with Camera Trigger */}
+          <div 
+            onClick={() => profileFileInputRef.current?.click()}
+            className="relative shrink-0 cursor-pointer group"
+            title="Click to change profile picture"
+          >
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-xl sm:text-2xl overflow-hidden">
               {currentUser?.photoURL ? (
                 <img
                   src={currentUser.photoURL}
@@ -157,26 +211,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <span>{displayName.charAt(0).toUpperCase()}</span>
+                <span>{getUserInitials(displayName)}</span>
               )}
             </div>
-            <div className="absolute -bottom-1.5 -right-1.5 bg-white p-0.5 rounded-full shadow-xs">
-              {isSuperAdmin ? (
-                <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px]" title="Super Admin">
-                  <Crown className="w-3.5 h-3.5" />
-                </div>
-              ) : isOfficerOrAdmin ? (
-                <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px]" title="Officer">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-              ) : isFieldCrew ? (
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]" title="Field Crew">
-                  <Building2 className="w-3.5 h-3.5" />
-                </div>
+            
+            {/* Interactive Camera Badge */}
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 text-white flex items-center justify-center rounded-full shadow-xs border-2 border-white group-hover:bg-blue-700 transition">
+              {isUploadingPhoto ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]" title="Verified">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </div>
+                <Camera className="w-3.5 h-3.5" />
               )}
             </div>
           </div>

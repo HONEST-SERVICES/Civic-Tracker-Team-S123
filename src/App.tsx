@@ -731,6 +731,7 @@ export default function App() {
               onOpenAuthModal={() => setShowAuthModal(true)}
               onOpenSettingsModal={() => setShowSettingsModal(true)}
               onOpenGeminiCopilot={() => setShowGeminiAssistant(true)}
+              onUpdateUserProfile={(updated) => setCurrentUser(updated)}
             />
           </div>
         ) : (
@@ -845,6 +846,7 @@ export default function App() {
                     onNavigate={(scr) => setCitizenTab(scr)}
                     currentUser={currentUser}
                     onOpenAuth={() => setShowAuthModal(true)}
+                    onUpdateUserProfile={(updated) => setCurrentUser(updated)}
                   />
                 )}
               </div>
