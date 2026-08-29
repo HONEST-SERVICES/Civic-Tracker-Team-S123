@@ -187,7 +187,7 @@ export const SwachhataDriveModal: React.FC<SwachhataDriveModalProps> = ({
 
           {/* Location & Assembly Point */}
           <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#0d5c52] dark:text-teal-400">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
               <MapPin className="w-4 h-4" />
               <span>Assembly & Staging Location</span>
             </div>
@@ -208,7 +208,7 @@ export const SwachhataDriveModal: React.FC<SwachhataDriveModalProps> = ({
             <div className="space-y-1.5">
               {campaign.objectives.map((obj, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#0d5c52] dark:text-teal-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                   <span>{obj}</span>
                 </div>
               ))}
@@ -218,13 +218,13 @@ export const SwachhataDriveModal: React.FC<SwachhataDriveModalProps> = ({
           {/* Equipment Provided */}
           <div className="space-y-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Shirt className="w-3.5 h-3.5 text-amber-600" />
+              <Shirt className="w-3.5 h-3.5 text-blue-600" />
               <span>Safety Gear & Kit Provided by MoHUA</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {campaign.equipmentProvided.map((eq, i) => (
-                <div key={i} className="p-2.5 rounded-xl bg-teal-50/60 dark:bg-slate-800 border border-teal-200/80 dark:border-slate-700 text-[11px] text-teal-900 dark:text-teal-200 font-medium flex items-center gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-800 dark:text-slate-200 font-medium flex items-center gap-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span className="line-clamp-2">{eq}</span>
                 </div>
               ))}
@@ -232,15 +232,15 @@ export const SwachhataDriveModal: React.FC<SwachhataDriveModalProps> = ({
           </div>
 
           {/* Volunteer Recognition */}
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 flex items-center justify-between">
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Award className="w-5 h-5 text-amber-600 shrink-0" />
+              <Award className="w-5 h-5 text-blue-600 shrink-0" />
               <div>
-                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Swachh Survekshan Karma Credit</p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-400">+50 Points to Volunteer Leaderboard Profile</p>
+                <p className="text-xs font-bold text-blue-900 dark:text-blue-200">Swachh Survekshan Karma Credit</p>
+                <p className="text-[11px] text-blue-700 dark:text-blue-400">+50 Points to Volunteer Leaderboard Profile</p>
               </div>
             </div>
-            <span className="text-[10px] font-extrabold bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-extrabold bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 px-2 py-0.5 rounded-md">
               Verified
             </span>
           </div>
@@ -260,10 +260,10 @@ export const SwachhataDriveModal: React.FC<SwachhataDriveModalProps> = ({
           <button
             type="button"
             onClick={handleToggleJoin}
-            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-md ${
+            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition shadow-sm ${
               isJoined
-                ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                : 'bg-[#0d5c52] hover:bg-[#09473f] text-white'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-slate-900 hover:bg-slate-800 text-white'
             }`}
           >
             {isJoined ? (
@@ -273,8 +273,8 @@ export const SwachhataDriveModal: React.FC<SwachhataDriveModalProps> = ({
               </>
             ) : (
               <>
-                <Flame className="w-4 h-4 text-amber-300" />
-                <span>Join Sunday Market Cleanliness Drive</span>
+                <Flame className="w-4 h-4 text-blue-300" />
+                <span>Join Cleanliness Drive</span>
               </>
             )}
           </button>

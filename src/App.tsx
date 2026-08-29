@@ -487,22 +487,22 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen w-screen bg-slate-100 flex flex-col font-sans overflow-hidden select-none">
-      {/* 1. TOP HEADER (CivicPulse Logo & Title on Left, Single Clean Profile Avatar on Right) */}
-      <header className="h-14 bg-[#115e59] text-white px-3 sm:px-5 flex items-center justify-between border-b border-teal-900 shadow-md relative z-40">
+    <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans overflow-hidden select-none">
+      {/* 1. TOP HEADER (Ultra-Clean Minimalist Civic Header) */}
+      <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/80 shadow-xs relative z-40">
         {/* Left: CivicPulse Logo & Title */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-teal-500/25 border border-teal-300/40 flex items-center justify-center text-teal-200 flex-shrink-0 shadow-xs">
-            <Activity className="w-4 h-4 text-teal-200 animate-pulse" />
+          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 shadow-xs">
+            <Activity className="w-4 h-4 text-blue-600 animate-pulse" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate font-bold tracking-tight text-base sm:text-lg">CivicPulse</span>
-              <span className="bg-white/15 text-teal-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
+              <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">CivicPulse</span>
+              <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
                 Live Matrix
               </span>
             </div>
-            <p className="text-[10px] text-teal-100/90 truncate hidden md:block font-normal">
+            <p className="text-[10px] text-slate-500 truncate hidden md:block font-normal">
               Civic Grievance Redressal & Field Dispatch Matrix
             </p>
           </div>
@@ -510,8 +510,8 @@ export default function App() {
 
         {/* Center: Live Municipal Sync Status Badge (Desktop) */}
         <div className="hidden lg:flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] px-2.5 py-1 rounded-full font-medium">
-            <Radio className="w-3 h-3 text-emerald-300 animate-pulse" strokeWidth={1.75} />
+          <div className="flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
+            <Radio className="w-3 h-3 text-emerald-500 animate-pulse" strokeWidth={1.75} />
             <span>Civic Network Online</span>
           </div>
         </div>
@@ -524,7 +524,7 @@ export default function App() {
               id="header-profile-btn"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               title="User Profile & Settings"
-              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 border border-white/30 text-white flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
             >
               {currentUser?.photoURL ? (
                 <img
@@ -534,7 +534,7 @@ export default function App() {
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <UserCircle className="w-5 h-5 text-white" strokeWidth={1.75} />
+                <UserCircle className="w-5 h-5 text-slate-600" strokeWidth={1.75} />
               )}
             </button>
 
@@ -542,17 +542,17 @@ export default function App() {
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
                 <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-[#115e59] shrink-0 font-bold overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 font-bold overflow-hidden">
                     {currentUser?.photoURL ? (
                       <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                      <User className="w-5 h-5 text-[#115e59]" />
+                      <User className="w-5 h-5 text-blue-600" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
                     <div className="mt-0.5">
-                      <span className="text-[10px] font-bold text-[#115e59] bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                         {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
                       </span>
                     </div>
@@ -567,9 +567,9 @@ export default function App() {
                       setShowGeminiAssistant(true);
                       setShowProfileMenu(false);
                     }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-teal-50 hover:text-[#115e59] rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                    className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
                   >
-                    <Sparkles className="w-4 h-4 text-teal-600" />
+                    <Sparkles className="w-4 h-4 text-blue-600" />
                     <span>Gemini AI Copilot</span>
                   </button>
 
@@ -618,19 +618,6 @@ export default function App() {
           </div>
         </div>
       </header>
-
-      {/* Dynamic Network / Sync Indicator Bar */}
-      <div className="h-0.5 w-full bg-teal-900/50 relative overflow-hidden flex-shrink-0">
-        <div 
-          className={`h-full transition-all duration-300 ${
-            isDispatching 
-              ? 'w-full bg-amber-400 animate-pulse' 
-              : isFirestoreConnected
-              ? 'w-full bg-emerald-400'
-              : 'w-1/3 bg-teal-300'
-          }`} 
-        />
-      </div>
 
       {/* 2. MAIN APPLICATION WORKSPACE ROUTED STRICTLY BY FIRESTORE RBAC */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -737,7 +724,7 @@ export default function App() {
                   {currentUser ? (
                     <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 text-center sm:text-left">
                       <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="w-20 h-20 rounded-full overflow-hidden bg-teal-50 border-2 border-[#115e59]/40 flex items-center justify-center text-2xl font-bold text-[#115e59] shrink-0 shadow-xs">
+                        <div className="w-20 h-20 rounded-full overflow-hidden bg-orange-50 border-2 border-orange-500/40 flex items-center justify-center text-2xl font-bold text-orange-600 shrink-0 shadow-xs">
                           {currentUser.photoURL ? (
                             <img
                               src={currentUser.photoURL}
@@ -755,7 +742,7 @@ export default function App() {
                             {currentUser.phone || currentUser.email || 'citizen@swachhbharat.gov.in'}
                           </p>
                           <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
-                            <span className="text-[11px] font-bold text-[#115e59] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                            <span className="text-[11px] font-bold text-orange-800 bg-orange-100/70 px-3 py-1 rounded-full border border-orange-200/60">
                               {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
                             </span>
                             {currentUser.assignedWard && (
@@ -816,15 +803,15 @@ export default function App() {
                   <div className="pt-2 space-y-3">
                     <button
                       onClick={() => setShowAuthModal(true)}
-                      className="w-full min-h-[48px] bg-[#115e59] hover:bg-[#0f4f4b] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full min-h-[48px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Shield className="w-4 h-4" />
+                      <Shield className="w-4 h-4 text-blue-400" />
                       <span>Switch Account / Sign In with Another Profile</span>
                     </button>
 
                     <button
                       onClick={() => setShowSettingsModal(true)}
-                      className="w-full min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200"
+                      className="w-full min-h-[44px] bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200 shadow-xs"
                     >
                       <Settings className="w-4 h-4 text-slate-600" />
                       <span>Preferences & Settings</span>
@@ -858,14 +845,14 @@ export default function App() {
         )}
       </main>
 
-      {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Visible in Citizen Mode on mobile screens) */}
+      {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Ultra-Clean Minimalist Styling) */}
       {userRole === 'CITIZEN' && (
         <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2">
           {/* Tab 1: Home */}
           <button
             onClick={() => setCitizenTab('HOME')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
-              citizenTab === 'HOME' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+              citizenTab === 'HOME' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
             }`}
           >
             <Home className="w-5 h-5" />
@@ -875,8 +862,8 @@ export default function App() {
           {/* Tab 2: Events / Activity */}
           <button
             onClick={() => setCitizenTab('EVENTS')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
-              citizenTab === 'EVENTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+              citizenTab === 'EVENTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
             }`}
           >
             <Calendar className="w-5 h-5" />
@@ -888,7 +875,7 @@ export default function App() {
             <button
               onClick={() => setCitizenTab('CATEGORIES')}
               title="Post a Complaint"
-              className="w-13 h-13 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-100 transition-all cursor-pointer"
+              className="w-12 h-12 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-50 transition-all cursor-pointer"
             >
               <Plus className="w-6 h-6 stroke-[3]" />
             </button>
@@ -897,8 +884,8 @@ export default function App() {
           {/* Tab 3: Complaints */}
           <button
             onClick={() => setCitizenTab('COMPLAINTS')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
-              citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+              citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
             }`}
           >
             <ClipboardList className="w-5 h-5" />
@@ -908,8 +895,8 @@ export default function App() {
           {/* Tab 4: Profile */}
           <button
             onClick={() => setCitizenTab('PROFILE')}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs font-medium transition-colors cursor-pointer ${
-              citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-800'
+            className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
+              citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
             }`}
           >
             <User className="w-5 h-5" />

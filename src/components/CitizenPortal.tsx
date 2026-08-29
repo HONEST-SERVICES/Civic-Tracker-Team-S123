@@ -22,6 +22,8 @@ import {
   Star,
   Compass,
   FileText,
+  PlusCircle,
+  Clock3,
   Check,
   Phone,
   Navigation,
@@ -743,7 +745,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   onClick={() => setCategoryDomainFilter('ALL')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                     categoryDomainFilter === 'ALL'
-                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -754,7 +756,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   onClick={() => setCategoryDomainFilter('URBAN_ROAD')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                     categoryDomainFilter === 'URBAN_ROAD'
-                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -765,7 +767,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   onClick={() => setCategoryDomainFilter('SANITATION_WATER')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                     categoryDomainFilter === 'SANITATION_WATER'
-                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -776,7 +778,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   onClick={() => setCategoryDomainFilter('RURAL_SUBURBAN')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                     categoryDomainFilter === 'RURAL_SUBURBAN'
-                      ? 'bg-white text-[#2d7a70] shadow-xs'
+                      ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -793,7 +795,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       onClick={() => setSelectedCategory(cat.id as HazardCategory)}
                       className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer transition ${
                         isSelected
-                          ? 'bg-teal-50/80 border-[#2d7a70] text-[#2d7a70] shadow-xs'
+                          ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-xs'
                           : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100/80'
                       }`}
                     >
@@ -801,7 +803,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         {getCategoryIcon(cat.icon)}
                       </div>
                       <div className="min-w-0">
-                        <p className={`text-xs font-bold truncate ${isSelected ? 'text-[#2d7a70]' : 'text-slate-800'}`}>
+                        <p className={`text-xs font-bold truncate ${isSelected ? 'text-orange-700' : 'text-slate-800'}`}>
                           {cat.name}
                         </p>
                         <p className="text-[10px] text-slate-500 truncate">{cat.subtitle}</p>
@@ -815,7 +817,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             {/* 2. Photo, Pin, & Details Submission Form */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Camera className="w-4 h-4 text-[#2d7a70]" />
+                <Camera className="w-4 h-4 text-orange-600" />
                 <span>2. Geo-Photo & Location Details</span>
               </h3>
 
@@ -834,7 +836,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         </span>
                       )}
                       {isAnalyzingVision && !isCompressing && (
-                        <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
+                        <span className="text-[11px] font-semibold text-orange-700 flex items-center gap-1 animate-pulse">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Automated Triage In Progress...
                         </span>
@@ -853,7 +855,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         />
                         {isAnalyzingVision && (
                           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
-                            <Sparkles className="w-6 h-6 text-teal-300 animate-spin" />
+                            <Sparkles className="w-6 h-6 text-orange-300 animate-spin" />
                             <p className="text-xs font-bold">Evaluating pavement hazard & civic priority...</p>
                           </div>
                         )}
@@ -862,17 +864,17 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           onClick={() => fileInputRef.current?.click()}
                           className="absolute bottom-2 right-2 bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition"
                         >
-                          <Camera className="w-3 h-3 text-[#2d7a70]" />
+                          <Camera className="w-3 h-3 text-orange-600" />
                           <span>Change Photo</span>
                         </button>
                       </div>
 
                       {/* Vision Result Diagnostic Card */}
                       {visionResult && !isAnalyzingVision && (
-                        <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
+                        <div className="p-3 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 font-bold text-teal-900">
-                              <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                            <div className="flex items-center gap-1.5 font-bold text-orange-900">
+                              <Sparkles className="w-3.5 h-3.5 text-orange-600" />
                               <span>Automated Verification & Triage</span>
                             </div>
                             <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
@@ -880,7 +882,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                                 ? 'bg-red-600 text-white'
                                 : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60
                                 ? 'bg-amber-500 text-white'
-                                : 'bg-teal-700 text-white'
+                                : 'bg-orange-600 text-white'
                             }`}>
                               PRIORITY: {visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80 ? 'CRITICAL' : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60 ? 'HIGH' : 'MEDIUM'}
                             </span>
@@ -889,13 +891,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             {visionResult.hazardName}
                           </p>
                           <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
-                            <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                            <span className="bg-white/80 border border-orange-200 px-1.5 py-0.5 rounded font-medium">
                               Department: {visionResult.recommendedDepartment}
                             </span>
-                            <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                            <span className="bg-white/80 border border-orange-200 px-1.5 py-0.5 rounded font-medium">
                               Assigned Unit: {visionResult.recommendedCrew}
                             </span>
-                            <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                            <span className="bg-white/80 border border-orange-200 px-1.5 py-0.5 rounded font-medium">
                               Estimated Time: ~{visionResult.estimatedRepairTimeMinutes}m
                             </span>
                           </div>
@@ -909,10 +911,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       onDragLeave={() => setIsDragOver(false)}
                       onDrop={handleDrop}
                       className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition text-center ${
-                        isDragOver ? 'border-[#2d7a70] bg-teal-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+                        isDragOver ? 'border-orange-500 bg-orange-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
                       }`}
                     >
-                      <Camera className="w-5 h-5 text-[#2d7a70] mb-1" />
+                      <Camera className="w-5 h-5 text-orange-600 mb-1" />
                       <p className="text-xs font-bold text-slate-800">Click to upload or drag & drop photo</p>
                       <p className="text-[11px] text-slate-500">Auto-verified for immediate municipal crew routing</p>
                     </div>
@@ -935,7 +937,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     <label className="block text-xs font-bold text-slate-700">
                       Location Pin (Drag on Google Map):
                     </label>
-                    <span className="text-[11px] font-mono text-[#2d7a70] font-semibold">
+                    <span className="text-[11px] font-mono text-orange-600 font-semibold">
                       {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
                     </span>
                   </div>
@@ -1010,7 +1012,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <button
                   type="submit"
                   disabled={isDispatching || isSubmittingForm}
-                  className="w-full h-11 rounded-xl bg-[#2d7a70] hover:bg-[#23635b] active:bg-[#1b4b45] text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 active:from-orange-800 active:to-amber-800 text-white font-bold text-xs shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {(isDispatching || isSubmittingForm) ? (
                     <>
@@ -1030,48 +1032,58 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
           {/* RIGHT COLUMN (Col 6/12): Active Complaint Status & Live Ward Map & List */}
           <div className="md:col-span-6 space-y-6">
-            {/* 1. Active Grievance Hero Banner */}
+            {/* 1. Active Grievance Banner (Clean Refined Card) */}
             {activeComplaint && (
-              <div className="bg-gradient-to-br from-[#24665d] to-[#2d7a70] rounded-2xl p-5 text-white shadow-sm space-y-3.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      Live Active Grievance
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 border-l-4 border-l-blue-600 shadow-sm space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs font-semibold text-slate-600">
+                      {formatTicketId(activeComplaint.id)}
                     </span>
-                    <h3 className="text-base font-bold text-white mt-1">
-                      {activeComplaint.title}
-                    </h3>
-                    <p className="text-xs font-mono text-teal-200">
-                      ID: {formatTicketId(activeComplaint.id)} • {activeComplaint.location.zone}
-                    </p>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                      activeComplaint.status === 'RESOLVED' 
+                        ? 'bg-emerald-50 text-emerald-700' 
+                        : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {activeComplaint.status === 'RESOLVED' ? 'Resolved' : activeComplaint.assignedUnitName ? 'In Progress' : 'Registered'}
+                    </span>
                   </div>
 
                   <button
                     onClick={() => setTrackedIncident(activeComplaint)}
-                    className="px-3.5 py-1.5 rounded-full bg-white text-[#115e59] text-xs font-bold shadow-sm hover:bg-teal-50 transition cursor-pointer flex-shrink-0"
+                    className="bg-slate-900 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
                   >
-                    View Status
+                    View Details
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-teal-50 bg-black/15 px-3 py-2 rounded-xl">
-                  <MapPin className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-800">
+                    {activeComplaint.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {activeComplaint.status === 'RESOLVED' ? 'Redressal Closed' : `Live Dispatch ETA: ~${activeComplaint.etaMinutes || 15} mins • ${activeComplaint.location.zone}`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 border border-slate-200/70 px-3 py-2 rounded-xl">
+                  <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
                   <span className="truncate">{activeComplaint.location.address}</span>
                 </div>
 
                 {/* 4-Step Resolution Mini Stepper */}
-                <div className="pt-2 border-t border-teal-600/60 flex items-center justify-between text-xs text-teal-100">
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-emerald-300" />
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Registered</span>
                   </div>
-                  <span className="text-teal-400">→</span>
-                  <div className="flex items-center gap-1.5 font-semibold text-white">
-                    <Truck className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="text-slate-300">→</span>
+                  <div className="flex items-center gap-1.5 font-semibold text-blue-700">
+                    <Truck className="w-3.5 h-3.5 text-blue-600" />
                     <span>{activeComplaint.status === 'RESOLVED' ? 'Resolved' : activeComplaint.assignedUnitName || 'Assigned to Crew'}</span>
                   </div>
-                  <span className="text-teal-400">→</span>
-                  <div className="flex items-center gap-1.5 text-teal-200">
+                  <span className="text-slate-300">→</span>
+                  <div className="flex items-center gap-1.5 text-slate-500">
                     <Clock className="w-3.5 h-3.5" />
                     <span>{activeComplaint.status === 'RESOLVED' ? 'Closed' : `ETA: ~${activeComplaint.etaMinutes || 15}m`}</span>
                   </div>
@@ -1083,7 +1095,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <div id="ward-overview-map" className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#2d7a70]" />
+                  <MapPin className="w-4 h-4 text-orange-600" />
                   <span>Ward 4 Real-Time Geospatial Map</span>
                 </h3>
                 <span className="text-xs text-slate-500 font-medium">
@@ -1118,11 +1130,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     <div
                       key={ticket.id}
                       onClick={() => setTrackedIncident(ticket)}
-                      className="p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-[#2d7a70] transition-all cursor-pointer flex items-center justify-between gap-3 shadow-2xs"
+                      className="p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-orange-300 transition-all cursor-pointer flex items-center justify-between gap-3 shadow-2xs"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-[#115e59]">{formatTicketId(ticket.id)}</span>
+                          <span className="font-mono text-xs font-bold text-orange-600">{formatTicketId(ticket.id)}</span>
                           <span className="text-slate-300">•</span>
                           <span className="text-xs text-slate-600 truncate">{ticket.location.address}</span>
                         </div>
@@ -1152,11 +1164,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         MOBILE LAYOUT (< md) -> AUTHENTIC SWACHHATA MOBILE FLOW 
         ========================================================================
       */}
-      <div className="block md:hidden max-w-2xl mx-auto px-4 py-3 space-y-2.5">
+      <div className="block md:hidden max-w-2xl mx-auto">
         {/* Top Success Banner */}
         {submittedSuccess && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-[#2d7a70] flex-shrink-0 mt-0.5" />
+          <div className="mx-4 mt-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-bold text-slate-900">Grievance submitted successfully. Tracking ID: #{lastSubmittedId}</p>
               <p className="text-xs text-slate-700 mt-0.5">
@@ -1168,183 +1180,159 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
         {/* VIEW 1: AUTHENTIC CIVICPULSE CITIZEN HOME */}
         {currentView === 'HOME' && (
-          <div className="space-y-2.5">
-            {/* 1. Compact Header Welcome Card */}
-            <div className="bg-white rounded-xl py-2.5 px-4 shadow-xs border border-slate-200/80 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-teal-50 border border-[#115e59]/30 flex items-center justify-center flex-shrink-0 shadow-xs">
-                  <UserCircle className="w-5 h-5 text-[#115e59]" strokeWidth={1.5} />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-sm font-bold text-slate-800 tracking-tight truncate">
-                    Welcome, {reporterName}
-                  </h2>
-                  <p className="text-[11px] text-slate-500 truncate">
-                    Here are today's actions for you
-                  </p>
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                <span className="text-xs px-2 py-0.5 bg-slate-100 rounded-md text-slate-600 font-medium inline-block border border-slate-200/60">
-                  Ward 4
-                </span>
-              </div>
-            </div>
-
-            {/* 2. Compact Incident Card or Clean Empty State */}
-            {activeComplaint ? (
-              <div className="bg-gradient-to-r from-[#115e59] to-[#2d7a70] rounded-xl py-2 px-3.5 text-white shadow-xs space-y-1.5 relative overflow-hidden">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-                    <span className="text-xs font-bold font-mono text-teal-100 truncate">
-                      {formatTicketId(activeComplaint.id)}
-                    </span>
-                    <span className="text-teal-300">•</span>
-                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                      activeComplaint.status === 'RESOLVED' 
-                        ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' 
-                        : 'bg-amber-400/30 text-amber-200 border border-amber-300/40'
-                    }`}>
-                      {activeComplaint.status === 'RESOLVED' ? 'Resolved' : activeComplaint.assignedUnitName ? 'Assigned' : 'Registered'}
-                    </span>
+          <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between pb-24 px-4 pt-3 gap-3.5">
+            <div className="space-y-3">
+              {/* 1. Compact Header Welcome Card */}
+              <div className="bg-white rounded-2xl py-2.5 px-4 shadow-sm border border-slate-200/90 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-xs">
+                    <UserCircle className="w-5 h-5 text-slate-700" strokeWidth={1.5} />
                   </div>
-                  <button
-                    onClick={() => setTrackedIncident(activeComplaint)}
-                    className="px-2.5 py-1 rounded-full bg-white text-[#115e59] text-xs font-bold shadow-xs hover:bg-teal-50 transition cursor-pointer flex-shrink-0"
-                  >
-                    Track Status
-                  </button>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-slate-900 tracking-tight truncate">
+                      Welcome, {reporterName}
+                    </h2>
+                    <p className="text-[11px] text-slate-500 truncate font-normal">
+                      Here are today's actions for you
+                    </p>
+                  </div>
                 </div>
-
-                <div className="flex items-center justify-between text-xs text-teal-50 pt-1 border-t border-white/10">
-                  <p className="text-xs font-semibold text-white truncate max-w-[200px]">
-                    {activeComplaint.title}
-                  </p>
-                  <span className="text-xs text-teal-200 font-mono flex-shrink-0">
-                    {activeComplaint.status === 'RESOLVED' ? 'Closed' : `ETA: ~${activeComplaint.etaMinutes || 15}m`}
+                <div className="flex-shrink-0">
+                  <span className="text-xs px-2.5 py-0.5 bg-blue-50 rounded-md text-blue-700 font-semibold inline-block border border-blue-200/80">
+                    Ward 4
                   </span>
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70] flex-shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#2d7a70]" />
+
+              {/* 2. Refined Active Ticket Banner / Empty State */}
+              {activeComplaint ? (
+                <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-600 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-xs font-semibold text-slate-600 truncate">
+                        {formatTicketId(activeComplaint.id)}
+                      </span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                        activeComplaint.status === 'RESOLVED' 
+                          ? 'bg-emerald-50 text-emerald-700' 
+                          : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {activeComplaint.status === 'RESOLVED' ? 'Resolved' : activeComplaint.assignedUnitName ? 'In Progress' : 'Registered'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setTrackedIncident(activeComplaint)}
+                      className="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-lg hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
+                    >
+                      View Details
+                    </button>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-800 truncate">No active grievances logged</p>
-                    <p className="text-[11px] text-slate-500 truncate">Tap '+' to report an issue in your ward</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => pushView('CATEGORIES')}
-                  className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-[#115e59] border border-teal-200 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
-                >
-                  + Report
-                </button>
-              </div>
-            )}
 
-            {/* 3. Dashboard Quick Action 2x2 Grid */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Card 1: Post a Complaint */}
-              <div
-                onClick={() => pushView('CATEGORIES')}
-                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
-              >
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <FileText className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition leading-snug">
-                    Post a Complaint
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-snug mt-1">
-                    We are committed to receiving your complaint
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 2: My Active Complaints */}
-              <div
-                onClick={() => pushView('COMPLAINTS')}
-                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
-              >
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Clock className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition leading-snug">
-                    My Complaints ({citizenComplaints.length})
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-snug mt-1">
-                    Track live resolution & field work orders
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 3: SBM Public Toilet Locator */}
-              <div
-                onClick={() => pushView('FACILITIES')}
-                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
-              >
-                <div className="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg">
-                  <span>🚻</span>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition leading-snug">
-                      SBM Toilet Locator
-                    </h3>
-                    <span className="text-[10px] font-extrabold bg-cyan-600 text-white px-1.5 py-0.2 rounded-full">
-                      {publicFacilities.length}
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                    <p className="font-bold text-slate-800 text-sm truncate max-w-[200px]">
+                      {activeComplaint.title}
+                    </p>
+                    <span className="text-slate-500 text-xs font-medium flex-shrink-0">
+                      {activeComplaint.status === 'RESOLVED' ? 'Redressal Closed' : `ETA: ~${activeComplaint.etaMinutes || 15}m`}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 leading-snug mt-1">
-                    Find, inspect & rate nearby clean toilets
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-sm flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">No active grievances logged</p>
+                      <p className="text-[11px] text-slate-500 truncate">Tap below to report an issue in your ward</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => pushView('CATEGORIES')}
+                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition cursor-pointer shrink-0"
+                  >
+                    + Report
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Dashboard Quick Action 2x2 Grid (Expanded to Fill Viewport Vertically) */}
+            <div className="flex-1 grid grid-cols-2 gap-3.5 my-1">
+              {/* Card 1: File Grievance */}
+              <div
+                onClick={() => pushView('CATEGORIES')}
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-blue-600 transition">
+                    File Grievance
+                  </h3>
+                  <p className="font-normal text-slate-500 text-xs leading-relaxed mt-1">
+                    Report road hazard or civic issue
                   </p>
                 </div>
               </div>
 
-              {/* Card 4: Swachh Survekshan & Citizen Feedback */}
+              {/* Card 2: Track Grievances */}
+              <div
+                onClick={() => pushView('COMPLAINTS')}
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Clock3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-amber-700 transition">
+                    Track Grievances
+                  </h3>
+                  <p className="font-normal text-slate-500 text-xs leading-relaxed mt-1">
+                    Live crew & SLA progress
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 3: Public Facilities */}
+              <div
+                onClick={() => pushView('FACILITIES')}
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
+              >
+                <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-teal-700 transition">
+                    Public Facilities
+                  </h3>
+                  <p className="font-normal text-slate-500 text-xs leading-relaxed mt-1">
+                    Find & rate nearby amenities
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 4: Citizen Survey */}
               <div
                 onClick={() => {
                   setShowSurvekshanModal(true);
                 }}
-                className="bg-white border border-slate-200/80 rounded-xl shadow-xs hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-32 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer active:scale-[0.98] group select-none min-h-[140px] h-full"
               >
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Sparkles className="w-4.5 h-4.5" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition leading-snug">
-                    Swachh Survekshan
+                  <h3 className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-emerald-600 transition">
+                    Citizen Survey
                   </h3>
-                  <p className="text-xs text-slate-500 leading-snug mt-1">
-                    Answer simple questions & feedback
+                  <p className="font-normal text-slate-500 text-xs leading-relaxed mt-1">
+                    Ward cleanliness feedback
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Officer & Staff Access Strip */}
-            <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70]">
-                  <Building className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Municipal Officer Desk</p>
-                  <p className="text-[11px] text-slate-500">Ward Sanitary Inspector & AE Portal</p>
-                </div>
-              </div>
-              <button
-                onClick={onOpenAuth}
-                className="px-3 py-1.5 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-semibold rounded-lg shadow-xs transition cursor-pointer"
-              >
-                Staff Login
-              </button>
             </div>
           </div>
         )}
@@ -1352,7 +1340,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         {/* VIEW 2: CHOOSE CATEGORY */}
         {currentView === 'CATEGORIES' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-[#2d7a70] px-4 py-3.5 text-white flex items-center gap-3">
+            <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center gap-3">
               <button
                 onClick={popView}
                 className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
@@ -1362,7 +1350,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </button>
               <div>
                 <h2 className="text-base font-bold tracking-tight">Choose Category</h2>
-                <p className="text-xs text-teal-100">Select standard MoHUA grievance category</p>
+                <p className="text-xs text-slate-300">Select standard MoHUA grievance category</p>
               </div>
             </div>
 
@@ -1373,7 +1361,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => setCategoryDomainFilter('ALL')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   categoryDomainFilter === 'ALL'
-                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -1384,7 +1372,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => setCategoryDomainFilter('URBAN_ROAD')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   categoryDomainFilter === 'URBAN_ROAD'
-                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -1395,7 +1383,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => setCategoryDomainFilter('SANITATION_WATER')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   categoryDomainFilter === 'SANITATION_WATER'
-                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -1406,7 +1394,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => setCategoryDomainFilter('RURAL_SUBURBAN')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   categoryDomainFilter === 'RURAL_SUBURBAN'
-                    ? 'bg-[#2d7a70] text-white shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -1426,7 +1414,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       {getCategoryIcon(cat.icon)}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 group-hover:text-[#2d7a70] transition truncate">
+                      <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition truncate">
                         {cat.name}
                       </p>
                       <p className="text-xs text-slate-500 truncate">
@@ -1434,7 +1422,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       </p>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#2d7a70] flex-shrink-0 ml-2" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0 ml-2" />
                 </button>
               ))}
             </div>
@@ -1444,7 +1432,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         {/* VIEW 3: COMPLAINT SUBMISSION FORM */}
         {currentView === 'FORM' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-[#2d7a70] px-4 py-3.5 text-white flex items-center gap-3">
+            <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center gap-3">
               <button
                 onClick={popView}
                 className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
@@ -1454,7 +1442,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </button>
               <div>
                 <h2 className="text-base font-bold tracking-tight">Post Grievance</h2>
-                <p className="text-xs text-teal-100">
+                <p className="text-xs text-slate-300">
                   {SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Civic Infrastructure'}
                 </p>
               </div>
@@ -1468,7 +1456,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     Capture / Upload Geo-Tagged Photo
                   </label>
                   {isAnalyzingVision && (
-                    <span className="text-[11px] font-semibold text-teal-700 flex items-center gap-1 animate-pulse">
+                    <span className="text-[11px] font-semibold text-blue-700 flex items-center gap-1 animate-pulse">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       Automated Triage In Progress...
                     </span>
@@ -1486,7 +1474,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       />
                       {isAnalyzingVision ? (
                         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
-                          <Sparkles className="w-6 h-6 text-teal-300 animate-spin" />
+                          <Sparkles className="w-6 h-6 text-blue-300 animate-spin" />
                           <p className="text-xs font-bold">Evaluating pavement hazard & civic priority...</p>
                         </div>
                       ) : (
@@ -1501,17 +1489,17 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         onClick={() => fileInputRef.current?.click()}
                         className="absolute bottom-3 right-3 bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Camera className="w-3.5 h-3.5 text-[#2d7a70]" />
+                        <Camera className="w-3.5 h-3.5 text-blue-600" />
                         <span>Retake Photo</span>
                       </button>
                     </div>
 
                     {/* Vision Diagnostic Assessment */}
                     {visionResult && !isAnalyzingVision && (
-                      <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
+                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1.5 text-xs text-slate-800 animate-fade-in">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-bold text-teal-900">
-                            <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                          <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                             <span>Automated Verification & Triage</span>
                           </div>
                           <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
@@ -1519,7 +1507,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               ? 'bg-red-600 text-white'
                               : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60
                               ? 'bg-amber-500 text-white'
-                              : 'bg-teal-700 text-white'
+                              : 'bg-blue-600 text-white'
                           }`}>
                             PRIORITY: {visionResult.priority === 'P1_CRITICAL' || visionResult.riskScore >= 80 ? 'CRITICAL' : visionResult.priority === 'P2_URGENT' || visionResult.riskScore >= 60 ? 'HIGH' : 'MEDIUM'}
                           </span>
@@ -1528,10 +1516,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           {visionResult.hazardName}
                         </p>
                         <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-600">
-                          <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                          <span className="bg-white/80 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
                             Department: {visionResult.recommendedDepartment}
                           </span>
-                          <span className="bg-white/80 border border-teal-200 px-1.5 py-0.5 rounded font-medium">
+                          <span className="bg-white/80 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
                             Assigned Unit: {visionResult.recommendedCrew}
                           </span>
                         </div>
@@ -1545,10 +1533,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     onDragLeave={() => setIsDragOver(false)}
                     onDrop={handleDrop}
                     className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition text-center min-h-[140px] ${
-                      isDragOver ? 'border-[#2d7a70] bg-teal-50/60' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+                      isDragOver ? 'border-blue-500 bg-blue-50/60' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[#2d7a70] shadow-xs mb-2">
+                    <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-xs mb-2">
                       <Camera className="w-6 h-6" />
                     </div>
                     <p className="text-sm font-semibold text-slate-800">Tap to take photo of civic issue</p>
@@ -1574,7 +1562,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     Incident Location Pin (Google Map)
                   </label>
-                  <span className="text-xs font-mono text-[#2d7a70] font-semibold">
+                  <span className="text-xs font-mono text-blue-600 font-semibold">
                     {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
                   </span>
                 </div>
@@ -1632,7 +1620,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               <button
                 type="submit"
                 disabled={isDispatching}
-                className="w-full h-12 rounded-xl bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md min-h-[48px] mt-2"
+                className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-sm min-h-[48px] mt-2"
               >
                 {isDispatching ? (
                   <>
@@ -1665,7 +1653,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </div>
               <button
                 onClick={() => pushView('CATEGORIES')}
-                className="text-xs font-bold text-[#2d7a70] bg-teal-50 px-3 py-1 rounded-lg border border-teal-200 cursor-pointer hover:bg-teal-100 transition"
+                className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200 cursor-pointer hover:bg-blue-100 transition"
               >
                 + New Complaint
               </button>
@@ -1673,7 +1661,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
             {citizenComplaints.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-3 shadow-xs">
-                <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 text-[#2d7a70] flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto">
                   <ClipboardList className="w-6 h-6" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900">No active grievances logged</h3>
@@ -1682,7 +1670,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </p>
                 <button
                   onClick={() => pushView('CATEGORIES')}
-                  className="px-4 py-2 bg-[#2d7a70] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#23635b] transition cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800 transition cursor-pointer"
                 >
                   + Report an Issue
                 </button>
@@ -1695,12 +1683,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     <div
                       key={ticket.id}
                       onClick={() => setTrackedIncident(ticket)}
-                      className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-[#2d7a70] transition-colors cursor-pointer space-y-3"
+                      className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-blue-500 transition-colors cursor-pointer space-y-3"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-xs text-[#115e59]">
+                            <span className="font-mono font-bold text-xs text-blue-700">
                               {formatTicketId(ticket.id)}
                             </span>
                             <span className="text-xs text-slate-400">•</span>
@@ -1716,7 +1704,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                           isResolved
                             ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
                         }`}>
                           {isResolved ? 'Resolved' : 'Assigned'}
                         </span>
@@ -1738,7 +1726,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <Truck className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                           <span className="truncate">Inspector: <strong className="text-slate-800 font-medium">{ticket.assignedUnitName || 'Triage in Queue'}</strong></span>
                         </div>
-                        <span className="text-[#2d7a70] font-bold text-[11px] flex items-center gap-0.5">
+                        <span className="text-blue-600 font-bold text-[11px] flex items-center gap-0.5">
                           Track <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </div>
@@ -1776,7 +1764,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </div>
               </div>
 
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-[#115e59] border border-teal-200 flex-shrink-0">
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex-shrink-0">
                 {filteredFacilities.length} Units
               </span>
             </div>
@@ -1791,7 +1779,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   value={facilitySearchQuery}
                   onChange={(e) => setFacilitySearchQuery(e.target.value)}
                   placeholder="Search by facility name, street, ward, or amenities..."
-                  className="w-full h-11 pl-10 pr-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#2d7a70] shadow-xs"
+                  className="w-full h-11 pl-10 pr-9 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-400 shadow-xs"
                 />
                 {facilitySearchQuery && (
                   <button
@@ -1817,7 +1805,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     onClick={() => setFacilityFilterState(chip.id as any)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                       facilityFilterState === chip.id
-                        ? 'bg-[#2d7a70] text-white shadow-xs'
+                        ? 'bg-slate-900 text-white shadow-xs'
                         : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                     }`}
                   >
@@ -1862,11 +1850,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   return (
                     <div
                       key={fac.id}
-                      className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3 hover:border-[#2d7a70] transition"
+                      className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3 hover:border-teal-500 transition"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-3 min-w-0">
-                          <span className="text-2xl p-2.5 rounded-xl bg-teal-50 text-[#2d7a70] flex-shrink-0">
+                          <span className="text-2xl p-2.5 rounded-xl bg-teal-50 text-teal-700 flex-shrink-0">
                             {fac.type === 'TOILET' ? '🚻' : '♻️'}
                           </span>
                           <div className="min-w-0">
@@ -1874,11 +1862,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               <h4 className="font-bold text-slate-900 text-sm truncate">{fac.name}</h4>
                             </div>
                             <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
-                              <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                              <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                               <span className="truncate">{fac.location.address || fac.ward}</span>
                             </p>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-[#115e59] border border-teal-200">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
                                 📍 {distKm.toFixed(1)} km away • ~{walkMins} min walk
                               </span>
                             </div>
@@ -1898,7 +1886,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
                         {fac.timings && (
                           <div className="flex items-center gap-1 text-[11px]">
-                            <Clock className="w-3.5 h-3.5 text-[#2d7a70]" />
+                            <Clock className="w-3.5 h-3.5 text-teal-600" />
                             <span>{fac.timings}</span>
                           </div>
                         )}
@@ -1968,7 +1956,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                                   setIsRatingSaving(false);
                                 }
                               }}
-                              className="flex-1 h-8 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              className="flex-1 h-8 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                             >
                               <Star className="w-3.5 h-3.5" />
                               <span>{isRatingSaving ? 'Saving...' : `Submit ${facilityRatingInput}★ Rating`}</span>
@@ -1990,7 +1978,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               setSelectedFacilityForRating(fac);
                               setFacilityRatingInput(5);
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#2d7a70] text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold border border-teal-200 transition cursor-pointer flex items-center gap-1.5"
                           >
                             <Star className="w-3.5 h-3.5" />
                             <span>Rate Cleanliness</span>
@@ -2010,7 +1998,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               }}
                               className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
                             >
-                              <Crosshair className="w-3.5 h-3.5 text-[#2d7a70]" />
+                              <Crosshair className="w-3.5 h-3.5 text-slate-700" />
                               <span>Locate</span>
                             </button>
 
@@ -2018,7 +2006,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               href={`https://www.google.com/maps/dir/?api=1&destination=${fac.location.lat},${fac.location.lng}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-3 py-1.5 rounded-lg bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+                              className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
                             >
                               <Navigation className="w-3.5 h-3.5" />
                               <span>Directions</span>
@@ -2044,10 +2032,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       {trackedIncident && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-200">
-            <div className="bg-[#115e59] p-4 text-white flex items-center justify-between sticky top-0 z-10">
+            <div className="bg-slate-900 p-4 text-white flex items-center justify-between sticky top-0 z-10">
               <div>
-                <span className="text-xs font-mono text-teal-200 font-bold">{formatTicketId(trackedIncident.id)}</span>
-                <h3 className="text-base font-bold">{trackedIncident.title}</h3>
+                <span className="text-xs font-mono text-blue-300 font-bold">{formatTicketId(trackedIncident.id)}</span>
+                <h3 className="text-base font-bold text-white">{trackedIncident.title}</h3>
               </div>
               <button
                 onClick={() => setTrackedIncident(null)}
@@ -2067,7 +2055,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   {/* Step 1: Registered */}
                   <div className="relative flex items-start gap-3">
-                    <div className="absolute -left-6 w-5 h-5 rounded-full bg-[#2d7a70] text-white flex items-center justify-center text-[10px] font-bold ring-4 ring-white">
+                    <div className="absolute -left-6 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold ring-4 ring-white">
                       ✓
                     </div>
                     <div>
@@ -2079,7 +2067,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   {/* Step 2: Assigned */}
                   <div className="relative flex items-start gap-3">
                     <div className={`absolute -left-6 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white ${
-                      trackedIncident.assignedUnitName ? 'bg-[#2d7a70] text-white' : 'bg-slate-300 text-slate-600'
+                      trackedIncident.assignedUnitName ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-600'
                     }`}>
                       {trackedIncident.assignedUnitName ? '✓' : '2'}
                     </div>
@@ -2094,7 +2082,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   {/* Step 3: In Remediation */}
                   <div className="relative flex items-start gap-3">
                     <div className={`absolute -left-6 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-white ${
-                      trackedIncident.status === 'IN_PROGRESS' || trackedIncident.status === 'RESOLVED' ? 'bg-[#2d7a70] text-white' : 'bg-slate-300 text-slate-600'
+                      trackedIncident.status === 'IN_PROGRESS' || trackedIncident.status === 'RESOLVED' ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-600'
                     }`}>
                       {trackedIncident.status === 'RESOLVED' ? '✓' : '3'}
                     </div>
@@ -2199,7 +2187,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in zoom-in-95 text-slate-800 dark:text-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-[#2d7a70] dark:text-teal-400 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
                   ✨
                 </div>
                 <div>
@@ -2227,7 +2215,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     setSurvekshanFeedbackSubmitted(false);
                     setShowSurvekshanModal(false);
                   }}
-                  className="mt-2 px-4 py-2 bg-[#2d7a70] text-white text-xs font-bold rounded-xl cursor-pointer"
+                  className="mt-2 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-800"
                 >
                   Close
                 </button>
@@ -2256,7 +2244,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 space-y-1">
                   <div className="flex justify-between font-semibold">
                     <span>Ward 4 Cleanliness Index</span>
-                    <span className="text-[#2d7a70] dark:text-teal-400 font-bold">94.2% (Grade A+)</span>
+                    <span className="text-emerald-600 font-bold">94.2% (Grade A+)</span>
                   </div>
                   <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                     <span>Avg Resolution Time</span>
@@ -2267,7 +2255,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSurvekshanFeedbackSubmitted(true)}
-                  className="w-full py-2.5 bg-[#2d7a70] hover:bg-[#23635b] text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs"
                 >
                   Submit Citizen Feedback
                 </button>

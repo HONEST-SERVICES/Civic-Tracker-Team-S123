@@ -71,7 +71,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
       {/* Header Banner */}
       <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#2d7a70] flex items-center justify-center font-bold text-lg shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-lg shrink-0">
             🌿
           </div>
           <div className="min-w-0">
@@ -85,13 +85,13 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </div>
 
         {/* Volunteer Karma Points Badge */}
-        <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl shrink-0">
-          <Award className="w-4 h-4 text-amber-600" />
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl shrink-0">
+          <Award className="w-4 h-4 text-blue-600" />
           <div className="text-right">
-            <span className="text-xs font-black text-amber-900 block leading-tight">
+            <span className="text-xs font-black text-slate-900 block leading-tight">
               {volunteerKarmaPoints}
             </span>
-            <span className="text-[9px] font-semibold text-amber-700 uppercase">Karma Pts</span>
+            <span className="text-[9px] font-semibold text-slate-500 uppercase">Karma Pts</span>
           </div>
         </div>
       </div>
@@ -105,7 +105,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
             placeholder="Search drives by name, landmark, or category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#2d7a70] shadow-xs"
+            className="w-full h-10 pl-10 pr-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 shadow-xs"
           />
           {searchQuery && (
             <button
@@ -130,7 +130,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
               onClick={() => setSelectedFilter(chip.id as any)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 ${
                 selectedFilter === chip.id
-                  ? 'bg-[#2d7a70] text-white shadow-xs'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
@@ -143,7 +143,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
       {/* Drives List */}
       {filteredCampaigns.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-3 shadow-xs">
-          <div className="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 text-[#2d7a70] flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 text-slate-500 flex items-center justify-center mx-auto">
             <Calendar className="w-6 h-6" />
           </div>
           <h3 className="text-sm font-bold text-slate-900">No matching drives found</h3>
@@ -155,7 +155,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
               setSelectedFilter('ALL');
               setSearchQuery('');
             }}
-            className="px-4 py-2 bg-[#2d7a70] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#23635b] transition cursor-pointer"
+            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800 transition cursor-pointer"
           >
             Show All Drives
           </button>
@@ -173,7 +173,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
                   onSelectCampaign?.(campaign);
                   onOpenCampaignModal?.(campaign);
                 }}
-                className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-[#2d7a70] transition-all cursor-pointer space-y-3 group"
+                className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs hover:border-slate-400 transition-all cursor-pointer space-y-3 group"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1 min-w-0">
@@ -185,12 +185,12 @@ export const EventsView: React.FC<EventsViewProps> = ({
                         {campaign.ward}
                       </span>
                     </div>
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#2d7a70] transition leading-snug">
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition leading-snug">
                       {campaign.title}
                     </h3>
                   </div>
 
-                  <span className="text-xs font-bold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg shrink-0">
+                  <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg shrink-0 border border-slate-200">
                     {campaign.dateStr}
                   </span>
                 </div>
@@ -202,23 +202,23 @@ export const EventsView: React.FC<EventsViewProps> = ({
                 {/* Details Strip */}
                 <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs text-slate-600">
                   <div className="flex items-center gap-1.5 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="truncate">{campaign.locationName}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                    <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>{campaign.timeStr}</span>
                   </div>
                 </div>
 
                 {/* Safety Kit & SBM Perks Note */}
-                <div className="p-2.5 bg-teal-50/60 rounded-xl border border-teal-100 flex items-center justify-between text-xs text-slate-700">
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#2d7a70] shrink-0" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     <span className="truncate text-[11px]">Includes SBM Safety Kit & Certificate</span>
                   </div>
-                  <div className="flex items-center gap-1 font-bold text-[#115e59] text-[11px] shrink-0">
-                    <Users className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 font-bold text-slate-800 text-[11px] shrink-0">
+                    <Users className="w-3.5 h-3.5 text-slate-500" />
                     <span>{volunteerCount} / {campaign.maxTarget} Volunteers</span>
                   </div>
                 </div>
@@ -231,7 +231,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     className={`flex-1 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                       isJoined
                         ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
-                        : 'bg-[#2d7a70] text-white hover:bg-[#23635b] shadow-xs'
+                        : 'bg-slate-900 text-white hover:bg-slate-800 shadow-xs'
                     }`}
                   >
                     {isJoined ? (
@@ -249,8 +249,8 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      onSelectCampaign?.(campaign);
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onOpenCampaignModal?.(campaign);
                     }}
                     className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1 shrink-0"
