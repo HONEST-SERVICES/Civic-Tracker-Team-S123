@@ -262,9 +262,12 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         {/* Modal Header */}
         <div className="p-6 pb-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
-              <Building2 className="w-5 h-5" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="CivicPulse Logo" 
+              className="w-10 h-10 object-contain rounded-xl shadow-xs"
+              referrerPolicy="no-referrer"
+            />
             <div>
               <h3 className="font-extrabold text-base text-slate-900 leading-tight">CivicPulse</h3>
               <p className="text-xs text-slate-500">Sign in to access your civic account</p>

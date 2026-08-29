@@ -251,9 +251,12 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       <header className="p-4 sm:p-5 border-b border-slate-200/80 bg-white/95 backdrop-blur-xs shadow-xs z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
-              <Building2 className="w-5 h-5" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="CivicPulse Logo" 
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-xl shadow-xs"
+              referrerPolicy="no-referrer"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">
@@ -292,9 +295,12 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
           
           {/* Card Header */}
           <div className="text-center space-y-1.5 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto shadow-xs mb-3">
-              <Building2 className="w-6 h-6" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="CivicPulse Brand" 
+              className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 object-contain"
+              referrerPolicy="no-referrer"
+            />
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               CivicPulse
             </h1>

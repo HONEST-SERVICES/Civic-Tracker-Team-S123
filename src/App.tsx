@@ -490,9 +490,12 @@ export default function App() {
       <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/80 shadow-xs relative z-40">
         {/* Left: CivicPulse Logo & Title */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 shadow-xs">
-            <Activity className="w-4 h-4 text-blue-600 animate-pulse" />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="CivicPulse Logo" 
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-lg flex-shrink-0"
+            referrerPolicy="no-referrer"
+          />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">CivicPulse</span>

@@ -114,13 +114,16 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
       {/* Officer Header Strip */}
       <div className="bg-[#2d7a70] text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-sm flex-shrink-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/25 flex items-center justify-center text-white">
-            {isSuperAdmin ? <Crown className="w-4 h-4 text-amber-300" /> : <Building2 className="w-4 h-4" />}
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="CivicPulse" 
+            className="w-8 h-8 object-contain rounded-lg flex-shrink-0 bg-white/10 p-0.5 border border-white/25"
+            referrerPolicy="no-referrer"
+          />
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-sm leading-tight">
-                {isSuperAdmin ? 'National Apex Command HQ' : 'Ward Inspection & Remediation Desk'}
+                {isSuperAdmin ? 'CivicPulse Apex Command HQ' : 'CivicPulse Ward Command Desk'}
               </h2>
               <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded text-white">
                 {currentUser?.designation || (isSuperAdmin ? 'Joint Secretary, MoHUA' : 'Ward Assistant Engineer')}

@@ -44,13 +44,16 @@ export const TopTelemetryBar: React.FC<TopTelemetryBarProps> = ({
       {/* Brand & Municipal Corporation Title */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-900/40 border border-blue-700/50 text-blue-400">
-            <Building2 className="w-5 h-5" />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="CivicPulse" 
+            className="w-9 h-9 object-contain rounded-lg flex-shrink-0 bg-slate-900 border border-slate-700"
+            referrerPolicy="no-referrer"
+          />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-100 text-base tracking-tight">
-                SyncDispatch
+                CivicPulse
               </span>
               <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                 City Municipal Corporation
