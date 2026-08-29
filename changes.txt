@@ -77,6 +77,23 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 - Maintained client-side canvas compression pipeline (`compressImage`) to ensure <100 KB payload limits and automated Gemini AI vision triage across both capture modes.
 - Added a preview action bar with 1-tap "Retake" (Camera), "Gallery" switch, and "Remove" (Trash) actions.
 
+12. PRODUCTION AUTH OVERHAUL & EMAIL/PASSWORD FORMS:
+- Removed artificial badges and jargon ("MoHUA Civic Tech Standard • Role-Protected & Encrypted", "GovTech Standard").
+- Standardized brand title to "CivicPulse" with clean subtitle: "Sign in to access your civic account or municipal dashboard".
+- Implemented full Firebase email/password authentication (`loginWithEmail`, `registerWithEmail`, `resetPassword`):
+  * Clean mode switcher tabs: [ Sign In ] | [ Create Account ]
+  * Structured form inputs: Full Name (on sign-up), Email Address with Mail icon, Password with interactive show/hide Eye toggle.
+  * "Forgot password?" inline trigger with password reset link dispatcher.
+  * Primary Action: "Sign In to CivicPulse" / "Create Civic Account" (`bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl transition-all shadow-sm`).
+- Clean "Or continue with" divider and secondary authentication:
+  * "Continue with Google" standard white button.
+  * Inline toggle for Mobile Phone OTP verification with SMS token confirmation.
+- Visual depth & surface contrast:
+  * Page canvas: `bg-slate-50 min-h-screen flex flex-col justify-between`.
+  * Center card: `bg-white border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-200/60 p-8 max-w-md w-full mx-auto`.
+  * Inputs: `bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none`.
+- Clean footer: "By continuing, you agree to the Terms of Service and Privacy Policy." & "CivicPulse Municipal Redressal Network • All rights reserved."
+
 =======================================================
 Status: Production-Ready GovTech Release
 =======================================================

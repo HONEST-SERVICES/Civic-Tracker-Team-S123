@@ -19,6 +19,10 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
   RecaptchaVerifier, 
   signInWithPhoneNumber, 
   onAuthStateChanged, 
@@ -136,6 +140,53 @@ export async function loginWithGoogle(): Promise<{ user: User; profile: UserProf
   console.log(`[Auth Performance] Google Sign-In resolved and transitioned in: ${elapsed} ms`);
 
   return { user: cred.user, profile };
+}
+
+/**
+ * Sign in with Email and Password with optimistic UI resolution and background Firestore sync
+ */
+export async function loginWithEmail(email: string, pass: string): Promise<{ user: User; profile: UserProfile }> {
+  const startTime = performance.now();
+  const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
+  const profile = createOptimisticUserProfile(cred.user);
+  void syncUserProfile(cred.user).catch((err) => {
+    console.warn("[Firebase Diagnostic] Background profile sync warning:", err);
+  });
+  const elapsed = Math.round(performance.now() - startTime);
+  console.log(`[Auth Performance] Email Sign-In resolved and transitioned in: ${elapsed} ms`);
+  return { user: cred.user, profile };
+}
+
+/**
+ * Register a new user with Email, Password and Display Name
+ */
+export async function registerWithEmail(name: string, email: string, pass: string): Promise<{ user: User; profile: UserProfile }> {
+  const startTime = performance.now();
+  const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+  if (name.trim()) {
+    try {
+      await updateProfile(cred.user, { displayName: name.trim() });
+    } catch (e) {
+      console.warn("Failed to update profile displayName", e);
+    }
+  }
+  const profile = createOptimisticUserProfile(cred.user);
+  if (name.trim()) {
+    profile.name = name.trim();
+  }
+  void syncUserProfile(cred.user).catch((err) => {
+    console.warn("[Firebase Diagnostic] Background profile sync warning:", err);
+  });
+  const elapsed = Math.round(performance.now() - startTime);
+  console.log(`[Auth Performance] Email Registration resolved and transitioned in: ${elapsed} ms`);
+  return { user: cred.user, profile };
+}
+
+/**
+ * Send password reset email
+ */
+export async function resetPassword(email: string): Promise<void> {
+  return await sendPasswordResetEmail(auth, email.trim());
 }
 
 /**

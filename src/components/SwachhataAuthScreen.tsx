@@ -1,17 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Shield, 
-  Phone, 
-  Loader2, 
-  AlertCircle, 
-  CheckCircle2, 
-  RotateCcw, 
-  ArrowRight, 
-  Lock,
   Building2,
+  Mail,
+  Lock,
+  User as UserIcon,
+  Eye,
+  EyeOff,
+  Phone,
+  ArrowRight,
+  RotateCcw,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
   Globe
 } from 'lucide-react';
 import { 
+  loginWithEmail,
+  registerWithEmail,
+  resetPassword,
   loginWithGoogle, 
   setupRecaptcha, 
   sendPhoneOtp, 
@@ -23,8 +29,7 @@ import {
   getCurrentLanguage, 
   setLanguage, 
   SUPPORTED_LANGUAGES, 
-  LanguageCode, 
-  t 
+  LanguageCode
 } from '../utils/translations';
 
 interface SwachhataAuthScreenProps {
@@ -32,10 +37,21 @@ interface SwachhataAuthScreenProps {
 }
 
 export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSuccess }) => {
-  const [activeTab, setActiveTab] = useState<'GOOGLE' | 'PHONE'>('GOOGLE');
+  const [authMode, setAuthMode] = useState<'SIGN_IN' | 'SIGN_UP'>('SIGN_IN');
+  const [showPhoneAuth, setShowPhoneAuth] = useState<boolean>(false);
+  const [showForgotPassword, setShowForgotPassword] = useState<boolean>(false);
+
+  // Email/Password states
+  const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+
+  // Phone states
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [otpCode, setOtpCode] = useState<string>('');
   const [otpSent, setOtpSent] = useState<boolean>(false);
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -57,6 +73,77 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
     setCurrentLang(lang);
   };
 
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
+      return;
+    }
+    if (authMode === 'SIGN_UP' && !name.trim()) {
+      setErrorMessage('Please enter your full name.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (authMode === 'SIGN_IN') {
+        const { profile } = await loginWithEmail(email, password);
+        onSuccess(profile);
+      } else {
+        const { profile } = await registerWithEmail(name, email, password);
+        onSuccess(profile);
+      }
+    } catch (err: any) {
+      console.error('Email Auth Error:', err);
+      const code = err?.code;
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setErrorMessage('Invalid email or password. Please verify and retry.');
+      } else if (code === 'auth/email-already-in-use') {
+        setErrorMessage('An account with this email already exists. Please sign in.');
+      } else if (code === 'auth/weak-password') {
+        setErrorMessage('Password must be at least 6 characters.');
+      } else if (code === 'auth/invalid-email') {
+        setErrorMessage('Please enter a valid email address.');
+      } else {
+        setErrorMessage(err?.message || 'Authentication failed. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email address to receive reset instructions.');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      await resetPassword(email);
+      setSuccessMessage(`Password reset link sent to ${email.trim()}. Check your inbox.`);
+      setShowForgotPassword(false);
+    } catch (err: any) {
+      console.error('Password reset error:', err);
+      if (err?.code === 'auth/user-not-found') {
+        setErrorMessage('No account found with this email address.');
+      } else {
+        setErrorMessage(err?.message || 'Failed to send password reset email.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -70,7 +157,7 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       } else if (err?.code === 'auth/popup-blocked') {
         setErrorMessage('Sign-in popup blocked by browser. Please allow popups.');
       } else {
-        setErrorMessage(err?.message || 'Failed to sign in with Google. Please check your connection or use Mobile OTP.');
+        setErrorMessage(err?.message || 'Failed to sign in with Google. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -113,9 +200,9 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
       if (err?.code === 'auth/invalid-phone-number') {
         setErrorMessage('Invalid phone number format. Please check and retry.');
       } else if (err?.code === 'auth/quota-exceeded') {
-        setErrorMessage('SMS verification quota exceeded. Please use Google Sign-In.');
+        setErrorMessage('SMS verification quota exceeded. Please use Google or Email Sign-In.');
       } else {
-        setErrorMessage(err?.message || 'Failed to send OTP. Please try Google Sign-In.');
+        setErrorMessage(err?.message || 'Failed to send OTP. Please try Google or Email Sign-In.');
       }
     } finally {
       setIsLoading(false);
@@ -156,12 +243,12 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col justify-between relative font-sans select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between relative font-sans">
       {/* Invisible reCAPTCHA container */}
       <div id="auth-screen-recaptcha-container"></div>
 
-      {/* Top GovTech Clean Navigation Bar */}
-      <header className="p-4 sm:p-5 border-b border-slate-200/80 bg-white shadow-xs z-10">
+      {/* Top Clean Navigation Bar */}
+      <header className="p-4 sm:p-5 border-b border-slate-200/80 bg-white/95 backdrop-blur-xs shadow-xs z-10">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
@@ -170,14 +257,11 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">
-                  {t('appName', currentLang)}
-                </span>
-                <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2.5 py-0.5 rounded-full border border-slate-200">
-                  GovTech Standard
+                  CivicPulse
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
-                {t('appSubtitle', currentLang)}
+                Autonomous Municipal Redressal & Field Ops Grid
               </p>
             </div>
           </div>
@@ -202,239 +286,392 @@ export const SwachhataAuthScreen: React.FC<SwachhataAuthScreenProps> = ({ onSucc
         </div>
       </header>
 
-      {/* Main Centered White Card Area */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 z-10">
-        <div className="w-full max-w-md bg-white text-slate-900 rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+      {/* Main Centered Login Card Area */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 z-10 my-4 sm:my-8">
+        <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-200/60 p-6 sm:p-8 max-w-md w-full mx-auto">
           
           {/* Card Header */}
-          <div className="p-6 sm:p-7 pb-4 text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto shadow-xs">
-              <Shield className="w-6 h-6" />
+          <div className="text-center space-y-1.5 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto shadow-xs mb-3">
+              <Building2 className="w-6 h-6" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-                {t('appName', currentLang)}
-              </h1>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                {t('appSubtitle', currentLang)}
-              </p>
-            </div>
-
-            {/* Subtle Civic Trust Badge */}
-            <div className="pt-1">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full">
-                <Lock className="w-3 h-3 text-[#115e59]" />
-                <span>{t('govBadge', currentLang)}</span>
-              </span>
-            </div>
-
-            {/* Auth Mode Toggle Tabs */}
-            <div className="mt-4 grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => { setActiveTab('GOOGLE'); setErrorMessage(null); }}
-                className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  activeTab === 'GOOGLE'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Google Sign-In
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setActiveTab('PHONE'); setErrorMessage(null); }}
-                className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === 'PHONE'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Mobile OTP</span>
-              </button>
-            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+              CivicPulse
+            </h1>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              Sign in to access your civic account or municipal dashboard
+            </p>
           </div>
 
-          {/* Form & Body */}
-          <div className="p-6 sm:p-7 pt-2 space-y-4">
-            
-            {/* Status Notifications */}
-            {errorMessage && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-600" />
-                <div className="leading-snug">{errorMessage}</div>
-              </div>
-            )}
+          {/* Status Notifications */}
+          {errorMessage && (
+            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-600" />
+              <div className="leading-snug">{errorMessage}</div>
+            </div>
+          )}
 
-            {successMessage && (
-              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
-                <div className="leading-snug">{successMessage}</div>
-              </div>
-            )}
+          {successMessage && (
+            <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
+              <div className="leading-snug">{successMessage}</div>
+            </div>
+          )}
 
-            {/* OPTION 1: GOOGLE SIGN-IN */}
-            {activeTab === 'GOOGLE' && (
-              <div className="space-y-4 py-1">
+          {!showPhoneAuth ? (
+            <div>
+              {/* Top Mode Switcher Tabs */}
+              <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl mb-5">
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setAuthMode('SIGN_IN'); 
+                    setShowForgotPassword(false);
+                    setErrorMessage(null); 
+                  }}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    authMode === 'SIGN_IN' && !showForgotPassword
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setAuthMode('SIGN_UP'); 
+                    setShowForgotPassword(false);
+                    setErrorMessage(null); 
+                  }}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    authMode === 'SIGN_UP'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              {showForgotPassword ? (
+                /* Forgot Password Form */
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="text-left space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Reset Password
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Enter your email address and we'll send you a link to reset your password.
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3.5 py-2.5 text-sm transition-all outline-none"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || !email.trim()}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span>Send Reset Link</span>
+                    )}
+                  </button>
+
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(false)}
+                      className="text-xs text-slate-600 hover:text-slate-900 font-medium hover:underline cursor-pointer"
+                    >
+                      Back to Sign In
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Standard Email / Password Form */
+                <form onSubmit={handleEmailAuth} className="space-y-3.5">
+                  {authMode === 'SIGN_UP' && (
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Your full name"
+                          className="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3.5 py-2.5 text-sm transition-all outline-none"
+                          required={authMode === 'SIGN_UP'}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        className="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-3.5 py-2.5 text-sm transition-all outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Password
+                      </label>
+                      {authMode === 'SIGN_IN' && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowForgotPassword(true); setErrorMessage(null); }}
+                          className="text-[11px] text-blue-600 hover:text-blue-700 font-medium hover:underline cursor-pointer"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl pl-10 pr-10 py-2.5 text-sm transition-all outline-none"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full mt-2 bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span>{authMode === 'SIGN_IN' ? 'Sign In to CivicPulse' : 'Create Civic Account'}</span>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* OR DIVIDER */}
+              <div className="relative my-5">
+                <div className="border-t border-slate-200"></div>
+                <span className="bg-white px-3 text-xs text-slate-400 font-medium absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  Or continue with
+                </span>
+              </div>
+
+              {/* SECONDARY AUTH OPTIONS */}
+              <div className="space-y-3">
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 border border-slate-300 rounded-xl shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 border border-slate-200 rounded-xl shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-slate-700" />
-                  ) : (
-                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                  )}
-                  <span className="text-xs sm:text-sm">{t('continueWithGoogle', currentLang)}</span>
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>Continue with Google</span>
                 </button>
 
-                <p className="text-center text-[11px] text-slate-500">
-                  Instant sign-in for Citizens, Field Crews, and Municipal Officers.
-                </p>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => { 
+                      setShowPhoneAuth(true); 
+                      setErrorMessage(null); 
+                      setSuccessMessage(null); 
+                    }}
+                    className="text-xs text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1.5 hover:underline cursor-pointer"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Sign in with Phone OTP</span>
+                  </button>
+                </div>
               </div>
-            )}
+            </div>
+          ) : (
+            /* PHONE OTP VIEW */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <span className="text-xs font-bold text-slate-800">Mobile OTP Verification</span>
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setShowPhoneAuth(false); 
+                    setOtpSent(false); 
+                    setOtpCode(''); 
+                    setErrorMessage(null); 
+                  }}
+                  className="text-xs text-slate-600 hover:text-slate-900 font-medium hover:underline cursor-pointer"
+                >
+                  Back to Email Login
+                </button>
+              </div>
 
-            {/* OPTION 2: MOBILE NUMBER & OTP */}
-            {activeTab === 'PHONE' && (
-              <div className="space-y-4">
-                {!otpSent ? (
-                  <form onSubmit={handleSendOtp} className="space-y-3">
-                    <div className="text-left space-y-1">
-                      <label className="block text-xs font-bold text-slate-700">
-                        {t('mobileNumber', currentLang)}
-                      </label>
-                      <p className="text-[11px] text-slate-500">
-                        Enter your 10-digit mobile number for instant SMS verification.
-                      </p>
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp} className="space-y-3.5">
+                  <div className="text-left space-y-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Mobile Number
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Enter your 10-digit phone number for SMS verification.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-transparent transition">
+                    <div className="px-3 py-2.5 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-600" />
+                      <span>+91</span>
                     </div>
-
-                    <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-transparent transition">
-                      <div className="px-3 py-2.5 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-slate-600" />
-                        <span>+91</span>
-                      </div>
-                      <input
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="98765 43210"
-                        maxLength={10}
-                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-hidden"
-                        required
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isLoading || !phoneNumber.trim()}
-                      className="w-full min-h-[44px] bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Sending OTP...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{t('sendOtp', currentLang)}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleVerifyOtp} className="space-y-3">
-                    <div className="text-left space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-bold text-slate-700">
-                          6-Digit Verification Code
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => { setOtpSent(false); setOtpCode(''); }}
-                          className="text-[11px] font-semibold text-slate-700 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>{t('changeNumber', currentLang)}</span>
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-slate-500">
-                        Enter the code sent to your phone.
-                      </p>
-                    </div>
-
                     <input
-                      type="text"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="• • • • • •"
-                      className="w-full px-4 py-2.5 text-center text-lg font-mono tracking-widest text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                      maxLength={6}
-                      autoFocus
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="98765 43210"
+                      maxLength={10}
+                      className="w-full px-3.5 py-2.5 text-sm text-slate-900 focus:outline-hidden"
                       required
                     />
+                  </div>
 
-                    <button
-                      type="submit"
-                      disabled={isLoading || otpCode.length < 6}
-                      className="w-full min-h-[44px] bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Verifying Token...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>{t('verifyAndSignIn', currentLang)}</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
+                  <button
+                    type="submit"
+                    disabled={isLoading || !phoneNumber.trim()}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sending OTP...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Send SMS OTP</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+                  <div className="text-left space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        6-Digit Verification Code
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setOtpSent(false); setOtpCode(''); }}
+                        className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Change Number</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Enter the SMS code sent to your phone.
+                    </p>
+                  </div>
 
-          </div>
+                  <input
+                    type="text"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="• • • • • •"
+                    className="w-full px-4 py-2.5 text-center text-lg font-mono tracking-widest text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
+                    maxLength={6}
+                    autoFocus
+                    required
+                  />
 
-          {/* Card Footer */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100 text-center space-y-1">
-            <p className="text-[11px] text-slate-500 font-medium leading-tight">
-              {t('termsText', currentLang) || 'By continuing, you agree to the Municipal Service Charter and Grievance Redressal Terms.'}
-            </p>
-            <p className="text-[10px] text-slate-400">
-              Swachh Bharat Mission (Urban) • Official Citizen & Governance Portal
+                  <button
+                    type="submit"
+                    disabled={isLoading || otpCode.length < 6}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Verifying Token...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Verify & Sign In</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* Footer Note */}
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center space-y-1">
+            <p className="text-[11px] text-slate-500 leading-tight">
+              By continuing, you agree to the Terms of Service and Privacy Policy.
             </p>
           </div>
 
         </div>
       </main>
 
-      {/* Bottom Footer */}
-      <footer className="p-4 text-center text-xs text-slate-500 border-t border-slate-200 bg-white">
-        Ministry of Housing and Urban Affairs (MoHUA), Government of India
+      {/* Clean Bottom Footer */}
+      <footer className="p-4 text-center text-xs text-slate-400 border-t border-slate-200/80 bg-white">
+        CivicPulse Municipal Redressal Network • All rights reserved.
       </footer>
     </div>
   );
