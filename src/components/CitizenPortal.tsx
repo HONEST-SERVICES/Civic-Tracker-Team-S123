@@ -81,6 +81,9 @@ interface CitizenPortalProps {
   currentUser?: UserProfile | null;
   onOpenAuth?: () => void;
   onUpdateUserProfile?: (updatedProfile: UserProfile) => void;
+  showSurveyModal?: boolean;
+  onOpenSurvey?: () => void;
+  onCloseSurvey?: () => void;
 }
 
 export const CitizenPortal: React.FC<CitizenPortalProps> = ({
@@ -92,7 +95,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   onNavigate,
   currentUser,
   onOpenAuth,
-  onUpdateUserProfile
+  onUpdateUserProfile,
+  showSurveyModal,
+  onOpenSurvey,
+  onCloseSurvey
 }) => {
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
@@ -159,9 +165,15 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   // Cleanliness Drive Campaign State
   const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
   const [selectedDriveCampaign, setSelectedDriveCampaign] = useState<CleanlinessCampaign>(SAMPLE_CAMPAIGNS[0]);
-  const [showSurvekshanModal, setShowSurvekshanModal] = useState<boolean>(false);
+  const [showSurvekshanModal, setShowSurvekshanModal] = useState<boolean>(Boolean(showSurveyModal));
   const [survekshanRating, setSurvekshanRating] = useState<number>(5);
   const [survekshanFeedbackSubmitted, setSurvekshanFeedbackSubmitted] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (showSurveyModal !== undefined) {
+      setShowSurvekshanModal(showSurveyModal);
+    }
+  }, [showSurveyModal]);
 
   // Compression & Submission Error State
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
@@ -314,9 +326,30 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     }
   }, [currentUser]);
 
+  // Unified Reset Helper for Grievance Submission and Form State Hygiene
+  const resetGrievanceForm = () => {
+    setSelectedCategory('DEEP_POTHOLE');
+    setPhotoUrl(null);
+    setVisionResult(null);
+    setLandmark('Cinema Road, Outside Verad Gate');
+    setGrievanceDescription('');
+    setVoiceNoteData({ hasVoiceNote: false, audioNoteBase64: '' });
+    setShowNonCivicWarning(false);
+    setRequiresManualReview(false);
+    setIsAnalyzingVision(false);
+    setIsOverrideMode(false);
+    setSubmitErrorMessage(null);
+    setCompressionStats(null);
+    setAnalysisStep(1);
+    setCitizenConfirmedTriage(true);
+  };
+
   // Sync external navigation prop without destroying form state or view history
   useEffect(() => {
     if (activeScreen && activeScreen !== currentView) {
+      if (activeScreen === 'FORM' || activeScreen === 'CATEGORIES') {
+        resetGrievanceForm();
+      }
       setCurrentView(activeScreen);
       setViewHistory((prev) => (prev[prev.length - 1] === activeScreen ? prev : [...prev, activeScreen]));
     }
@@ -324,6 +357,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   // Structured client-side routing & view history manager
   const pushView = (view: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES') => {
+    if (view === 'CATEGORIES' || view === 'FORM') {
+      resetGrievanceForm();
+    }
     setViewHistory((prev) => (prev[prev.length - 1] === view ? prev : [...prev, view]));
     setCurrentView(view);
     onNavigate?.(view);
@@ -356,20 +392,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   );
 
   const renderAIDecisionBreakdown = () => {
-    if (isAnalyzingVision) return null;
+    if (!visionResult || isAnalyzingVision) return null;
 
     const catObj = SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory);
-    const isCritical = selectedCategory === 'OPEN_MANHOLES' || selectedCategory === 'DOWNED_POWER_LINE' || selectedCategory === 'STRUCTURAL_SINKHOLE' || selectedCategory === 'DEEP_POTHOLE';
+    const isCritical = visionResult.priority === 'P1_CRITICAL' || selectedCategory === 'OPEN_MANHOLES' || selectedCategory === 'DOWNED_POWER_LINE' || selectedCategory === 'STRUCTURAL_SINKHOLE';
 
-    const effectiveTriage = visionResult || {
-      hazardName: catObj?.name || 'Civic Infrastructure Hazard',
-      category: selectedCategory,
-      priority: isCritical ? 'P1_CRITICAL' : 'P2_URGENT',
-      recommendedDepartment: catObj?.department || 'PUBLIC_WORKS',
-      severity: isCritical ? 'P1 Critical — 4hr SLA Target' : 'P2 Urgent — 24hr SLA Target',
-      aiConfidence: 98,
-      aiReasoning: `Automated MoHUA multimodal classification verified for ${catObj?.name || 'reported hazard'} at ${landmark || selectedWard}. High-confidence spatial hazard detected with auto-routing to ${catObj?.department || 'PUBLIC_WORKS'}.`,
-      isCivicIssue: true
+    const effectiveTriage = {
+      hazardName: visionResult.hazardName || catObj?.name || 'Civic Infrastructure Hazard',
+      category: visionResult.category || selectedCategory,
+      priority: visionResult.priority || (isCritical ? 'P1_CRITICAL' : 'P2_URGENT'),
+      recommendedDepartment: visionResult.recommendedDepartment || catObj?.department || 'PUBLIC_WORKS',
+      severity: visionResult.severity || (isCritical ? 'P1 Critical — 4hr SLA Target' : 'P2 Urgent — 24hr SLA Target'),
+      aiConfidence: visionResult.aiConfidence || 98,
+      aiReasoning: visionResult.aiReasoning || visionResult.hazardDescription || `Automated MoHUA multimodal classification verified for ${visionResult.hazardName || catObj?.name} at ${landmark || selectedWard}. High-confidence spatial hazard detected with auto-routing to ${catObj?.department || 'PUBLIC_WORKS'}.`,
+      isCivicIssue: visionResult.isCivicIssue !== undefined ? visionResult.isCivicIssue : true
     };
 
     const deptFormatted = 
@@ -449,7 +485,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
             <span>AI Reasoning:</span>
           </div>
           <p className="text-slate-600 pl-5">
-            {effectiveTriage.aiReasoning || effectiveTriage.hazardDescription || `Image exhibits structural civic defect with automated routing priority assigned to ${deptFormatted}.`}
+            {effectiveTriage.aiReasoning || `Image exhibits structural civic defect with automated routing priority assigned to ${deptFormatted}.`}
           </p>
         </div>
 
@@ -527,8 +563,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const renderNonCivicWarningModal = () => {
     if (!showNonCivicWarning) return null;
     return (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-scale-in">
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9990] flex items-center justify-center p-4">
+        <div className="relative z-[9999] bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-scale-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
               <AlertTriangle className="w-5 h-5" />
@@ -581,6 +617,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   const popView = () => {
+    resetGrievanceForm();
     if (trackedIncident) {
       setTrackedIncident(null);
       return;
@@ -746,12 +783,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
       setSubmittedSuccess(true);
       setLastSubmittedId(uniqueId);
-      setPhotoUrl(null);
-      setVisionResult(null);
-      setCompressionStats(null);
-      setLandmark('');
-      setGrievanceDescription('');
-      setVoiceNoteData({ hasVoiceNote: false, audioNoteBase64: '' });
+      resetGrievanceForm();
       pushView('COMPLAINTS');
       setTimeout(() => setSubmittedSuccess(false), 8000);
     } catch (err: any) {
@@ -759,10 +791,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       const fallbackId = `Ticket #${Math.floor(1000 + Math.random() * 9000)}`;
       setSubmittedSuccess(true);
       setLastSubmittedId(fallbackId);
-      setPhotoUrl(null);
-      setVisionResult(null);
-      setCompressionStats(null);
-      setLandmark('');
+      resetGrievanceForm();
       pushView('COMPLAINTS');
       setTimeout(() => setSubmittedSuccess(false), 8000);
     } finally {
@@ -1888,7 +1917,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 4: Citizen Survey */}
               <div
                 onClick={() => {
-                  setShowSurvekshanModal(true);
+                  if (onOpenSurvey) {
+                    onOpenSurvey();
+                  } else {
+                    setShowSurvekshanModal(true);
+                  }
                 }}
                 className="bg-[#FAF5FF] border-2 border-violet-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
@@ -2752,8 +2785,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
       {/* MODAL: COMPLAINT STATUS TRACKING & RATING DRAWER (Shared by Mobile & Desktop) */}
       {trackedIncident && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9990] flex items-center justify-center p-4">
+          <div className="relative z-[9999] bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-200">
             <div className="bg-slate-900 p-4 text-white flex items-center justify-between sticky top-0 z-10">
               <div>
                 <span className="text-xs font-mono text-blue-300 font-bold">{formatTicketId(trackedIncident.id)}</span>
@@ -2905,8 +2938,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
       {/* Swachh Survekshan Citizen Feedback Modal */}
       {showSurvekshanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4 animate-in zoom-in-95 text-slate-800 dark:text-slate-100">
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="relative z-[9999] bg-white rounded-3xl w-full max-w-md p-5 shadow-2xl space-y-4 border border-slate-200 animate-in zoom-in-95 text-slate-800">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
@@ -2918,7 +2951,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 </div>
               </div>
               <button
-                onClick={() => setShowSurvekshanModal(false)}
+                onClick={() => {
+                  setShowSurvekshanModal(false);
+                  onCloseSurvey?.();
+                }}
                 className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-xs cursor-pointer"
               >
                 ✕
@@ -2936,6 +2972,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   onClick={() => {
                     setSurvekshanFeedbackSubmitted(false);
                     setShowSurvekshanModal(false);
+                    onCloseSurvey?.();
                   }}
                   className="mt-2 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-800"
                 >

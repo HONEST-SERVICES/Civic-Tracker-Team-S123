@@ -148,12 +148,12 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9990] overflow-hidden bg-slate-950/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200 font-sans">
       {/* Click outside to close backdrop */}
       <div className="flex-1" onClick={onClose} />
 
       {/* Drawer Body */}
-      <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250">
+      <div className="relative z-[9999] w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250">
         {/* Drawer Header */}
         <div className="bg-gradient-to-r from-[#0d5c52] via-[#115e59] to-[#042f2e] text-white p-4 sm:p-5 flex items-center justify-between border-b border-teal-700/50">
           <div className="flex items-center gap-3">

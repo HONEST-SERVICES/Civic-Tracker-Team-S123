@@ -113,6 +113,8 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showStaffManagementModal, setShowStaffManagementModal] = useState<boolean>(false);
   const [showGeminiAssistant, setShowGeminiAssistant] = useState<boolean>(false);
+  const [showSurveyModal, setShowSurveyModal] = useState<boolean>(false);
+  const [commandCenterTab, setCommandCenterTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE'>('COMMAND_DESK');
 
   // Cleanliness Drive Campaign State
   const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
@@ -126,6 +128,117 @@ export default function App() {
   const [selectedUnit, setSelectedUnit] = useState<MunicipalUnit | null>(null);
   const [isDispatching, setIsDispatching] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+
+  // Helper to normalize route paths
+  const normalizeRoutePath = (path: string) => {
+    const p = path.toLowerCase().replace(/\/+$/, '');
+    return p === '' ? '/' : p;
+  };
+
+  // Synchronize internal app views from URL path
+  const applyRouteFromPath = (path: string) => {
+    const normalized = normalizeRoutePath(path);
+    if (normalized === '/file-grievance' || normalized === '/file' || normalized === '/report') {
+      setCitizenTab('FORM');
+      setIsOfficerCitizenMode(true);
+      setShowSurveyModal(false);
+    } else if (normalized === '/track' || normalized === '/complaints') {
+      setCitizenTab('COMPLAINTS');
+      setIsOfficerCitizenMode(true);
+      setShowSurveyModal(false);
+    } else if (normalized === '/facilities' || normalized === '/sbm' || normalized === '/toilets') {
+      setCitizenTab('FACILITIES');
+      setIsOfficerCitizenMode(true);
+      setShowSurveyModal(false);
+    } else if (normalized === '/survey') {
+      setCitizenTab('HOME');
+      setIsOfficerCitizenMode(true);
+      setShowSurveyModal(true);
+    } else if (normalized === '/profile' || normalized === '/account') {
+      setCitizenTab('PROFILE');
+      setShowSurveyModal(false);
+    } else if (normalized === '/command-hq' || normalized === '/command' || normalized === '/gis') {
+      setIsOfficerCitizenMode(false);
+      setCitizenTab('HOME');
+      setCommandCenterTab('COMMAND_DESK');
+      setShowSurveyModal(false);
+    } else if (normalized === '/governance' || normalized === '/kpi' || normalized === '/wards') {
+      setIsOfficerCitizenMode(false);
+      setCitizenTab('HOME');
+      setCommandCenterTab('WARD_CONFIG');
+      setShowSurveyModal(false);
+    } else {
+      // Default to / or /home
+      setCitizenTab('HOME');
+      setShowSurveyModal(false);
+    }
+  };
+
+  // Push or replace URL state and update views
+  const navigateTo = (path: string, replace = false) => {
+    const targetNorm = normalizeRoutePath(path);
+    const currentNorm = normalizeRoutePath(window.location.pathname);
+    if (currentNorm !== targetNorm) {
+      if (replace) {
+        window.history.replaceState(null, '', targetNorm);
+      } else {
+        window.history.pushState(null, '', targetNorm);
+      }
+    }
+    applyRouteFromPath(targetNorm);
+  };
+
+  // Synchronize URL and listen to Hardware Back / Browser Popstate events
+  useEffect(() => {
+    // Initial sync on mount
+    applyRouteFromPath(window.location.pathname);
+
+    const handlePopState = () => {
+      // 1. If any modal is active, close the modal first without leaving the page
+      if (showAuthModal) {
+        setShowAuthModal(false);
+        return;
+      }
+      if (showSettingsModal) {
+        setShowSettingsModal(false);
+        return;
+      }
+      if (showStaffManagementModal) {
+        setShowStaffManagementModal(false);
+        return;
+      }
+      if (showGeminiAssistant) {
+        setShowGeminiAssistant(false);
+        return;
+      }
+      if (showDriveModal) {
+        setShowDriveModal(false);
+        return;
+      }
+      if (showSurveyModal) {
+        setShowSurveyModal(false);
+        return;
+      }
+      if (showProfileMenu) {
+        setShowProfileMenu(false);
+        return;
+      }
+
+      // 2. Otherwise update current view from popped URL
+      applyRouteFromPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    showAuthModal,
+    showSettingsModal,
+    showStaffManagementModal,
+    showGeminiAssistant,
+    showDriveModal,
+    showSurveyModal,
+    showProfileMenu
+  ]);
 
   // Background Agent Thought Logs
   const [thoughtLogs, setThoughtLogs] = useState<AgentThoughtStep[]>([
@@ -231,7 +344,9 @@ export default function App() {
       setShowSettingsModal(false);
       setShowGeminiAssistant(false);
       setShowProfileMenu(false);
+      setShowSurveyModal(false);
       setThoughtLogs([]);
+      navigateTo('/', true);
     }
   };
 
@@ -474,12 +589,23 @@ export default function App() {
     setIncidents(prev => prev.map(inc => (inc.id === incidentId ? { ...inc, priority } : inc)));
   };
 
-  // If user is not logged in, render the official Swachhata Auth screen
+  // 1. AUTH RESOLUTION GATE: Prevent login screen flash on hard reload
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#EEF2F6] flex flex-col items-center justify-center space-y-4">
+        <img src="/logo.png" alt="CivicPulse" className="h-12 w-auto animate-pulse" />
+        <div className="w-8 h-8 border-3 border-slate-300 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated User View: Render official Swachhata Auth screen
   if (!currentUser) {
     return (
       <SwachhataAuthScreen
         onSuccess={(profile) => {
           setCurrentUser(profile);
+          navigateTo('/');
         }}
       />
     );
@@ -500,7 +626,7 @@ export default function App() {
             </div>
             <button
               id="switch-back-to-command-hq-btn"
-              onClick={() => setIsOfficerCitizenMode(false)}
+              onClick={() => navigateTo('/command-hq')}
               className="bg-slate-950 hover:bg-slate-900 text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-semibold transition-all shrink-0 ml-2 cursor-pointer"
             >
               <Building className="w-3.5 h-3.5 text-amber-400" />
@@ -513,16 +639,19 @@ export default function App() {
         {!isOfficerCommandView && (
           <header className="h-14 px-4 bg-white text-slate-900 flex items-center justify-between border-b border-slate-200/90 shadow-xs relative z-40">
             {/* Left: CivicPulse Logo & Title */}
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div 
+              onClick={() => navigateTo('/')}
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer select-none group"
+            >
               <img 
                 src="/logo.png" 
                 alt="CivicPulse Logo" 
-                className="h-9 sm:h-10 w-auto object-contain flex-shrink-0"
+                className="h-9 sm:h-10 w-auto object-contain flex-shrink-0 group-hover:opacity-90 transition"
                 referrerPolicy="no-referrer"
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg">{t('appName')}</span>
+                  <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg group-hover:text-blue-900 transition">{t('appName')}</span>
                   <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
                     Live Matrix
                   </span>
@@ -578,7 +707,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right: Clean Profile Avatar / Sign In Action */}
+            {/* Right: Clean Profile Avatar / Sign In Action (hidden on Profile tab to prevent redundant click loop) */}
             <div className="flex items-center gap-2.5 flex-shrink-0">
               {!authLoading && !currentUser ? (
                 <button
@@ -589,6 +718,9 @@ export default function App() {
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign In</span>
                 </button>
+              ) : citizenTab === 'PROFILE' ? (
+                /* Static clean presence indicator when already on Profile screen */
+                <div className="w-9 h-9" />
               ) : (
                 /* User Profile Menu Trigger */
                 <div className="relative">
@@ -636,8 +768,8 @@ export default function App() {
                         <button
                           id="menu-profile-btn"
                           onClick={() => {
-                            setCitizenTab('PROFILE');
                             setShowProfileMenu(false);
+                            navigateTo('/profile');
                           }}
                           className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
                         >
@@ -687,9 +819,12 @@ export default function App() {
                           <button
                             id="menu-toggle-view-btn"
                             onClick={() => {
-                              setIsOfficerCitizenMode(!isOfficerCitizenMode);
                               setShowProfileMenu(false);
-                              setCitizenTab('HOME');
+                              if (isOfficerCitizenMode) {
+                                navigateTo('/command-hq');
+                              } else {
+                                navigateTo('/');
+                              }
                             }}
                             className="w-full text-left px-2.5 py-2 text-xs text-amber-900 bg-amber-50 hover:bg-amber-100/80 rounded-lg transition flex items-center gap-2 font-bold cursor-pointer border border-amber-200/80"
                           >
@@ -730,8 +865,7 @@ export default function App() {
               currentUser={currentUser}
               onSignOut={handleSignOut}
               onSwitchToTacticalDesk={() => {
-                setIsOfficerCitizenMode(false);
-                setCitizenTab('HOME');
+                navigateTo('/command-hq');
               }}
               onOpenStaffManagement={() => setShowStaffManagementModal(true)}
               onOpenAuthModal={() => setShowAuthModal(true)}
@@ -759,11 +893,18 @@ export default function App() {
                 onLogout={handleSignOut}
                 onSwitchToCitizen={() => {
                   setIsOfficerCitizenMode(true);
-                  setCitizenTab('HOME');
+                  navigateTo('/');
                 }}
                 currentUser={currentUser}
                 onOpenStaffManagement={() => setShowStaffManagementModal(true)}
-                onOpenProfile={() => setCitizenTab('PROFILE')}
+                onOpenProfile={() => navigateTo('/profile')}
+                initialTab={commandCenterTab}
+                onTabChange={(tab) => {
+                  setCommandCenterTab(tab);
+                  if (tab === 'COMMAND_DESK') navigateTo('/command-hq');
+                  else if (tab === 'WARD_CONFIG') navigateTo('/governance');
+                  else if (tab === 'PROFILE') navigateTo('/profile');
+                }}
               />
             )}
 
@@ -849,10 +990,26 @@ export default function App() {
                     onSubmitIncident={handleDispatchIncident}
                     isDispatching={isDispatching}
                     activeScreen={citizenTab === 'FORM' ? 'FORM' : citizenTab === 'CATEGORIES' ? 'CATEGORIES' : citizenTab === 'COMPLAINTS' ? 'COMPLAINTS' : citizenTab === 'FACILITIES' ? 'FACILITIES' : 'HOME'}
-                    onNavigate={(scr) => setCitizenTab(scr)}
+                    onNavigate={(scr) => {
+                      if (scr === 'FORM' || scr === 'CATEGORIES') {
+                        navigateTo('/file-grievance');
+                      } else if (scr === 'COMPLAINTS') {
+                        navigateTo('/track');
+                      } else if (scr === 'FACILITIES') {
+                        navigateTo('/facilities');
+                      } else {
+                        navigateTo('/');
+                      }
+                    }}
                     currentUser={currentUser}
                     onOpenAuth={() => setShowAuthModal(true)}
                     onUpdateUserProfile={(updated) => setCurrentUser(updated)}
+                    showSurveyModal={showSurveyModal}
+                    onOpenSurvey={() => navigateTo('/survey')}
+                    onCloseSurvey={() => {
+                      setShowSurveyModal(false);
+                      navigateTo('/', true);
+                    }}
                   />
                 )}
               </div>
@@ -868,9 +1025,9 @@ export default function App() {
             {/* Tab 1: Home */}
             <button
               id="mobile-nav-home"
-              onClick={() => setCitizenTab('HOME')}
+              onClick={() => navigateTo('/')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'HOME' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+                citizenTab === 'HOME' && !showSurveyModal ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
             >
               <Home className="w-5 h-5" />
@@ -897,7 +1054,7 @@ export default function App() {
                   if (!currentUser) {
                     setShowAuthModal(true);
                   } else {
-                    setCitizenTab('CATEGORIES');
+                    navigateTo('/file-grievance');
                   }
                 }}
                 title="Post a Complaint"
@@ -914,7 +1071,7 @@ export default function App() {
                 if (!currentUser) {
                   setShowAuthModal(true);
                 } else {
-                  setCitizenTab('COMPLAINTS');
+                  navigateTo('/track');
                 }
               }}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
@@ -928,7 +1085,7 @@ export default function App() {
             {/* Tab 4: Profile */}
             <button
               id="mobile-nav-profile"
-              onClick={() => setCitizenTab('PROFILE')}
+              onClick={() => navigateTo('/profile')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -942,9 +1099,9 @@ export default function App() {
             {/* Officer Tab 1: GIS Tactical Desk */}
             <button
               id="mobile-officer-nav-desk"
-              onClick={() => setCitizenTab('HOME')}
+              onClick={() => navigateTo('/command-hq')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab !== 'PROFILE' ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+                citizenTab !== 'PROFILE' && !isOfficerCitizenMode ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
             >
               <Building2 className="w-5 h-5" />
@@ -974,7 +1131,7 @@ export default function App() {
             {/* Officer Tab 4: Profile */}
             <button
               id="mobile-officer-nav-profile"
-              onClick={() => setCitizenTab('PROFILE')}
+              onClick={() => navigateTo('/profile')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -988,7 +1145,7 @@ export default function App() {
             {/* Crew Tab 1: Work Orders */}
             <button
               id="mobile-crew-nav-orders"
-              onClick={() => setCitizenTab('HOME')}
+              onClick={() => navigateTo('/')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab !== 'PROFILE' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -1010,7 +1167,7 @@ export default function App() {
             {/* Crew Tab 3: Profile */}
             <button
               id="mobile-crew-nav-profile"
-              onClick={() => setCitizenTab('PROFILE')}
+              onClick={() => navigateTo('/profile')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -1024,7 +1181,7 @@ export default function App() {
             {/* Volunteer Tab 1: Hub */}
             <button
               id="mobile-volunteer-nav-hub"
-              onClick={() => setCitizenTab('HOME')}
+              onClick={() => navigateTo('/')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab !== 'PROFILE' ? 'text-teal-700 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -1049,7 +1206,7 @@ export default function App() {
             {/* Volunteer Tab 3: Profile */}
             <button
               id="mobile-volunteer-nav-profile"
-              onClick={() => setCitizenTab('PROFILE')}
+              onClick={() => navigateTo('/profile')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -1063,7 +1220,7 @@ export default function App() {
             {/* Auditor / Other Role Tab 1: Desk */}
             <button
               id="mobile-auditor-nav-desk"
-              onClick={() => setCitizenTab('HOME')}
+              onClick={() => navigateTo('/')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab !== 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -1075,7 +1232,7 @@ export default function App() {
             {/* Auditor Tab 2: Profile */}
             <button
               id="mobile-auditor-nav-profile"
-              onClick={() => setCitizenTab('PROFILE')}
+              onClick={() => navigateTo('/profile')}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}

@@ -190,6 +190,18 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
     }
   };
 
+  const resetGrievanceForm = () => {
+    setCategory('DEEP_POTHOLE');
+    setTitle('Severe Tire-Damaging Pothole on Commuter Way');
+    setDescription('Deep rim-breaking pothole in outer lane with sharp exposed aggregate. Vehicles swerving into oncoming traffic.');
+    setSelectedImageUrl(SAMPLE_HAZARD_PREVIEWS[0].url);
+    setAnomalyBadgeText(SAMPLE_HAZARD_PREVIEWS[0].riskText);
+    setDepthText(SAMPLE_HAZARD_PREVIEWS[0].depth);
+    setAreaText(SAMPLE_HAZARD_PREVIEWS[0].area);
+    setDetectedAnomalies(SAMPLE_HAZARD_PREVIEWS[0].anomalies);
+    setVoiceNoteData({ hasVoiceNote: false, audioNoteBase64: '' });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isDispatching) return;
@@ -229,6 +241,7 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
     };
 
     onSubmitIncident(newIncident);
+    resetGrievanceForm();
   };
 
   return (

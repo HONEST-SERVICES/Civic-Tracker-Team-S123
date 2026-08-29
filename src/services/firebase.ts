@@ -1321,3 +1321,205 @@ export async function ratePublicFacility(
     throw err;
   }
 }
+
+/**
+ * Pure 1-Tap Wipe: Deletes all complaints from Firestore instance civictracker,
+ * resets all field units to status AVAILABLE and clears assignments, leaving the database completely empty (0 tickets).
+ */
+export async function wipeAllComplaints(): Promise<{ success: boolean; count: number; message: string }> {
+  try {
+    console.log("[Admin Wipe] Purging all complaints from Firestore civictracker...");
+    
+    // 1. Purge all complaints
+    const compSnap = await getDocs(complaintsCollection);
+    const deletePromises: Promise<void>[] = [];
+    compSnap.forEach((d) => {
+      deletePromises.push(deleteDoc(doc(complaintsCollection, d.id)));
+    });
+    await Promise.all(deletePromises);
+    const deletedCount = compSnap.size;
+    console.log(`[Admin Wipe] Purged ${deletedCount} complaint documents.`);
+
+    // 2. Reset municipal units to AVAILABLE & clear assignments
+    const unitSnap = await getDocs(unitsCollection);
+    if (unitSnap.empty) {
+      await seedInitialUnits();
+    } else {
+      const unitResetPromises: Promise<void>[] = [];
+      unitSnap.forEach((u) => {
+        unitResetPromises.push(
+          updateDoc(doc(unitsCollection, u.id), {
+            status: 'AVAILABLE',
+            isManualOverride: false,
+            assignedIncidentId: null
+          })
+        );
+      });
+      await Promise.all(unitResetPromises);
+    }
+    console.log("[Admin Wipe] Municipal units reset to AVAILABLE with assignments cleared.");
+
+    return { 
+      success: true, 
+      count: deletedCount, 
+      message: `All complaints purged (${deletedCount} removed). Database is now empty.` 
+    };
+  } catch (err: any) {
+    console.error("[Admin Wipe] Error wiping database:", err);
+    return { success: false, count: 0, message: err?.message || "Failed to wipe complaints." };
+  }
+}
+
+/**
+ * 1-Tap Demo Incident Seeder: Seeds the 3 pristine baseline demo scenarios (#8153, #3542, #8366).
+ * Only executes when explicitly triggered.
+ */
+export async function seedDemoComplaints(): Promise<{ success: boolean; count: number; message: string }> {
+  try {
+    console.log("[Admin Demo Seed] Seeding baseline demo incidents into Firestore civictracker...");
+    const now = Date.now();
+    const demoIncidents: Partial<CrisisIncident>[] = [
+      {
+        id: 'Ticket #8153',
+        title: 'Open Manholes & Storm Drain Void',
+        category: 'OPEN_MANHOLES',
+        priority: 'P1_CRITICAL',
+        department: 'PUBLIC_WORKS',
+        status: 'OPEN',
+        riskScore: 94,
+        location: {
+          lat: 31.2555,
+          lng: 75.7060,
+          zone: 'Ward 4 - Central Zone',
+          address: 'Main Commercial Market Gate, Near Clock Tower, Ward 4'
+        },
+        imageUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+        reporterName: 'Sunita Sharma',
+        reporterPhone: '+91 98765 43210',
+        ward: 'Ward 4 - Central Zone',
+        createdAt: now - 25 * 60 * 1000,
+        description: 'Broken cast-iron chamber lid missing. Immediate critical hazard for two-wheelers and pedestrians.',
+        aiConfidence: 98,
+        aiReasoning: 'Automated Gemini Vision classified missing storm chamber lid with active traffic exposure. Auto-assigned P1 Critical with 4hr SLA target.',
+        isCivicIssue: true,
+        requiresManualVerification: false
+      },
+      {
+        id: 'Ticket #3542',
+        title: 'Pressurized Water Main Burst & Road Inundation',
+        category: 'WATERLOGGING',
+        priority: 'P1_CRITICAL',
+        department: 'WATER_SUPPLY',
+        status: 'DISPATCHED',
+        assignedUnitId: 'UNIT-04-RAPID',
+        assignedUnitName: 'Ward 4 Rapid Road Repair Crew (Pothole Patcher)',
+        etaMinutes: 12,
+        riskScore: 88,
+        location: {
+          lat: 31.2470,
+          lng: 75.7015,
+          zone: 'Ward 4 - Central Zone',
+          address: 'Sector 2 Trunk Line, Opposite Water Tank, Ward 4'
+        },
+        imageUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+        reporterName: 'Vikram Malhotra',
+        reporterPhone: '+91 94170 88219',
+        ward: 'Ward 4 - Central Zone',
+        createdAt: now - 55 * 60 * 1000,
+        dispatchedAt: now - 15 * 60 * 1000,
+        description: 'Freshwater delivery pipeline ruptured under road surface causing asphalt buckling and waterlogging.',
+        aiConfidence: 96,
+        aiReasoning: 'Hydrostatic pressure rupture detected. Assigned to Water Supply Department with emergency isolation response.',
+        isCivicIssue: true,
+        requiresManualVerification: false
+      },
+      {
+        id: 'Ticket #8366',
+        title: 'Deep Rim-Breaker Pothole on Commuter Corridor',
+        category: 'DEEP_POTHOLE',
+        priority: 'P2_URGENT',
+        department: 'PUBLIC_WORKS',
+        status: 'OPEN',
+        riskScore: 78,
+        location: {
+          lat: 31.2532,
+          lng: 75.7031,
+          zone: 'Ward 4 - Central Zone',
+          address: 'G.T. Road Opposite Central Bus Station, Ward 4'
+        },
+        imageUrl: 'https://images.unsplash.com/photo-1584463699031-c4c0b629c135?auto=format&fit=crop&w=800&q=80',
+        reporterName: 'Rajesh Verma',
+        reporterPhone: '+91 98140 55432',
+        ward: 'Ward 4 - Central Zone',
+        createdAt: now - 110 * 60 * 1000,
+        description: 'Deep road cavity with sharp broken aggregate in outer lane. Commuter vehicles swerving suddenly.',
+        aiConfidence: 95,
+        aiReasoning: 'Deep asphalt surface cavitation with structural foundation exposure. Auto-routed to Public Works Rapid Asphalt Wing.',
+        isCivicIssue: true,
+        requiresManualVerification: false
+      },
+      {
+        id: 'Ticket #6420',
+        title: 'Solid Waste & Overflowing Garbage Dump',
+        category: 'GARBAGE_DUMP',
+        priority: 'P2_URGENT',
+        department: 'SANITATION',
+        status: 'IN_PROGRESS',
+        assignedUnitId: 'UNIT-11-SWEEP',
+        assignedUnitName: 'Ward 4 SBM Sanitation & Garbage Removal Fleet',
+        etaMinutes: 20,
+        riskScore: 72,
+        location: {
+          lat: 31.2505,
+          lng: 75.6995,
+          zone: 'Ward 4 - Central Zone',
+          address: 'Subzi Mandi Market Road, Ward 4'
+        },
+        imageUrl: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?auto=format&fit=crop&w=800&q=80',
+        reporterName: 'Gurpreet Kaur',
+        reporterPhone: '+91 98881 22345',
+        ward: 'Ward 4 - Central Zone',
+        createdAt: now - 180 * 60 * 1000,
+        dispatchedAt: now - 40 * 60 * 1000,
+        description: 'Unattended municipal solid waste accumulating near vegetable market perimeter blocking footpath.',
+        aiConfidence: 97,
+        aiReasoning: 'Accumulation of organic and municipal solid waste. Auto-routed to Sanitation Division with Compactor Fleet dispatch.',
+        isCivicIssue: true,
+        requiresManualVerification: false
+      }
+    ];
+
+    for (const inc of demoIncidents) {
+      await setDoc(doc(complaintsCollection, inc.id!), mapIncidentToFirestore(inc));
+    }
+
+    // Ensure initial wards and facilities are present
+    await seedInitialWards();
+    await seedPublicFacilitiesIfEmpty();
+
+    console.log(`[Admin Demo Seed] ${demoIncidents.length} demo incident scenarios loaded successfully.`);
+    return { 
+      success: true, 
+      count: demoIncidents.length, 
+      message: `${demoIncidents.length} demo incident scenarios loaded successfully.` 
+    };
+  } catch (err: any) {
+    console.error("[Admin Demo Seed] Error seeding demo complaints:", err);
+    return { success: false, count: 0, message: err?.message || "Failed to seed demo complaints." };
+  }
+}
+
+/**
+ * 1-Tap Admin Testing Utility: Purge all active test complaints, reset municipal units to AVAILABLE,
+ * and seed pristine demo municipal incidents into Firestore instance civictracker.
+ */
+export async function resetDatabaseToDemoState(): Promise<{ success: boolean; message: string }> {
+  try {
+    await wipeAllComplaints();
+    const seedRes = await seedDemoComplaints();
+    return { success: seedRes.success, message: seedRes.message };
+  } catch (err: any) {
+    console.error("[Admin Demo Reset] Error resetting database:", err);
+    return { success: false, message: err?.message || "Failed to reset database." };
+  }
+}

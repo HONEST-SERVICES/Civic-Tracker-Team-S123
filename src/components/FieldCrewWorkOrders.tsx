@@ -353,8 +353,8 @@ export const FieldCrewWorkOrders: React.FC<FieldCrewWorkOrdersProps> = ({
 
       {/* RESOLUTION & PROOF OF FIX MODAL */}
       {selectedTicket && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-200 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9990] flex items-center justify-center p-4 font-sans">
+          <div className="relative z-[9999] bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-200 animate-in zoom-in-95">
             <div className="bg-gradient-to-r from-emerald-800 to-teal-900 p-4 text-white flex items-center justify-between sticky top-0 z-10">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-emerald-300">

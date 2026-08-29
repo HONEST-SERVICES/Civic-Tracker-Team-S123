@@ -480,5 +480,254 @@ Status: Persistent AI Decision Breakdown & Citizen Triage Confirmation Card Comp
 Status: Mobile Viewport AI Triage Breakdown & Responsive Scrolling Complete
 =======================================================
 
+=======================================================
+33. FULL PRE-FLIGHT SYSTEM AUDIT REPORT (INFRASTRUCTURE, PIPELINES & MULTI-VIEWPORT INTEGRITY):
+=======================================================
+- 1. Citizen Grievance & AI Triage Pipeline Audit:
+  * Photo Upload & Gemini Vision Triage:
+    - Step-by-step triage animation verified (Step 1: Ingesting -> Step 2: Gemini Multimodal Vision -> Step 3: Ward & SLA Routing).
+    - Persistent "AI Triage Assessment & Verification" card verified on BOTH desktop and mobile viewports with all 5 elements:
+      1. Detected Hazard tag (high-contrast pill)
+      2. Assessed Severity / Priority (P1/P2/P3 badge with SLA target)
+      3. Assigned Municipal Department (with routing context)
+      4. Target Ward & Reverse-Geocoded Address (high precision)
+      5. AI Reasoning Explanation Box (styled callout)
+    - Interactive "Confirm & Submit Grievance" and "Override Category / Ward" toggles verified.
+  * Multimodal Voice & Audio:
+    - Live Web Speech dictation verified across English (en-IN), Hindi (hi-IN), and Telugu (te-IN) with interim results streaming.
+    - 30-second audio note recorder verified with live timer, waveform pulse, playback controls, and Base64 persistence to Firestore.
+  * Non-Issue Gate:
+    - Non-civic photo upload triggers modal warning with options to re-upload or route directly to officer manual verification queue (`requiresManualVerification = true`).
 
+- 2. Municipal Officer Command Desk & Data Pipeline Audit:
+  * Desktop 3-Column View:
+    - Verified 3-column operational layout (Col 1: KPIs & filters, Col 2: 65% Tactical Map + 35% Incident Queue, Col 3: Incident Action Desk).
+    - Ticket selection, image preview, manual review queue, and 1-click crew assignment operating seamlessly.
+  * Mobile Officer View:
+    - Verified 3 segmented tabs ([ 🗺️ Map ] | [ 📋 Queue ] | [ ⚡ Dispatch ]) functioning without cramped vertical stacking or hidden containers.
+  * Performance Hot Paths:
+    - 50-item buffer active on `thoughtLogs` (`slice(-50)`).
+    - Direct document updates (`updateComplaintInFirestore` -> `doc(db, 'complaints', id)`) executed without full collection scans.
+    - $O(1)$ dictionary lookup table (`incidentMap = new Map(...)`) in `GoogleTacticalMap.tsx` for GIS markers.
+
+- 3. Theme, PWA & Database Integrity Audit:
+  * Theme: Cleanly locked to the Light GovTech `#EEF2F6` theme with high contrast typography and zero broken dark classes.
+  * PWA: Verified `/public/manifest.json`, `/public/sw.js`, and HTML head link tags are present and registered.
+  * Role Switching: Confirmed "Switch to Citizen" toggles the view cleanly without calling `signOut()` or redirecting to the login screen.
+  * Firestore: Live real-time sync active with collection `complaints` on Firestore instance `civictracker`.
+
+- 4. Diagnostic Report:
+  * [PASS] Citizen Triage & Mobile Modal
+  * [PASS] Reverse Geocoding & Address Auto-Fill
+  * [PASS] Voice-to-Text & Audio Recording
+  * [PASS] Officer Command Desk (Desktop & Mobile Tabs)
+  * [PASS] Role Toggle (No Logout)
+  * [PASS] Firestore Real-Time Sync & Performance Caps
+
+- Build Verification:
+  * `tsc --noEmit` / `lint_applet`: Passed with zero errors.
+  * `compile_applet`: Production build succeeded with zero errors.
+
+=======================================================
+Status: Full Pre-Flight System Audit PASSED
+=======================================================
+
+=======================================================
+16. GRIEVANCE FORM STATE HYGIENE & 1-TAP DEMO DATASET RESET:
+=======================================================
+- 1. Form State Hygiene & `resetGrievanceForm()` Implementation:
+  * Implemented unified `resetGrievanceForm()` in `CitizenPortal.tsx` and `CitizenIngestionPanel.tsx`.
+  * Guarantees complete cleanup of:
+    - `selectedCategory` (restores default category)
+    - `photoUrl`, `visionResult`, `compressionStats` (clears previous photo analysis & cached AI results)
+    - `landmark`, `grievanceDescription` (clears description & address overrides)
+    - `voiceNoteData` (clears recorded audio notes & base64 payloads)
+    - `showNonCivicWarning`, `requiresManualReview`, `isAnalyzingVision`, `isOverrideMode`
+    - `analysisStep`, `citizenConfirmedTriage`
+  * Automatically invoked:
+    1. Immediately upon successful submission (and fallback submission).
+    2. When opening the grievance submission form or category picker (`pushView('CATEGORIES')` / `pushView('FORM')`).
+    3. When closing or navigating back from the submission flow (`popView()`).
+
+- 2. 1-Tap Demo Database Purge & Re-seed Engine:
+  * Implemented `resetDatabaseToDemoState()` in `src/services/firebase.ts`.
+  * Purges all existing complaints in Firestore collection `complaints`.
+  * Resets all municipal emergency units to `AVAILABLE` status.
+  * Re-seeds 4 clean, realistic MoHUA benchmark civic incidents across sectors.
+  * Added "🧹 Reset Demo Dataset" action button & confirmation modal to:
+    1. `MunicipalOfficerCommandCenter.tsx` Header (accessible to Officers and Super Admins).
+    2. `SettingsModal.tsx` under dedicated "Admin & Testing Tools" section.
+  * Provides live status feedback, confirmation modal safeguard, and instant auto-updating UI.
+
+=======================================================
+Status: Form Reset & 1-Tap Demo Reset Engine Complete
+=======================================================
+
+=======================================================
+17. DECOUPLE DATABASE PURGE FROM AUTO-SEEDING (PURE WIPE OPTION):
+=======================================================
+- 1. Split Purge & Seed Functions in Firestore Service (`src/services/firebase.ts`):
+  * `wipeAllComplaints()`:
+    - Pure 1-tap wipe: Deletes all complaint documents from Firestore instance `civictracker`.
+    - Resets all municipal field units to `AVAILABLE` status and clears unit assignments (`assignedIncidentId: null`, `isManualOverride: false`).
+    - Leaves database completely empty (0 tickets) without inserting dummy data.
+  * `seedDemoComplaints()`:
+    - Dedicated demo seeder: Inserts standard 3 baseline MoHUA demo incidents (#8153, #3542, #8366, #6420).
+    - Only runs when explicitly triggered by administrative user.
+  * `resetDatabaseToDemoState()`:
+    - Retained as a combined convenience wrapper calling `wipeAllComplaints()` followed by `seedDemoComplaints()`.
+
+- 2. Decoupled UI Controls in Command HQ & Admin Settings:
+  * `MunicipalOfficerCommandCenter.tsx`:
+    - **"🗑️ Wipe Complaints"** Button & Modal: Prompts *"Permanently clear all complaints and leave the system empty for testing?"*, invokes `wipeAllComplaints()`, toasts *"All complaints purged. Database is now empty."*
+    - **"🌱 Seed Demo Data"** Button: Invokes `seedDemoComplaints()`, toasts *"3 demo incident scenarios loaded."*
+  * `SettingsModal.tsx` under Admin & Testing Tools:
+    - **"🗑️ Wipe All Complaints (Empty Database)"**: With confirmation dialog and live feedback.
+    - **"🌱 Load Baseline Demo Data"**: 1-click baseline scenario loader.
+
+- 3. Zero-State Hygiene:
+  * Verified listeners in `App.tsx` and `firebase.ts` emit clean empty arrays `[]` when `complaints` is empty, with zero fallback auto-seeding.
+  * `LiveIncidentQueue.tsx` renders dedicated zero-state banner: "0 Active Tickets — All Clear".
+
+=======================================================
+Status: Database Wipe & Seed Decoupling Complete
+=======================================================
+
+=======================================================
+18. CITIZEN PROFILE VIEW SANITIZATION & UI HIERARCHY:
+=======================================================
+- 1. Stripped Developer Jargon & Infrastructure Leaks (`src/components/ProfileView.tsx`):
+  * Eliminated raw internal security/database capability blocks:
+    - Removed `Granted RBAC Security Capabilities` chip lists and enums (`SUBMIT_GRIEVANCE`, `VERIFY_PUBLIC_FACILITIES`, `LIVE_TELEMETRY_READ`).
+    - Removed raw `Level 1 (Citizen)` security level cards and `Official Access Level` duplicate banners.
+    - Removed exposed internal document IDs from primary cards, placing a tiny muted support reference (`text-[10px] text-slate-400 font-mono`) at page bottom.
+
+- 2. Unified Role & Identity Badging:
+  * Consolidated fragmented badges into a single, clean pill:
+    - Renders `<CheckCircle2 /> Verified Citizen • Ward 4 (Central Zone)` with emerald theme and clear typography.
+
+- 3. Restructured Action Shortcuts:
+  * Removed unrequested officer dispatch desk links from standard citizen screens.
+  * Structured citizen profile into two intuitive sections:
+    * **"Quick Services"**:
+      - 🤖 AI Civic Copilot (Gemini Assistant)
+      - 📱 Install Mobile App (PWA install action)
+      - 🌐 Language Preference ([ English | हिन्दी | తెలుగు ])
+    * **"Account & Preferences"**:
+      - 🔔 Notification Preferences (Interactive Push & SMS toggles with local persistence)
+      - 🔒 Privacy Policy & Citizen Charter modal
+      - ⚙️ General App Settings modal trigger
+      - 🚪 Log Out (`text-rose-600 hover:bg-rose-50 border-rose-200`)
+
+- 4. Resolved Header Profile Icon Redundancy (`src/App.tsx`):
+  * When on the Profile tab (`citizenTab === 'PROFILE'`), suppressed duplicate clickable header avatar trigger to prevent circular navigation loops.
+
+=======================================================
+Status: Citizen Profile Sanitization & Hierarchy Complete
+=======================================================
+
+=======================================================
+19. FULL URL ROUTE SYNCHRONIZATION, HARDWARE BACK BUTTON & AUTH FLASH RESOLUTION:
+=======================================================
+- 1. Auth Resolution Gate (`src/App.tsx`):
+  * Integrated dedicated `authLoading` state check before unauthenticated view gate.
+  * Displays branded splash screen with CivicPulse logo and subtle loader while initial Firebase Auth resolution executes, eliminating the login screen flash on hard reloads.
+- 2. Bi-directional URL Route Synchronization:
+  * Implemented `normalizeRoutePath`, `applyRouteFromPath`, and `navigateTo` state-to-history synchronizer in `App.tsx`.
+  * Canonical route mapping:
+    - `/` or `/home` -> Home view
+    - `/file-grievance` -> Complaint registration & category selector
+    - `/track` -> Active complaints timeline & ticket status
+    - `/facilities` -> SBM public toilets & sanitation locator
+    - `/survey` -> Citizen satisfaction survey modal
+    - `/profile` -> User profile & settings
+    - `/command-hq` -> Municipal Officer GIS Tactical Command Desk
+    - `/governance` -> Ward Governance & SLA management
+  * Synchronized all bottom navigation bars, header elements, action buttons, and modal controllers to update browser history seamlessly via `window.history.pushState` / `replaceState`.
+- 3. Hardware Back Button & Popstate Support:
+  * Attached global `popstate` event listener in `App.tsx`.
+  * Intercepts back navigation to prioritize closing active modal overlays (Survey, Auth, Settings, Staff Delegations, Gemini Copilot, Cleanliness Drives, Profile Menu) before updating the view state.
+  * Direct URL access and reload support preserved via `/public/_redirects` and `/public/_routes.json`.
+
+=======================================================
+Status: URL Route Synchronization & Lifecycle Complete
+=======================================================
+
+=======================================================
+20. MODAL Z-INDEX ISOLATION, GIS MAP DECLUTTERING & MOBILE COMMAND HQ POLISH:
+=======================================================
+- 1. High-Priority Modal Isolation & Z-Index Layering:
+  * Standardized all modal backdrops to `fixed inset-0 z-[9990] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4`.
+  * Standardized all modal dialog cards to `relative z-[9999] bg-white rounded-2xl shadow-2xl border border-slate-200`.
+  * Applied across `ConfirmationModal.tsx`, `MunicipalOfficerCommandCenter.tsx`, `AuthModal.tsx`, `SettingsModal.tsx`, `WardStaffManagementModal.tsx`, `SwachhataDriveModal.tsx`, `GeminiAssistantDrawer.tsx`, `CitizenPortal.tsx`, `ProfileView.tsx`, `SwachhSurvekshanAuditorDesk.tsx`, `MunicipalGovernanceView.tsx`, and `FieldCrewWorkOrders.tsx`.
+  * Completely eliminated map overlay bleeds, z-index clipping, and click-through conflicts over Google Maps.
+
+- 2. Decluttered GIS Map Overlays:
+  * In `GoogleTacticalMap.tsx`, consolidated multi-tier floating toolbars into a single unified top bar (`z-20`).
+  * Replaced bulky full-width legends with a minimal bottom-left status pill (`z-10`).
+  * Capped all map UI controls, filter chips, and drawer panels to `z-20` to guarantee strict visual separation under dialogs.
+
+- 3. Mobile Command HQ Layout Refinement:
+  * Tactical Map Tab (`MAP`): Expanded interactive map container to full viewport height (`h-[calc(100vh-130px)] rounded-2xl overflow-hidden`) with a floating bottom action card for the active ticket.
+  * Incident Queue Tab (`QUEUE`): Implemented clean mobile summary cards with 4 compact KPI stat blocks (Total, Open, Active, Resolved) and department dropdown filter.
+  * Dispatch Desk Tab (`DISPATCH`): Focused view with quick ticket carousel, ticket info with AI summary badge, citizen photo attachment, non-civic triage card, and 1-tap field crew assignment.
+
+- 4. Decoupled Database Purge from Auto-Seeding:
+  * In `src/services/firebase.ts`, separated `wipeAllComplaints()` (pure wipe leaving 0 tickets and resetting unit assignments to `AVAILABLE`) from `seedDemoComplaints()` (explicit seed of standard baseline scenarios).
+  * Updated Municipal Command Center and Settings modal controls to provide explicit, isolated trigger buttons for wiping vs. seeding.
+
+=======================================================
+Status: Production Polish & All Critical Fixes Complete
+=======================================================
+
+=======================================================
+21. ENTERPRISE GOVTECH REDESIGN & COLLAPSIBLE WORKSPACE:
+=======================================================
+- 1. Global Typography, Elevation & Modern GovTech Tokens:
+  * In `index.html` and `src/index.css`, configured Plus Jakarta Sans with refined font-feature-settings (`cv02, cv03, cv04, cv11, tnum`) for crisp GovTech readability and tabular figures.
+  * Added multi-layer shadow and surface elevation tokens (`gov-card`, `gov-card-elevated`, `gov-modal`) replacing flat grey borders with backdrop-blur multi-layer depth.
+
+- 2. Desktop: Modular Workspace with Collapsible Panels:
+  * Left Panel (Telemetry & Ward Controls):
+    - Added collapse/expand toggle (`PanelLeftClose` / `PanelLeftOpen`) to switch between an icon-only strip (`w-16`) and full width (`w-80`).
+    - Styled telemetry KPI micro-cards with soft gradients, icon chips, and active pulsing indicators (Total, Open/Pending, In Progress, Resolved).
+  * Center Stage (Map & Live Queue Splitter):
+    - Added unified pill dock with active category filter chips (`All Incidents`, `Critical P1`, `Urgent P2`, `Active Fleets`).
+    - Implemented a 3-way Split View Switcher: `Split View` (60% Map / 40% Queue), `Full Map` (100% GIS canvas), and `Full Queue` (100% incident table).
+  * Right Panel (Dispatch Desk):
+    - Added toggleable drawer (`PanelRightClose` / `PanelRightOpen`) switching between `w-14` icon strip and `w-96` inspection desk.
+    - Integrated AI Classification pill with 98% confidence score and triage reasoning box.
+    - Added high-resolution citizen geo-photo container with click-to-open full-screen Lightbox modal.
+    - Upgraded 1-Click Field Crew Assignment list with real-time status indicators (`AVAILABLE` in emerald, `EN_ROUTE` in blue, `ON_SITE` in amber).
+
+- 3. Mobile Command Desk: App-Grade Touch Navigation:
+  * Docked floating segmented navigation switcher: `[ 🗺️ Tactical Map ] | [ 📋 Queue (Count) ] | [ ⚡ Dispatch ]`.
+  * Map View: True edge-to-edge interactive canvas with floating bottom drawer for active ticket and instant dispatch button.
+  * Queue View: Modern card-based feed with 4 KPI mini cards (Total, Open, Active, Resolved), department dropdown filter, SLA countdown badge, and 1-tap dispatch trigger.
+  * Dispatch View: Dedicated full-screen sheet with ticket details, photo container with lightbox tap, AI classification badge, manual triage gate, and 1-tap crew assignment list.
+
+=======================================================
+Status: Enterprise GovTech Redesign Complete
+=======================================================
+
+=======================================================
+22. WARD GOVERNANCE MOBILE UI/UX OVERHAUL:
+=======================================================
+- 1. Compact, App-Grade Mobile Header:
+  * In `MunicipalGovernanceView.tsx`, streamlined header into a compact app bar with civic icon chip, active jurisdiction count badge (`{wards.length} Active Jurisdictions`), and instant `+ New Ward` action button.
+  * Removed redundant top banners and large Super Admin pills to maximize mobile screen real estate.
+
+- 2. Streamlined Search & Filters:
+  * Compact responsive search input (`pl-9 pr-3 py-2 bg-white border border-slate-200/90 rounded-xl text-xs`) with absolute search icon and instant clear button.
+
+- 3. Natural Scroll Hierarchy & Zero Double Scrollbars:
+  * Replaced fixed height bounds (`h-[500px]`, `overflow-y-scroll`) with a fluid page wrapper (`flex-1 overflow-y-auto px-4 pb-24 pt-2 space-y-3`), eliminating card clipping and nested scrollbar bugs.
+
+- 4. Expandable Accordion Ward Jurisdiction Cards:
+  * Redesigned ward cards into self-contained interactive accordions with compact collapsed summaries (ward name, sector count badge, district tag, assigned officer status).
+  * Expanded state reveals GIS center coordinates, active crew metrics, real-time officer delegation dropdown, sector/arterial route addition & deletion tags, inline boundary parameter editor (`[ ✏️ Edit Boundaries ]`), and instant `[ 🗑️ Delete Ward ]` control.
+
+=======================================================
+Status: Ward Governance Mobile UI/UX Overhaul Complete
+=======================================================
 

@@ -109,7 +109,22 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
             </tr>
           </thead>
           <tbody className="text-xs text-slate-800">
-            {incidents.map((incident) => {
+            {incidents.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-12 px-4 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <p className="font-bold text-slate-800 text-sm">0 Active Tickets — All Clear</p>
+                    <p className="text-xs text-slate-500 max-w-sm">
+                      There are currently no active civic grievances in the database. New citizen reports will automatically appear here in real time.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              incidents.map((incident) => {
               const isSelected = selectedIncident?.id === incident.id;
               const isResolved = incident.status === 'RESOLVED';
 
@@ -202,7 +217,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
                   </td>
                 </tr>
               );
-            })}
+            }))}
           </tbody>
         </table>
       </div>

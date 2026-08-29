@@ -17,12 +17,13 @@ import {
   AlertCircle,
   CheckCircle2,
   Navigation,
-  Globe,
+  ChevronDown,
+  ChevronUp,
   Radio,
   Sparkles,
   ExternalLink
 } from 'lucide-react';
-import { WardJurisdiction, UserProfile, UserRole } from '../types';
+import { WardJurisdiction, UserProfile } from '../types';
 import { 
   subscribeToWards, 
   createWardInFirestore, 
@@ -42,10 +43,19 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
   const [wards, setWards] = useState<WardJurisdiction[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
+  const [expandedWardId, setExpandedWardId] = useState<string | null>(null);
   const [isCreatingWard, setIsCreatingWard] = useState<boolean>(false);
-  const [newSubAreaText, setNewSubAreaText] = useState<string>('');
+  const [newSubAreaInputs, setNewSubAreaInputs] = useState<{ [wardId: string]: string }>({});
   
+  // Edit boundaries state
+  const [editingWardId, setEditingWardId] = useState<string | null>(null);
+  const [editWardForm, setEditWardForm] = useState<{ name: string; district: string; lat: number; lng: number }>({
+    name: '',
+    district: '',
+    lat: 0,
+    lng: 0
+  });
+
   // Feedback Toasts
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -77,8 +87,8 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
     const unsub = subscribeToWards(
       (liveWards) => {
         setWards(liveWards);
-        if (!selectedWardId && liveWards.length > 0) {
-          setSelectedWardId(liveWards[0].id);
+        if (!expandedWardId && liveWards.length > 0) {
+          setExpandedWardId(liveWards[0].id);
         }
       },
       (err) => {
@@ -106,8 +116,6 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
     };
   }, []);
 
-  const activeWard = wards.find(w => w.id === selectedWardId) || wards[0];
-
   const handleCreateWardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWardForm.name.trim()) {
@@ -134,7 +142,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
 
       showToast(`Ward "${newWardForm.name}" created and synced to municipal registry!`, "success");
       setIsCreatingWard(false);
-      setSelectedWardId(generatedId);
+      setExpandedWardId(generatedId);
       setNewWardForm({
         id: '',
         name: '',
@@ -152,11 +160,12 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
   };
 
   const handleAddSubArea = async (wardId: string) => {
-    if (!newSubAreaText.trim()) return;
+    const text = (newSubAreaInputs[wardId] || '').trim();
+    if (!text) return;
     setIsProcessing(true);
     try {
-      await addSubAreaToWard(wardId, newSubAreaText.trim());
-      setNewSubAreaText('');
+      await addSubAreaToWard(wardId, text);
+      setNewSubAreaInputs(prev => ({ ...prev, [wardId]: '' }));
       showToast(`Sub-location added to ${wardId}`, "success");
     } catch (err: any) {
       showToast(`Failed to add sub-area: ${err?.message || 'Error'}`, "error");
@@ -185,9 +194,9 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
     try {
       await deleteWardFromFirestore(wardId);
       showToast(`Ward "${wardName}" removed from municipal registry.`, "success");
-      if (selectedWardId === wardId) {
+      if (expandedWardId === wardId) {
         const remaining = wards.filter(w => w.id !== wardId);
-        setSelectedWardId(remaining.length > 0 ? remaining[0].id : null);
+        setExpandedWardId(remaining.length > 0 ? remaining[0].id : null);
       }
     } catch (err: any) {
       showToast(`Failed to delete ward: ${err?.message || 'Error'}`, "error");
@@ -197,18 +206,32 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
   };
 
   const handleAssignOfficerToWard = async (wardId: string, officerUid: string) => {
+    if (!officerUid) {
+      setIsProcessing(true);
+      try {
+        await updateWardInFirestore(wardId, {
+          activeOfficerUid: null,
+          activeOfficerName: null
+        });
+        showToast(`Cleared assigned officer for ${wardId}`, "success");
+      } catch (err: any) {
+        showToast(`Failed to clear officer: ${err?.message || 'Error'}`, "error");
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
     const targetUser = users.find(u => u.uid === officerUid);
     if (!targetUser) return;
 
     setIsProcessing(true);
     try {
-      // 1. Update the Ward document with active officer
       await updateWardInFirestore(wardId, {
         activeOfficerUid: targetUser.uid,
         activeOfficerName: targetUser.name
       });
 
-      // 2. Update the User profile role & assigned ward
       await updateUserRoleAndWard(targetUser.uid, {
         role: 'WARD_OFFICER',
         assignedWard: wards.find(w => w.id === wardId)?.name || wardId,
@@ -218,6 +241,34 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
       showToast(`${targetUser.name} designated as Ward Officer for ${wardId}`, "success");
     } catch (err: any) {
       showToast(`Failed to assign officer: ${err?.message || 'Error'}`, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const startEditingWard = (ward: WardJurisdiction) => {
+    setEditingWardId(ward.id);
+    setEditWardForm({
+      name: ward.name,
+      district: ward.district,
+      lat: ward.lat,
+      lng: ward.lng
+    });
+  };
+
+  const handleSaveBoundaryEdit = async (wardId: string) => {
+    setIsProcessing(true);
+    try {
+      await updateWardInFirestore(wardId, {
+        name: editWardForm.name.trim(),
+        district: editWardForm.district.trim(),
+        lat: Number(editWardForm.lat),
+        lng: Number(editWardForm.lng)
+      });
+      showToast(`Updated boundary parameters for ${wardId}`, "success");
+      setEditingWardId(null);
+    } catch (err: any) {
+      showToast(`Failed to update ward: ${err?.message || 'Error'}`, "error");
     } finally {
       setIsProcessing(false);
     }
@@ -234,10 +285,10 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
   }, [wards, searchQuery]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden font-sans">
+    <div className="flex-1 overflow-y-auto px-4 pb-24 pt-2 space-y-3 bg-slate-100 font-sans min-h-0">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className={`px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-xs transition-all z-30 ${
+        <div className={`px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-xs transition-all rounded-xl ${
           toastMessage.type === 'success' 
             ? 'bg-emerald-600 text-white' 
             : 'bg-rose-600 text-white'
@@ -252,287 +303,311 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
         </div>
       )}
 
-      {/* Main Top Header Strip */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#2d7a70]">
-            <Building2 className="w-5 h-5" />
+      {/* 1. COMPACT APP-GRADE HEADER */}
+      <div className="flex items-center justify-between gap-2 mb-3 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 font-bold text-base shadow-2xs">
+            🏛️
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-slate-900">Municipal Governance & Ward Configuration</h1>
-              <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
-                <Crown className="w-3 h-3 text-purple-600" />
-                <span>Super Admin Master Control</span>
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Manage territorial ward jurisdictions, sub-sector boundaries, and field officer delegations.
-            </p>
+            <h1 className="text-base font-bold text-slate-900 leading-tight">Ward Governance</h1>
+            <p className="text-[11px] text-slate-500 font-medium">{wards.length} Active Jurisdictions</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-3 py-1.5 rounded-xl font-medium">
-            <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span>Active Wards ({wards.length} Jurisdictions)</span>
-          </div>
-
-          <button
-            onClick={() => setIsCreatingWard(true)}
-            className="h-9 px-3.5 rounded-xl bg-[#2d7a70] hover:bg-[#23635b] text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Ward</span>
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsCreatingWard(true)}
+          className="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5"/> <span>New Ward</span>
+        </button>
       </div>
 
-      {/* 2-Column Split Dashboard */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
-        {/* LEFT COLUMN (Col 4/12): Wards List & Filter */}
-        <div className="lg:col-span-4 border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden">
-          {/* Search bar */}
-          <div className="p-3.5 border-b border-slate-100 bg-slate-50/70">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search wards, districts, or sub-areas..."
-                className="w-full h-9 pl-9 pr-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:outline-hidden"
-              />
-            </div>
-          </div>
+      {/* 2. STREAMLINE SEARCH & FILTERS */}
+      <div className="relative mb-3">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search wards, districts, or sub-areas..."
+          className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200/90 rounded-xl text-xs placeholder:text-slate-400 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 focus:outline-hidden shadow-2xs"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
-          {/* Wards List Scrollable */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-2 space-y-1.5">
-            {filteredWards.map((ward) => {
-              const isSelected = activeWard?.id === ward.id;
-              return (
-                <div
-                  key={ward.id}
-                  onClick={() => setSelectedWardId(ward.id)}
-                  className={`p-3.5 rounded-xl border transition cursor-pointer ${
-                    isSelected
-                      ? 'bg-teal-50/80 border-[#2d7a70] shadow-xs'
-                      : 'bg-white border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className={`w-3.5 h-3.5 ${isSelected ? 'text-[#2d7a70]' : 'text-slate-400'}`} />
-                        <h3 className={`font-bold text-xs truncate ${isSelected ? 'text-[#2d7a70]' : 'text-slate-800'}`}>
-                          {ward.name}
-                        </h3>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">{ward.district}</p>
-                    </div>
+      {/* 4. EXPANDABLE ACCORDION WARD JURISDICTION CARDS */}
+      <div className="space-y-3">
+        {filteredWards.map((ward) => {
+          const isExpanded = expandedWardId === ward.id;
+          const isEditing = editingWardId === ward.id;
 
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 flex-shrink-0">
+          return (
+            <div
+              key={ward.id}
+              className={`bg-white rounded-2xl border transition-all shadow-2xs overflow-hidden ${
+                isExpanded
+                  ? 'border-teal-500/80 ring-1 ring-teal-500/20 shadow-md'
+                  : 'border-slate-200/90 hover:border-teal-300'
+              }`}
+            >
+              {/* Closed State (Compact Summary Header) */}
+              <div
+                onClick={() => setExpandedWardId(isExpanded ? null : ward.id)}
+                className="p-3.5 flex items-center justify-between gap-3 cursor-pointer select-none"
+              >
+                <div className="min-w-0 flex-1">
+                  {/* Top Row: Ward Name & Sector Badge */}
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 truncate">{ward.name}</h3>
+                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-slate-200 shrink-0">
                       {ward.subAreas.length} Sectors
                     </span>
                   </div>
 
-                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-                    <div className="flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-teal-600" />
-                      <span className="truncate max-w-[140px]">
-                        {ward.activeOfficerName ? ward.activeOfficerName : 'No Officer Assigned'}
-                      </span>
-                    </div>
-
-                    <span className="font-mono text-slate-400">
-                      {ward.lat.toFixed(3)}, {ward.lng.toFixed(3)}
+                  {/* Bottom Row: District & Officer */}
+                  <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                    <span className="truncate">{ward.district}</span>
+                    <span>•</span>
+                    <span className={`truncate font-medium ${ward.activeOfficerName ? 'text-teal-700 font-semibold' : 'text-slate-400'}`}>
+                      {ward.activeOfficerName ? `Officer: ${ward.activeOfficerName}` : 'No Officer Assigned'}
                     </span>
                   </div>
                 </div>
-              );
-            })}
 
-            {filteredWards.length === 0 && (
-              <div className="p-8 text-center text-xs text-slate-400 space-y-2">
-                <MapPin className="w-8 h-8 mx-auto text-slate-300" />
-                <p>No municipal wards found matching your query.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN (Col 8/12): Ward Details, Sub-Areas & Officer Assignment */}
-        <div className="lg:col-span-8 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-6 space-y-6">
-          {activeWard ? (
-            <>
-              {/* Ward Overview Header Card */}
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-extrabold text-slate-900">{activeWard.name}</h2>
-                      <span className="bg-teal-50 text-[#2d7a70] border border-teal-200 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                        ID: {activeWard.id}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      District: <strong className="text-slate-700">{activeWard.district}</strong> • Coordinates: <span className="font-mono">{activeWard.lat}, {activeWard.lng}</span>
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleDeleteWard(activeWard.id, activeWard.name)}
-                      disabled={isProcessing}
-                      className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Ward</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Ward Metrics Summary Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Sub-Locations</span>
-                    <p className="text-base font-bold text-slate-800 mt-0.5">{activeWard.subAreas.length}</p>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] text-[#2d7a70] uppercase font-bold tracking-wider">Active Crews</span>
-                    <p className="text-base font-bold text-teal-900 mt-0.5">{activeWard.activeCrewsCount || 1} Deployed</p>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] text-blue-700 uppercase font-bold tracking-wider">Assigned Officer</span>
-                    <p className="text-xs font-bold text-blue-950 mt-1 truncate">
-                      {activeWard.activeOfficerName || 'Unassigned'}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] text-purple-700 uppercase font-bold tracking-wider">GIS Center</span>
-                    <p className="text-xs font-mono font-bold text-purple-950 mt-1">
-                      {activeWard.lat.toFixed(2)}, {activeWard.lng.toFixed(2)}
-                    </p>
-                  </div>
+                {/* Accordion Expand Chevron */}
+                <div className={`p-1.5 rounded-xl transition-colors ${
+                  isExpanded ? 'bg-teal-50 text-teal-700' : 'bg-slate-50 text-slate-400 hover:text-slate-600'
+                }`}>
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </div>
               </div>
 
-              {/* Sub-Locations & Arterials Config */}
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-[#2d7a70]" />
-                    <h3 className="text-sm font-bold text-slate-900">Sub-Locations, Sectors & Arterial Routes</h3>
-                  </div>
-                  <span className="text-xs text-slate-500">Auto-populated for citizen pin matching</span>
-                </div>
+              {/* Expanded State Content */}
+              {isExpanded && (
+                <div className="px-3.5 pb-4 pt-2 border-t border-slate-100 space-y-4 bg-slate-50/40">
+                  
+                  {/* Inline Boundary Editing Form */}
+                  {isEditing ? (
+                    <div className="p-3 bg-white rounded-xl border border-teal-300 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between text-xs font-bold text-teal-900">
+                        <span>Edit Ward Boundary Parameters</span>
+                        <button onClick={() => setEditingWardId(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
 
-                {/* Add Sub-Area input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSubAreaText}
-                    onChange={(e) => setNewSubAreaText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSubArea(activeWard.id);
-                      }
-                    }}
-                    placeholder="Enter new sector, junction, or arterial road (e.g. Model Town Phase 2)..."
-                    className="flex-1 h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden"
-                  />
-                  <button
-                    onClick={() => handleAddSubArea(activeWard.id)}
-                    disabled={!newSubAreaText.trim() || isProcessing}
-                    className="h-9 px-4 bg-[#2d7a70] hover:bg-[#23635b] disabled:opacity-50 text-white font-bold text-xs rounded-xl transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Sector</span>
-                  </button>
-                </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Ward Name</label>
+                          <input
+                            type="text"
+                            value={editWardForm.name}
+                            onChange={(e) => setEditWardForm({ ...editWardForm, name: e.target.value })}
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">District</label>
+                          <input
+                            type="text"
+                            value={editWardForm.district}
+                            onChange={(e) => setEditWardForm({ ...editWardForm, district: e.target.value })}
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Center Latitude</label>
+                          <input
+                            type="number"
+                            step="0.0001"
+                            value={editWardForm.lat}
+                            onChange={(e) => setEditWardForm({ ...editWardForm, lat: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Center Longitude</label>
+                          <input
+                            type="number"
+                            step="0.0001"
+                            value={editWardForm.lng}
+                            onChange={(e) => setEditWardForm({ ...editWardForm, lng: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"
+                          />
+                        </div>
+                      </div>
 
-                {/* Sub-Areas Pill Badges */}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {activeWard.subAreas.map((sub, idx) => (
-                    <div
-                      key={idx}
-                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-2 shadow-2xs hover:border-slate-300 transition"
-                    >
-                      <Navigation className="w-3 h-3 text-[#2d7a70]" />
-                      <span>{sub}</span>
-                      <button
-                        onClick={() => handleRemoveSubArea(activeWard.id, sub)}
-                        disabled={isProcessing}
-                        className="text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                        title="Remove sector"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          onClick={() => setEditingWardId(null)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleSaveBoundaryEdit(ward.id)}
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg cursor-pointer"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                  {activeWard.subAreas.length === 0 && (
-                    <p className="text-xs text-slate-400 italic">No sub-locations defined for this ward yet.</p>
+                  ) : (
+                    /* 1. Boundary Coordinates & Metric Badges */
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Center Coordinates</span>
+                        <p className="font-mono text-xs font-bold text-slate-800 mt-0.5">
+                          {ward.lat.toFixed(4)}, {ward.lng.toFixed(4)}
+                        </p>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">District Tag</span>
+                        <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">{ward.district}</p>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider">Active Field Crews</span>
+                        <p className="text-xs font-bold text-teal-900 mt-0.5">{ward.activeCrewsCount || 1} Deployed</p>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">Total Grievances</span>
+                        <p className="text-xs font-bold text-blue-900 mt-0.5">{ward.totalComplaintsCount || 0} Registered</p>
+                      </div>
+                    </div>
                   )}
-                </div>
-              </div>
 
-              {/* Officer & Personnel Delegation for Active Ward */}
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-[#2d7a70]" />
-                    <h3 className="text-sm font-bold text-slate-900">Ward Officer Designation & Personnel Assignment</h3>
-                  </div>
-                  <span className="text-xs text-slate-500">Live Role Sync</span>
-                </div>
-
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Designate Registered Staff / User as Active Ward Officer:
-                  </label>
-
-                  <div className="flex flex-wrap sm:flex-nowrap gap-2">
+                  {/* 2. Assigned Field Officer Delegation */}
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                    <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-teal-700" />
+                      <span>Designated Ward Officer:</span>
+                    </label>
                     <select
-                      value={activeWard.activeOfficerUid || ''}
-                      onChange={(e) => handleAssignOfficerToWard(activeWard.id, e.target.value)}
+                      value={ward.activeOfficerUid || ''}
+                      onChange={(e) => handleAssignOfficerToWard(ward.id, e.target.value)}
                       disabled={isProcessing}
-                      className="flex-1 h-9 px-3 text-xs bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-[#2d7a70] focus:outline-hidden cursor-pointer"
+                      className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:ring-2 focus:ring-teal-500/20 focus:outline-hidden cursor-pointer"
                     >
-                      <option value="">-- Select Registered User to Delegate as Ward Officer --</option>
+                      <option value="">-- No Officer Assigned (Tap to Delegate User) --</option>
                       {users.map((u) => (
                         <option key={u.uid} value={u.uid}>
-                          {u.name} ({u.email || u.phone || u.uid}) — Current Role: {u.role}
+                          {u.name} ({u.email || u.phone || u.uid}) — Role: {u.role}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <p className="text-[11px] text-slate-500">
-                    Assigning a user promotes their account to <span className="font-semibold text-[#2d7a70]">WARD_OFFICER</span> with jurisdiction over <span className="font-semibold">{activeWard.name}</span>.
-                  </p>
+                  {/* 3. Sub-locations & Sectors */}
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-teal-700" />
+                        <span>Sectors & Arterial Routes ({ward.subAreas.length}):</span>
+                      </label>
+                    </div>
+
+                    {/* Sector Add Input */}
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newSubAreaInputs[ward.id] || ''}
+                        onChange={(e) => setNewSubAreaInputs({ ...newSubAreaInputs, [ward.id]: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddSubArea(ward.id);
+                          }
+                        }}
+                        placeholder="Add sector or junction..."
+                        className="flex-1 h-8 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden"
+                      />
+                      <button
+                        onClick={() => handleAddSubArea(ward.id)}
+                        disabled={!(newSubAreaInputs[ward.id] || '').trim() || isProcessing}
+                        className="h-8 px-3 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+
+                    {/* Sectors Pills */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {ward.subAreas.map((sub, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-700 flex items-center gap-1.5"
+                        >
+                          <Navigation className="w-3 h-3 text-teal-600" />
+                          <span>{sub}</span>
+                          <button
+                            onClick={() => handleRemoveSubArea(ward.id, sub)}
+                            disabled={isProcessing}
+                            className="text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                            title="Remove sector"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                      {ward.subAreas.length === 0 && (
+                        <p className="text-xs text-slate-400 italic">No sectors defined yet.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 4. Action Buttons Grid */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => startEditingWard(ward)}
+                      className="py-2 px-3 bg-white border border-slate-200 hover:border-teal-400 text-slate-800 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-teal-700" />
+                      <span>Edit Boundaries</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteWard(ward.id, ward.name)}
+                      disabled={isProcessing}
+                      className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Delete Ward</span>
+                    </button>
+                  </div>
+
                 </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-white rounded-2xl p-12 text-center text-slate-400 space-y-3 border border-slate-200">
-              <Building2 className="w-12 h-12 mx-auto text-slate-300" />
-              <h3 className="font-bold text-slate-700">Select a Ward from the left list or create a new one.</h3>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
+
+        {filteredWards.length === 0 && (
+          <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 space-y-2 shadow-2xs">
+            <Building2 className="w-8 h-8 mx-auto text-slate-300" />
+            <p className="font-medium text-slate-600">No municipal wards found matching your query.</p>
+          </div>
+        )}
       </div>
 
       {/* CREATE NEW WARD MODAL */}
       {isCreatingWard && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-200 shadow-2xl animate-in fade-in">
+        <div className="fixed inset-0 z-[9990] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans">
+          <div className="relative z-[9999] bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-200 shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#2d7a70] flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
@@ -557,7 +632,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                   value={newWardForm.name}
                   onChange={(e) => setNewWardForm({ ...newWardForm, name: e.target.value })}
                   placeholder="e.g. Ward 15 - North Transit Corridor"
-                  className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden"
+                  className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
@@ -569,7 +644,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                     value={newWardForm.id}
                     onChange={(e) => setNewWardForm({ ...newWardForm, id: e.target.value })}
                     placeholder="e.g. ward-15"
-                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden font-mono"
+                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden font-mono"
                   />
                 </div>
 
@@ -580,7 +655,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                     value={newWardForm.district}
                     onChange={(e) => setNewWardForm({ ...newWardForm, district: e.target.value })}
                     placeholder="e.g. North Municipal District"
-                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden"
+                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -593,7 +668,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                     step="0.0001"
                     value={newWardForm.lat}
                     onChange={(e) => setNewWardForm({ ...newWardForm, lat: parseFloat(e.target.value) || 0 })}
-                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden font-mono"
+                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden font-mono"
                   />
                 </div>
 
@@ -604,7 +679,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                     step="0.0001"
                     value={newWardForm.lng}
                     onChange={(e) => setNewWardForm({ ...newWardForm, lng: parseFloat(e.target.value) || 0 })}
-                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden font-mono"
+                    className="w-full h-9 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden font-mono"
                   />
                 </div>
               </div>
@@ -618,7 +693,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                   value={newWardForm.subAreasInput}
                   onChange={(e) => setNewWardForm({ ...newWardForm, subAreasInput: e.target.value })}
                   placeholder="Sector 1 Road, Civil Hospital Junction, Old Grain Market"
-                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#2d7a70] focus:bg-white focus:outline-hidden"
+                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:bg-white focus:outline-hidden"
                 />
               </div>
 
@@ -633,7 +708,7 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-4 py-2 bg-[#2d7a70] hover:bg-[#23635b] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                  className="px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                 >
                   {isProcessing ? 'Saving Ward...' : 'Create Ward'}
                 </button>

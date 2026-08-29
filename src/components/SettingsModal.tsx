@@ -6,15 +6,17 @@ import {
   AlertTriangle, 
   RefreshCw, 
   X, 
-  Bell,
-  Map,
-  Compass,
-  Volume2,
-  Radio,
-  Languages,
-  Sun
+  Bell, 
+  Map, 
+  Compass, 
+  Volume2, 
+  Radio, 
+  Languages, 
+  Sun,
+  Trash2,
+  Sparkles
 } from 'lucide-react';
-import { pingFirestoreHealthCheck } from '../services/firebase';
+import { pingFirestoreHealthCheck, wipeAllComplaints, seedDemoComplaints } from '../services/firebase';
 import { 
   getCurrentLanguage, 
   setLanguage, 
@@ -63,12 +65,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [testStatus, setTestStatus] = useState<'IDLE' | 'TESTING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [testMessage, setTestMessage] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isWipingDb, setIsWipingDb] = useState(false);
+  const [isSeedingDb, setIsSeedingDb] = useState(false);
+  const [adminActionMsg, setAdminActionMsg] = useState<string | null>(null);
+  const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setSavedSuccess(false);
       setTestStatus('IDLE');
       setTestMessage('');
+      setAdminActionMsg(null);
+      setShowWipeConfirm(false);
       try {
         const saved = localStorage.getItem('swachhata_user_preferences');
         if (saved) {
@@ -80,6 +88,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setCurrentLang(getCurrentLanguage());
     }
   }, [isOpen]);
+
+  const handleWipeAll = async () => {
+    setIsWipingDb(true);
+    setAdminActionMsg('Purging all active complaints from Firestore...');
+    try {
+      const res = await wipeAllComplaints();
+      if (res.success) {
+        setAdminActionMsg('✅ All complaints purged. Database is now empty.');
+        onConfigUpdated?.();
+      } else {
+        setAdminActionMsg('❌ ' + res.message);
+      }
+    } catch (err: any) {
+      setAdminActionMsg('❌ ' + (err?.message || 'Failed to wipe complaints.'));
+    } finally {
+      setIsWipingDb(false);
+      setShowWipeConfirm(false);
+      setTimeout(() => {
+        setAdminActionMsg(null);
+      }, 5000);
+    }
+  };
+
+  const handleSeedDemo = async () => {
+    setIsSeedingDb(true);
+    setAdminActionMsg('Loading baseline demo scenarios into Firestore...');
+    try {
+      const res = await seedDemoComplaints();
+      if (res.success) {
+        setAdminActionMsg('✅ 3 demo incident scenarios loaded.');
+        onConfigUpdated?.();
+      } else {
+        setAdminActionMsg('❌ ' + res.message);
+      }
+    } catch (err: any) {
+      setAdminActionMsg('❌ ' + (err?.message || 'Failed to load demo incidents.'));
+    } finally {
+      setIsSeedingDb(false);
+      setTimeout(() => {
+        setAdminActionMsg(null);
+      }, 5000);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -151,14 +202,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <div 
       id="settings-modal-overlay" 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div 
         id="settings-modal-dialog"
-        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] font-sans"
+        className="relative z-[9999] w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] font-sans"
       >
         {/* Header */}
         <div className="bg-[#0f172a] text-white px-6 py-4 flex items-center justify-between">
@@ -382,6 +433,97 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
 
+            </div>
+          </div>
+
+          {/* Admin & Testing Utilities Section */}
+          <div className="space-y-3 pt-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Admin & Testing Tools
+            </h3>
+
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-4">
+              {/* Option 1: Pure Wipe Database */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200">
+                <div>
+                  <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Wipe All Complaints (Empty Database)</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Deletes all tickets from Firestore, resets municipal units to Available, and leaves the database completely empty (0 tickets) for testing.
+                  </p>
+                </div>
+                {!showWipeConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowWipeConfirm(true)}
+                    disabled={isWipingDb || isSeedingDb}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 shadow-2xs"
+                  >
+                    Wipe Database
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleWipeAll}
+                      disabled={isWipingDb}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      {isWipingDb ? (
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                      ) : null}
+                      <span>Confirm Wipe</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowWipeConfirm(false)}
+                      className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Option 2: Seed Demo Baseline Data */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Load Baseline Demo Data</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Seeds 3 realistic benchmark MoHUA civic incident scenarios (#8153, #3542, #8366) into Firestore.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSeedDemo}
+                  disabled={isWipingDb || isSeedingDb}
+                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 shadow-2xs flex items-center gap-1"
+                >
+                  {isSeedingDb ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3 h-3" />
+                  )}
+                  <span>Seed Demo Data</span>
+                </button>
+              </div>
+
+              {adminActionMsg && (
+                <div className={`p-2.5 rounded-xl border text-xs font-semibold ${
+                  adminActionMsg.startsWith('✅') 
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
+                    : adminActionMsg.startsWith('❌')
+                    ? 'bg-rose-50 text-rose-900 border-rose-200'
+                    : 'bg-blue-50 text-blue-900 border-blue-200'
+                }`}>
+                  {adminActionMsg}
+                </div>
+              )}
             </div>
           </div>
 

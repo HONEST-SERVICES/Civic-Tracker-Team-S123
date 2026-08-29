@@ -314,8 +314,8 @@ export const SwachhSurvekshanAuditorDesk: React.FC<SwachhSurvekshanAuditorDeskPr
 
       {/* Audit Inspection Scoring Modal */}
       {selectedIncidentForAudit && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[9990] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative z-[9999] bg-white rounded-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="bg-[#0d5c52] text-white p-4.5 flex items-center justify-between">
               <div className="flex items-center gap-3">

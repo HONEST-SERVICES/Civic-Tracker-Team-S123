@@ -504,59 +504,51 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
 
   return (
     <div className="w-full h-full relative flex flex-col bg-slate-100 overflow-hidden select-none font-sans">
-      {/* Top Controls Overlay */}
-      <div className="absolute top-3 left-3 right-3 z-[400] flex items-center justify-between pointer-events-none flex-wrap gap-2">
-        {/* Left: Filters Bar & SBM Facility Toggle */}
-        <div className="flex items-center gap-1.5 flex-wrap pointer-events-auto">
-          {/* Filter Bar */}
-          <div className="flex items-center gap-1 bg-white/95 backdrop-blur-xs p-1 rounded-xl border border-slate-200 shadow-sm">
-            <div className="px-2 text-xs font-bold text-slate-500 flex items-center gap-1.5 border-r border-slate-200">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden sm:inline">Filter:</span>
-            </div>
+      {/* Unified Top Controls Overlay */}
+      <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        {/* Left: Compact Filter Chips */}
+        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-md border border-slate-200 pointer-events-auto">
+          {(['ALL', 'P1', 'P2', 'P3', 'CREWS'] as const).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                activeFilter === filter
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
+              }`}
+            >
+              {filter === 'ALL' ? 'All' : filter === 'P1' ? 'P1 Critical' : filter === 'CREWS' ? 'Fleets' : filter}
+            </button>
+          ))}
+        </div>
 
-            {(['ALL', 'P1', 'P2', 'P3', 'CREWS'] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  activeFilter === filter
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                {filter === 'ALL' ? 'All' : filter === 'CREWS' ? 'Fleets' : `${filter}`}
-              </button>
-            ))}
-          </div>
-
+        {/* Right: Toggleable Layers & Map Controls */}
+        <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-md border border-slate-200 pointer-events-auto">
           {/* SBM Public Toilet Locator Toggle */}
           <button
             onClick={() => setShowSbmFacilities(!showSbmFacilities)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer border ${
+            className={`px-2.5 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1 transition cursor-pointer ${
               showSbmFacilities
-                ? 'bg-cyan-700 text-white border-cyan-800 shadow-xs'
-                : 'bg-white/95 backdrop-blur-xs text-slate-700 border-slate-200 hover:bg-slate-50'
+                ? 'text-sky-800 bg-sky-50 border-sky-300 font-bold shadow-2xs'
+                : 'text-slate-600 bg-white border-transparent hover:bg-slate-100 font-medium'
             }`}
             title="Toggle Swachh Bharat Mission (SBM) Public Toilets & Waste Centers Layer"
           >
             <span>🚻</span>
-            <span className="font-semibold">SBM Toilet Locator</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-              showSbmFacilities ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+            <span className="hidden xs:inline">SBM Toilets</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              showSbmFacilities ? 'bg-sky-200/80 text-sky-900' : 'bg-slate-100 text-slate-600'
             }`}>
               {publicFacilities.length}
             </span>
           </button>
-        </div>
 
-        {/* Right: Map Style Switcher & Recenter */}
-        <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-xs p-1 rounded-xl border border-slate-200 pointer-events-auto shadow-sm">
-          {/* Tile Layer Switcher */}
-          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          {/* Tile Layer Switcher (Street / Satellite) - Hidden on Mobile View */}
+          <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
             <button
               onClick={() => setMapStyle('STREET')}
-              className={`px-2 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
                 mapStyle === 'STREET'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -564,12 +556,12 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
               title="Street Map View (Default)"
             >
               <Sun className="w-3 h-3 text-amber-500" />
-              <span className="hidden sm:inline">Street</span>
+              <span>Street</span>
             </button>
 
             <button
               onClick={() => setMapStyle('SATELLITE')}
-              className={`px-2 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
                 mapStyle === 'SATELLITE'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -577,7 +569,7 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
               title="Satellite Imagery Layer"
             >
               <Globe className="w-3 h-3 text-blue-500" />
-              <span className="hidden sm:inline">Satellite</span>
+              <span>Satellite</span>
             </button>
           </div>
 
@@ -585,7 +577,7 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
           <button
             onClick={handleRecenter}
             title="Recenter Municipal Grid"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
           >
             <Crosshair className="w-3.5 h-3.5 text-slate-500" />
             <span className="hidden md:inline">Center</span>
@@ -599,35 +591,35 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
         className="w-full h-full z-0 bg-slate-100 min-h-full"
       />
 
-      {/* Bottom Floating Legend */}
-      <div className="absolute bottom-3 left-3 z-[400] pointer-events-none hidden sm:flex items-center gap-3 bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-xl border border-slate-200 text-xs shadow-sm font-medium text-slate-700">
+      {/* Bottom Minimal Floating Legend Pill */}
+      <div className="absolute bottom-6 left-3 z-10 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-lg border border-slate-200 shadow-xs text-[11px] flex items-center gap-2 pointer-events-none">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          <span className="w-2 h-2 rounded-full bg-red-500" />
           <span className="font-semibold text-slate-800">Critical</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
           <span className="font-semibold text-slate-800">Urgent</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+          <span className="w-2 h-2 rounded-full bg-blue-500" />
           <span className="font-semibold text-slate-800">Normal</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-          <span className="font-semibold text-emerald-800">Resolved / Fleet</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="font-semibold text-emerald-800">Fleet</span>
         </div>
         {showSbmFacilities && (
-          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 text-cyan-700">
+          <div className="flex items-center gap-1 border-l border-slate-200 pl-2 text-sky-700 font-medium">
             <span>🚻</span>
-            <span className="font-bold">SBM Toilets</span>
+            <span className="font-bold">SBM</span>
           </div>
         )}
       </div>
 
       {/* SBM PUBLIC FACILITY DETAIL POPUP / CARD */}
       {selectedFacility && (
-        <div className="absolute top-14 right-3 left-3 sm:left-auto sm:w-96 z-[500] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 backdrop-blur-xs animate-in fade-in duration-150 font-sans">
+        <div className="absolute top-14 right-3 left-3 sm:left-auto sm:w-96 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 backdrop-blur-xs animate-in fade-in duration-150 font-sans">
           <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-teal-50 text-teal-700 text-base">
@@ -754,7 +746,7 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
 
       {/* Selected Incident Floating Drawer (if opened on map) */}
       {selectedIncident && (
-        <div className="absolute top-14 right-3 left-3 sm:left-auto sm:w-96 z-[500] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 backdrop-blur-xs animate-in fade-in duration-150 font-sans">
+        <div className="absolute top-14 right-3 left-3 sm:left-auto sm:w-96 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 backdrop-blur-xs animate-in fade-in duration-150 font-sans">
           <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
             <div className="flex items-center gap-2">
               <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${

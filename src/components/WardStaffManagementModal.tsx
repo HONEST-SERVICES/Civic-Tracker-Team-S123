@@ -230,8 +230,8 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-slate-200/80 animate-fade-in overflow-hidden">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9990] flex items-center justify-center p-4">
+      <div className="relative z-[9999] bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-slate-200 animate-in zoom-in-95 overflow-hidden font-sans">
         {/* Modal Header */}
         <div className="bg-[#0d5c52] p-5 text-white flex items-center justify-between border-b border-teal-800/50">
           <div className="flex items-center gap-3">
