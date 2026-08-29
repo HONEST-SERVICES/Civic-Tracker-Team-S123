@@ -125,23 +125,23 @@ async function startServer() {
         properties: {
           isCivicIssue: {
             type: Type.BOOLEAN,
-            description: "Set to TRUE if image depicts a valid municipal civic issue or hazard (pothole, garbage dump, overflow, manhole, waterlogging, outage, downed line). Set to FALSE if photo is a selfie, person portrait, casual non-civic object, pet, or indoor household item."
+            description: "Set to TRUE if image depicts a valid municipal civic issue or hazard (pothole, garbage dump, overflow, manhole, waterlogging, outage, downed line, broken pipe). Set to FALSE if photo is a selfie, person portrait, human hand/foot, pet, animal, food, receipt, document, indoor furniture, vehicle interior, or non-civic object."
           },
           rejectionReason: {
             type: Type.STRING,
-            description: "If isCivicIssue is FALSE, state concise reason (e.g., 'No structural hazard or municipal issue detected. Media appears to be a personal selfie or indoor photo.')"
+            description: "If isCivicIssue is FALSE, state concise reason (e.g., 'Image appears to be a person/selfie, not a civic hazard')"
           },
-          aiConfidence: {
-            type: Type.NUMBER,
-            description: "Percentage confidence score (0 to 100) matching visual defect to category"
-          },
-          aiReasoning: {
+          detectedHazard: {
             type: Type.STRING,
-            description: "1-sentence concise explanation of why this severity, category, and department were selected"
+            description: "Concise title of the detected civic defect"
+          },
+          recommendedCategory: {
+            type: Type.STRING,
+            description: "One of: SANITATION, ROADS, WATER, ELECTRICITY, HEALTH"
           },
           category: {
             type: Type.STRING,
-            description: "Category: DEEP_POTHOLE, GARBAGE_DUMP, GARBAGE_VEHICLE, SWEEPING_NOT_DONE, OPEN_MANHOLES, WATERLOGGING, STREETLIGHT_OUTAGE, PUBLIC_TOILET_CLEANING, STRUCTURAL_SINKHOLE, FLOODING_WATER_MAIN, DOWNED_POWER_LINE, or TRAFFIC_SIGNAL_FAILURE"
+            description: "Standard category enum: DEEP_POTHOLE, GARBAGE_DUMP, GARBAGE_VEHICLE, SWEEPING_NOT_DONE, OPEN_MANHOLES, WATERLOGGING, STREETLIGHT_OUTAGE, PUBLIC_TOILET_CLEANING, STRUCTURAL_SINKHOLE, FLOODING_WATER_MAIN, DOWNED_POWER_LINE, or TRAFFIC_SIGNAL_FAILURE"
           },
           hazardName: {
             type: Type.STRING,
@@ -155,6 +155,30 @@ async function startServer() {
             type: Type.STRING,
             description: "Priority rating: P1_CRITICAL, P2_URGENT, or P3_SCHEDULED"
           },
+          department: {
+            type: Type.STRING,
+            description: "Department: PUBLIC_WORKS, SANITATION, WATER_SUPPLY, ELECTRICITY, or HEALTH_SBM"
+          },
+          recommendedDepartment: {
+            type: Type.STRING,
+            description: "Department: PUBLIC_WORKS, SANITATION, WATER_SUPPLY, ELECTRICITY, or HEALTH_SBM"
+          },
+          confidence: {
+            type: Type.NUMBER,
+            description: "Confidence percentage 0-100"
+          },
+          aiConfidence: {
+            type: Type.NUMBER,
+            description: "Confidence percentage 0-100"
+          },
+          reasoning: {
+            type: Type.STRING,
+            description: "1-sentence concise explanation of why this category, department, and severity were selected"
+          },
+          aiReasoning: {
+            type: Type.STRING,
+            description: "1-sentence concise explanation of why this category, department, and severity were selected"
+          },
           riskScore: {
             type: Type.NUMBER,
             description: "Risk score from 0 to 100 based on public safety impact"
@@ -162,10 +186,6 @@ async function startServer() {
           hazardDescription: {
             type: Type.STRING,
             description: "Detailed professional civic inspection summary"
-          },
-          recommendedDepartment: {
-            type: Type.STRING,
-            description: "Department: PUBLIC_WORKS, SANITATION, WATER_SUPPLY, ELECTRICITY, or HEALTH_SBM"
           },
           recommendedCrew: {
             type: Type.STRING,
@@ -201,16 +221,18 @@ async function startServer() {
         ]
       };
 
-      const systemPrompt = `You are the Swachhata-MoHUA Municipal AI Vision Inspector.
-Analyze the uploaded photo carefully.
-FIRST & CRITICAL: Determine if the photo clearly shows an authentic, real-world municipal civic issue/hazard (pothole, pavement defect, garbage dump, uncollected waste, open manhole, road waterlogging, broken street light, downed electrical line, public toilet issue, etc.).
-STRICT HALLUCINATION & NON-CIVIC GATE:
-If the photo contains a hand, human selfie/portrait, pet/animal, receipt, document, meme, screenshot, food, vehicle interior/dashboard, or non-civic indoor room/furniture scene, you MUST set isCivicIssue: false and set rejectionReason to: "⚠️ No Municipal Hazard Detected: Image does not appear to show a civic issue (road damage, sanitation, drainage, or streetlighting). Please take a photo of the actual issue."
-If the photo IS a valid civic issue:
+      const systemPrompt = `You are an expert municipal triage AI for Indian cities.
+Analyze the provided image strictly for authentic civic infrastructure hazards:
+1. Valid Civic Issues: Potholes, broken roads, overflowing garbage bins, open manholes, waterlogging, street light outages, fallen electric wires, broken water pipes, illegal construction debris, public toilet issues.
+2. STRICT NON-CIVIC REJECTION: If the image shows a person, selfie, human hand/foot, pet, animal, food, receipt, document, indoor furniture, vehicle interior, computer screen, or any non-infrastructure object, you MUST set isCivicIssue: false and state a clear rejectionReason (e.g., "Image appears to be a person/selfie, not a civic hazard").
+
+If valid civic issue:
 - set isCivicIssue: true
-- set aiConfidence: 94 to 99
-- set aiReasoning: 1-sentence concise justification of why this severity level, municipal department, and category were assigned.
-- Extract diagnostic data matching the schema, accurately categorizing the municipal hazard and evaluating public safety risk (0-100).`;
+- set confidence / aiConfidence: 94 to 99
+- set recommendedCategory: "SANITATION" | "ROADS" | "WATER" | "ELECTRICITY" | "HEALTH"
+- set category: "DEEP_POTHOLE" | "GARBAGE_DUMP" | "WATERLOGGING" | "STREETLIGHT_OUTAGE" | "OPEN_MANHOLES" | "FLOODING_WATER_MAIN" | "DOWNED_POWER_LINE" | "PUBLIC_TOILET_CLEANING"
+- set reasoning / aiReasoning: 1-sentence concise justification of why this severity level, municipal department, and category were assigned.
+- Extract complete diagnostic data matching the schema.`;
 
       const response = await callGeminiWithFallback(ai, {
         contents: [

@@ -21,7 +21,13 @@ import {
   Truck,
   Sparkles,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Flame,
+  AlertOctagon,
+  Waves,
+  Bath,
+  Footprints,
+  SunMedium
 } from 'lucide-react';
 import { DepartmentType } from '../types';
 
@@ -35,11 +41,70 @@ export interface CategoryIconStyle {
 export function getCategoryStyle(categoryOrDeptOrIcon: string): CategoryIconStyle {
   const key = (categoryOrDeptOrIcon || '').toUpperCase();
 
-  // SANITATION & WASTE
+  // 1. Specific Vehicle / Stoppage
+  if (key.includes('VEHICLE') || key.includes('TRUCK')) {
+    return {
+      icon: Truck,
+      altIcon: Trash2,
+      containerClass: 'bg-emerald-50 border-emerald-200',
+      iconClass: 'text-emerald-600'
+    };
+  }
+
+  // 2. Street Sweeping
+  if (key.includes('SWEEPING') || key.includes('BROOM') || key.includes('BRUSH')) {
+    return {
+      icon: Sparkles,
+      altIcon: Recycle,
+      containerClass: 'bg-amber-50 border-amber-200',
+      iconClass: 'text-amber-600'
+    };
+  }
+
+  // 3. Open Burning / Waste Fire
+  if (key.includes('BURN') || key.includes('FLAME') || key.includes('FIRE')) {
+    return {
+      icon: Flame,
+      altIcon: AlertTriangle,
+      containerClass: 'bg-orange-50 border-orange-200',
+      iconClass: 'text-orange-600'
+    };
+  }
+
+  // 4. Agricultural Runoff / Farm Debris
+  if (key.includes('AGRICULTUR') || key.includes('FARM') || key.includes('RURAL_GARBAGE') || key.includes('TRACTOR')) {
+    return {
+      icon: Tractor,
+      altIcon: Sprout,
+      containerClass: 'bg-lime-50 border-lime-200',
+      iconClass: 'text-lime-700'
+    };
+  }
+
+  // 5. Downed Power Line / Wire / Pole Hazard
+  if (key.includes('DOWNED') || (key.includes('POWER') && key.includes('LINE')) || key.includes('POLE') || key.includes('BROKEN_POLE')) {
+    return {
+      icon: AlertOctagon,
+      altIcon: Zap,
+      containerClass: 'bg-rose-50 border-rose-200',
+      iconClass: 'text-rose-600'
+    };
+  }
+
+  // 6. Canal / Drainage Blockage / Waterlogging
+  if (key.includes('CANAL') || key.includes('DRAIN') || key.includes('CULVERT') || key.includes('WATERLOGGING')) {
+    return {
+      icon: Droplets,
+      altIcon: Waves,
+      containerClass: 'bg-blue-50 border-blue-200',
+      iconClass: 'text-blue-600'
+    };
+  }
+
+  // 7. General Sanitation & Waste Dump
   if (
     key.includes('SANITATION') || 
     key.includes('GARBAGE') || 
-    key.includes('SWEEPING') || 
     key.includes('WASTE') ||
     key === 'TRASH2' ||
     key === 'RECYCLE'
@@ -52,11 +117,29 @@ export function getCategoryStyle(categoryOrDeptOrIcon: string): CategoryIconStyl
     };
   }
 
-  // ROADS & POTHOLES
+  // 8. Public Toilets / Sanitation Blocks
+  if (key.includes('TOILET') || key.includes('BATH') || key.includes('URINAL')) {
+    return {
+      icon: Bath,
+      altIcon: Sparkles,
+      containerClass: 'bg-teal-50 border-teal-200',
+      iconClass: 'text-teal-600'
+    };
+  }
+
+  // 9. Roads, Potholes & Cave-ins
+  if (key.includes('SINKHOLE') || key.includes('CAVE_IN')) {
+    return {
+      icon: AlertOctagon,
+      altIcon: Construction,
+      containerClass: 'bg-rose-50 border-rose-200',
+      iconClass: 'text-rose-600'
+    };
+  }
+
   if (
     key.includes('ROAD') || 
     key.includes('POTHOLE') || 
-    key.includes('SINKHOLE') || 
     key.includes('PUBLIC_WORKS') ||
     key === 'CONSTRUCTION' ||
     key === 'ALERTTRIANGLE'
@@ -69,12 +152,9 @@ export function getCategoryStyle(categoryOrDeptOrIcon: string): CategoryIconStyl
     };
   }
 
-  // WATER SUPPLY & DRAINAGE
+  // 10. Water Pipe Leak & Flooding
   if (
     key.includes('WATER') || 
-    key.includes('DRAIN') || 
-    key.includes('CANAL') || 
-    key.includes('MANHOLE') || 
     key.includes('FLOOD') ||
     key === 'DROPLETS' ||
     key === 'PIPETTE'
@@ -82,12 +162,12 @@ export function getCategoryStyle(categoryOrDeptOrIcon: string): CategoryIconStyl
     return {
       icon: Droplets,
       altIcon: Pipette,
-      containerClass: 'bg-blue-50 border-blue-200',
-      iconClass: 'text-blue-600'
+      containerClass: 'bg-sky-50 border-sky-200',
+      iconClass: 'text-sky-600'
     };
   }
 
-  // STREETLIGHTING & ELECTRICITY
+  // 11. Streetlighting & Traffic Electricity
   if (
     key.includes('LIGHT') || 
     key.includes('ELECTRIC') || 
@@ -99,16 +179,16 @@ export function getCategoryStyle(categoryOrDeptOrIcon: string): CategoryIconStyl
   ) {
     return {
       icon: Zap,
-      altIcon: Lightbulb,
+      altIcon: SunMedium,
       containerClass: 'bg-yellow-50 border-yellow-200',
       iconClass: 'text-yellow-600'
     };
   }
 
-  // PUBLIC HEALTH & ENCROACHMENT
+  // 12. Public Health & Critical Safety Hazards
   if (
     key.includes('HEALTH') || 
-    key.includes('TOILET') || 
+    key.includes('MANHOLE') ||
     key.includes('SBM') || 
     key.includes('ENCROACH') ||
     key === 'STETHOSCOPE' ||

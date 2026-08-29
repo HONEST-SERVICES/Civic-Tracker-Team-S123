@@ -283,7 +283,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </h3>
 
             <div className="space-y-3">
-              {/* 🤖 AI Civic Copilot (Gemini) */}
+              {/* 🤖 AI Civic Copilot (Autonomous GovTech AI) */}
               {onOpenGeminiCopilot && (
                 <button
                   id="profile-gemini-copilot-btn"
@@ -296,7 +296,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                     <div>
                       <h4 className="font-bold text-xs text-teal-950">
-                        🤖 AI Civic Copilot (Gemini Assistant)
+                        🤖 AI Civic Copilot (Autonomous GovTech AI)
                       </h4>
                       <p className="text-[11px] text-teal-700 mt-0.5">
                         Instant statutory SLAs, grievance assistance & municipal guidance

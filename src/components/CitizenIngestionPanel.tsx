@@ -523,7 +523,7 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
             )}
           </button>
           <p className="text-[11px] text-center text-slate-500 mt-1.5">
-            Routes report through Gemini Autonomous Dispatcher & updates live GIS grid
+            Routes report through Autonomous AI Dispatcher & updates live GIS grid
           </p>
         </div>
       </form>

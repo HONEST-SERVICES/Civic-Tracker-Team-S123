@@ -1,4 +1,34 @@
 =======================================================
+19. ELIMINATE DOUBLE SCROLLBARS & LOCK SINGLE-VIEWPORT SCROLL HIERARCHY:
+=======================================================
+- Single-Viewport Hierarchy & Redundant Scroll Container Removal (`CitizenPortal.tsx`):
+  * Cleaned outer Citizen Portal view wrapper to: `w-full h-full min-h-screen flex-1 bg-[#EEF2F6] overflow-y-auto overscroll-contain no-scrollbar pb-28 sm:pb-32 md:pb-8 overflow-x-hidden font-sans`.
+  * Removed constrained inner scroll heights (`max-h-[92vh]`, `sm:max-h-[85vh]`, `overflow-hidden`) from the 4-step Grievance Wizard container (`currentView === 'FORM'`), setting `overflow-visible` to allow step content to expand naturally to its full height.
+  * Replaced inner form scrolling (`overflow-y-auto`) with clean padding (`p-4 space-y-4 pb-28`) so only ONE master scroll container dictates viewport motion.
+  * Wizard header set to `sticky top-0 z-10` and footer navigation set to `sticky bottom-0 z-20 bg-white/95 backdrop-blur-md` for natural viewport pinning on mobile and desktop.
+- Global Scrollbar Utility (`index.css`):
+  * Added `@utility no-scrollbar` hiding WebKit, Firefox, and legacy Edge/IE scrollbar thumbs while maintaining smooth scrolling mechanics.
+  * Applied `pb-28` across all step wrappers and action cards to prevent bottom navigation bar overlap.
+- Verification & Clean Build:
+  * Verified TypeScript type definitions and production compilation with zero errors.
+
+=======================================================
+18. HISTORY-SYNCED WIZARD BACK-TRACING & KEY-BASED MODAL STATE ISOLATION:
+=======================================================
+- Synchronized Step-by-Step History Back-Tracing (`CitizenPortal.tsx`):
+  * Integrated active `window.history.pushState({ modal: 'grievance', step: nextStep }, '', '#grievance-step-' + nextStep)` across all wizard step advancement and category selections.
+  * In the `popstate` listener:
+    - If user triggers hardware or browser back while inside the Grievance Wizard at `formStep > 1`, decrements one step smoothly (`setFormStep(prev => prev - 1)`) without closing the modal or reloading.
+    - If user is at `formStep === 1`, smoothly closes the form, resets form state, and returns to `#home`.
+  * In-app wizard "Back" buttons in both header and sticky footer now trigger `handleBack` / `history.back()` to preserve exact history stack fidelity.
+- Key-Based Modal State Isolation & Stale Flash Elimination:
+  * Wrapped the grievance intake wizard in a key-isolated container: `key={`grievance-wizard-container-${formSessionId}`}`.
+  * Automatically increments `formSessionId` on every new grievance initiation, cancel, or completion, forcing a pristine component lifecycle.
+  * Explicitly clears any draft storage (`sessionStorage` / `localStorage`) on submission or reset.
+- Verification & Clean Build:
+  * Executed strict TypeScript and production compilation checks with 0 errors.
+
+=======================================================
 17. MUNICIPAL CATEGORY ICONS, BACK-TRACING & CITIZEN IDENTITY POLISH:
 =======================================================
 - Upgraded Municipal Grievance Category Icons (`src/config/categoryConfig.tsx`):

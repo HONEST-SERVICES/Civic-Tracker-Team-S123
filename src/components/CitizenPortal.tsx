@@ -46,7 +46,15 @@ import {
   Shield,
   AlertCircle,
   Home,
-  Tractor
+  Tractor,
+  Recycle,
+  Construction,
+  Zap,
+  Flame,
+  AlertOctagon,
+  Waves,
+  Bath,
+  SunMedium
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { CategoryIcon } from '../config/categoryConfig';
@@ -148,9 +156,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
   const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>(activeScreen);
   const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>>([activeScreen]);
-  const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
+  const [formStep, setFormStep] = useState<1 | 2 | 3 | 4>(1);
+  const [formSessionId, setFormSessionId] = useState<number>(() => Date.now());
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
   const [categoryDomainFilter, setCategoryDomainFilter] = useState<'ALL' | 'URBAN_ROAD' | 'SANITATION_WATER' | 'RURAL_SUBURBAN'>('ALL');
+  const [aiAutoRoutedNotice, setAiAutoRoutedNotice] = useState<string | null>(null);
+  const [showGranularCategories, setShowGranularCategories] = useState<boolean>(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [isAnalyzingVision, setIsAnalyzingVision] = useState<boolean>(false);
@@ -342,7 +353,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   useEffect(() => {
     if (initialCapturedFile) {
       setCurrentView('FORM');
-      setFormStep(1);
+      setFormStep(2); // Jump directly to Step 2 (Photo & AI) while preserving Step 1 navigation
       handleFileUpload(initialCapturedFile);
       onClearPendingFile?.();
     }
@@ -350,6 +361,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   // Unified Reset Helper for Grievance Submission and Form State Hygiene
   const resetGrievanceForm = () => {
+    setFormSessionId(Date.now());
     setFormStep(1);
     setSelectedCategory('DEEP_POTHOLE');
     setPhotoUrl(null);
@@ -365,6 +377,21 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     setCompressionStats(null);
     setAnalysisStep(1);
     setCitizenConfirmedTriage(true);
+    setAiAutoRoutedNotice(null);
+    setShowGranularCategories(false);
+    try {
+      sessionStorage.removeItem('swachhata_draft_grievance');
+      localStorage.removeItem('swachhata_draft_grievance');
+    } catch {}
+  };
+
+  // Synchronized step navigation with browser history
+  const goToStep = (step: 1 | 2 | 3 | 4) => {
+    if (step === formStep) return;
+    setFormStep(step);
+    try {
+      window.history.pushState({ modal: 'grievance', step, view: 'form' }, '', '#grievance-step-' + step);
+    } catch {}
   };
 
   // Sync external navigation prop without destroying form state or view history
@@ -379,17 +406,22 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   }, [activeScreen, currentView]);
 
   // Structured client-side routing & view history manager
-  const pushView = (view: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES') => {
+  const pushView = (view: 'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES', initialStep: 1 | 2 | 3 | 4 = 1) => {
     if (view === 'CATEGORIES' || view === 'FORM') {
       resetGrievanceForm();
     }
     setViewHistory((prev) => (prev[prev.length - 1] === view ? prev : [...prev, view]));
     setCurrentView(view);
-    const slug = view.toLowerCase();
-    try {
-      window.history.pushState({ view: slug }, '', '#' + slug);
-    } catch {
-      // safe fallback
+    if (view === 'FORM') {
+      setFormStep(initialStep);
+      try {
+        window.history.pushState({ modal: 'grievance', step: initialStep, view: 'form' }, '', '#grievance-step-' + initialStep);
+      } catch {}
+    } else {
+      const slug = view.toLowerCase();
+      try {
+        window.history.pushState({ view: slug }, '', '#' + slug);
+      } catch {}
     }
     onNavigate?.(view);
   };
@@ -414,14 +446,46 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         return;
       }
 
-      if (e.state?.view) {
-        const v = String(e.state.view).toUpperCase();
+      const state = e.state;
+      const hash = window.location.hash;
+
+      // 1. Wizard Step History popstate handling
+      if (state?.modal === 'grievance' || state?.view === 'form' || hash.startsWith('#grievance-step-')) {
+        const targetStep = (state?.step as 1 | 2 | 3 | 4) || (hash.startsWith('#grievance-step-') ? (parseInt(hash.replace('#grievance-step-', ''), 10) as 1 | 2 | 3 | 4) : 1);
+        if (targetStep && targetStep >= 1 && targetStep <= 4) {
+          setCurrentView('FORM');
+          setFormStep(targetStep);
+          return;
+        }
+      }
+
+      // 2. If popping from within FORM view when no explicit step was specified:
+      if (currentView === 'FORM') {
+        if (formStep > 1) {
+          // Decrement one step smoothly
+          setFormStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
+          return;
+        } else {
+          // At Step 1 -> Close the modal/form and return to HOME
+          resetGrievanceForm();
+          setCurrentView('HOME');
+          setViewHistory(['HOME']);
+          try {
+            window.history.replaceState({ view: 'home' }, '', '#home');
+          } catch {}
+          onNavigate?.('HOME');
+          return;
+        }
+      }
+
+      if (state?.view) {
+        const v = String(state.view).toUpperCase();
         if (['HOME', 'CATEGORIES', 'FORM', 'COMPLAINTS', 'FACILITIES'].includes(v)) {
           setCurrentView(v as any);
           return;
         }
       }
-      const hashView = window.location.hash.replace('#', '').toUpperCase();
+      const hashView = hash.replace('#', '').toUpperCase();
       if (['HOME', 'CATEGORIES', 'FORM', 'COMPLAINTS', 'FACILITIES'].includes(hashView)) {
         setCurrentView(hashView as any);
       } else {
@@ -431,7 +495,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showDriveModal, showSurvekshanModal, showNonCivicWarning, focusedFacility]);
+  }, [showDriveModal, showSurvekshanModal, showNonCivicWarning, focusedFacility, currentView, formStep]);
 
   const renderAgenticHUD = () => (
     <div className="p-3.5 bg-slate-900 text-white rounded-xl space-y-2.5 border border-slate-700 shadow-md animate-fade-in">
@@ -440,7 +504,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           <Sparkles className="w-4 h-4 text-orange-400 animate-spin" />
           <span className="font-bold text-xs uppercase tracking-wider text-orange-300">Agentic AI Triage HUD</span>
         </div>
-        <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Gemini 3.7 Flash</span>
+        <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Automated Vision Engine</span>
       </div>
       <div className="space-y-1.5 text-xs">
         <div className={`flex items-center gap-2 transition-all ${analysisStep >= 1 ? 'text-orange-200 font-bold' : 'text-slate-400 opacity-50'}`}>
@@ -465,126 +529,81 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     const catObj = SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory);
     const isCritical = visionResult.priority === 'P1_CRITICAL' || selectedCategory === 'OPEN_MANHOLES' || selectedCategory === 'DOWNED_POWER_LINE' || selectedCategory === 'STRUCTURAL_SINKHOLE';
 
-    const effectiveTriage = {
-      hazardName: visionResult.hazardName || catObj?.name || 'Civic Infrastructure Hazard',
-      category: visionResult.category || selectedCategory,
-      priority: visionResult.priority || (isCritical ? 'P1_CRITICAL' : 'P2_URGENT'),
-      recommendedDepartment: visionResult.recommendedDepartment || catObj?.department || 'PUBLIC_WORKS',
-      severity: visionResult.severity || (isCritical ? 'P1 Critical — 4hr SLA Target' : 'P2 Urgent — 24hr SLA Target'),
-      aiConfidence: visionResult.aiConfidence || 98,
-      aiReasoning: visionResult.aiReasoning || visionResult.hazardDescription || `Automated MoHUA multimodal classification verified for ${visionResult.hazardName || catObj?.name} at ${landmark || selectedWard}. High-confidence spatial hazard detected with auto-routing to ${catObj?.department || 'PUBLIC_WORKS'}.`,
-      isCivicIssue: visionResult.isCivicIssue !== undefined ? visionResult.isCivicIssue : true
-    };
-
-    const deptFormatted = 
-      effectiveTriage.recommendedDepartment === 'PUBLIC_WORKS' ? 'Public Works Department — Road Repair Wing' :
-      effectiveTriage.recommendedDepartment === 'SANITATION' ? 'Sanitation & Solid Waste Division' :
-      effectiveTriage.recommendedDepartment === 'ELECTRICAL' ? 'Electrical & Power Supply Division' :
+    const detectedHazard = visionResult.hazardName || catObj?.name || 'Overflowing Drain / Manhole';
+    const priority = visionResult.priority || (isCritical ? 'P1_CRITICAL' : 'P2_URGENT');
+    
+    const deptRaw = visionResult.recommendedDepartment || catObj?.department || 'PUBLIC_WORKS';
+    const department = 
+      deptRaw === 'PUBLIC_WORKS' ? 'Drainage & Public Works' :
+      deptRaw === 'SANITATION' ? 'Sanitation & Solid Waste Division' :
+      deptRaw === 'ELECTRICAL' ? 'Electrical & Power Supply Division' :
       'Municipal Engineering & Utilities Wing';
+
+    const reasoning = visionResult.aiReasoning || visionResult.hazardDescription || `Automated MoHUA multimodal classification verified for ${detectedHazard}. High-confidence spatial hazard detected with auto-routing to ${department}.`;
+    const confidence = visionResult.aiConfidence || 98;
 
     return (
       <div
         ref={triageCardRef}
-        className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm space-y-3.5 my-3 animate-fade-in text-left block w-full"
+        className="mt-3 bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs space-y-2.5 animate-fadeIn text-left block w-full"
       >
-        {/* Header / Confidence Tag */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 tracking-tight">AI Triage Assessment & Verification</h3>
-              <p className="text-[11px] text-slate-500 font-medium">Automated MoHUA Classification & SLA Assignment</p>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse"/>
+            <span>Automated AI Triage Assessment</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-xs font-bold shadow-2xs">
-            <span>⚡ {effectiveTriage.aiConfidence || 98}% Match Confidence</span>
-          </div>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            ⚡ {confidence}% Confidence
+          </span>
         </div>
 
-        {/* 4 Clear Breakdown Points (High-Contrast Badges) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {/* 1. Detected Hazard / Issue */}
-          <div className="p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">1. Detected Hazard / Issue</span>
-            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span className="truncate">{effectiveTriage.hazardName}</span>
-            </div>
-          </div>
-
-          {/* 2. Assessed Severity & SLA */}
-          <div className="p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">2. Assessed Severity & SLA</span>
-            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold border ${
-              effectiveTriage.priority === 'P1_CRITICAL' 
-                ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                : 'bg-amber-50 text-amber-800 border-amber-200'
-            }`}>
-              <Shield className="w-3 h-3" />
-              {effectiveTriage.priority === 'P1_CRITICAL' ? 'P1 Critical — 4hr Target Resolution' : 'P2 Urgent — 24hr Target Resolution'}
+        {/* 3 Compact Triage Badges (Horizontal / Wrap Grid) */}
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2">
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Detected Issue</span>
+            <span className="font-bold text-slate-800 truncate block">
+              {detectedHazard}
             </span>
           </div>
 
-          {/* 3. Assigned Municipal Department */}
-          <div className="p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">3. Assigned Municipal Department</span>
-            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="truncate">{deptFormatted}</span>
-            </div>
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2">
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Target SLA</span>
+            <span className="font-bold text-rose-700 truncate block">
+              {priority === 'P1_CRITICAL' ? 'P1 Critical • 4h' : 'P2 Urgent • 24h'}
+            </span>
           </div>
 
-          {/* 4. Target Ward & Geocoded Location */}
-          <div className="p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">4. Target Ward & Geocoded Location</span>
-            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
-              <MapPin className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-              <span className="truncate">{selectedWard} • {landmark || 'Cinema Road, Sector 4'}</span>
+          <div className="col-span-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Routing Wing</span>
+              <span className="font-bold text-slate-800 text-[11px]">
+                {department}
+              </span>
             </div>
+            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold border border-emerald-200">
+              Auto-Assigned
+            </span>
           </div>
         </div>
 
-        {/* AI Reasoning Explanation Box */}
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 leading-relaxed space-y-1">
-          <div className="flex items-center gap-1.5 font-bold text-slate-900">
-            <Info className="w-3.5 h-3.5 text-blue-600" />
-            <span>AI Reasoning:</span>
-          </div>
-          <p className="text-slate-600 pl-5">
-            {effectiveTriage.aiReasoning || `Image exhibits structural civic defect with automated routing priority assigned to ${deptFormatted}.`}
+        {/* Brief AI Rationale */}
+        {reasoning && (
+          <p className="text-[10px] text-slate-500 bg-slate-50/60 rounded-lg p-2 border border-slate-100 leading-relaxed italic">
+            "{reasoning}"
           </p>
-        </div>
+        )}
 
-        {/* Interactive Citizen Confirmation & Overrides */}
-        <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCitizenConfirmedTriage(!citizenConfirmedTriage)}
-              className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                citizenConfirmedTriage
-                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                  : 'bg-slate-100 text-slate-700 border border-slate-300'
-              }`}
-            >
-              <CheckCircle2 className={`w-4 h-4 ${citizenConfirmedTriage ? 'text-emerald-600' : 'text-slate-400'}`} />
-              <span>{citizenConfirmedTriage ? 'Looks accurate (Confirmed)' : 'Unconfirmed'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsOverrideMode(!isOverrideMode)}
-              className="px-2.5 py-1.5 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 font-semibold text-xs transition cursor-pointer"
-            >
-              {isOverrideMode ? 'Hide Overrides' : '✏️ Override Category / Ward'}
-            </button>
-          </div>
-
-          <span className="text-[11px] text-slate-500 italic">
-            Description & landmark fields remain fully editable below.
-          </span>
+        {/* Interactive Override Toggle */}
+        <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+          <button
+            type="button"
+            onClick={() => setIsOverrideMode(!isOverrideMode)}
+            className="text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1 cursor-pointer"
+          >
+            <span>{isOverrideMode ? 'Hide Overrides' : '✏️ Override Category / Ward'}</span>
+          </button>
+          <span className="text-[10px] text-slate-400">Ward: {selectedWard}</span>
         </div>
 
         {/* Overrides Drawer */}
@@ -685,8 +704,22 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   const popView = () => {
-    if (currentView === 'FORM' && formStep > 1) {
-      setFormStep((prev) => (prev - 1) as 1 | 2);
+    if (currentView === 'FORM') {
+      if (formStep > 1) {
+        const prevStep = (formStep - 1) as 1 | 2 | 3;
+        setFormStep(prevStep);
+        try {
+          window.history.pushState({ modal: 'grievance', step: prevStep, view: 'form' }, '', '#grievance-step-' + prevStep);
+        } catch {}
+        return;
+      }
+      resetGrievanceForm();
+      setCurrentView('HOME');
+      setViewHistory(['HOME']);
+      try {
+        window.history.replaceState({ view: 'home' }, '', '#home');
+      } catch {}
+      onNavigate?.('HOME');
       return;
     }
     resetGrievanceForm();
@@ -700,12 +733,31 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       const prevView = newHist[newHist.length - 1];
       setViewHistory(newHist);
       setCurrentView(prevView);
+      const slug = prevView.toLowerCase();
+      try {
+        window.history.replaceState({ view: slug }, '', '#' + slug);
+      } catch {}
       onNavigate?.(prevView);
     } else {
       setCurrentView('HOME');
       setViewHistory(['HOME']);
+      try {
+        window.history.replaceState({ view: 'home' }, '', '#home');
+      } catch {}
       onNavigate?.('HOME');
     }
+  };
+
+  const handleBack = () => {
+    if (currentView === 'FORM') {
+      if (formStep > 1) {
+        window.history.back();
+      } else {
+        popView();
+      }
+      return;
+    }
+    popView();
   };
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -732,6 +784,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const handleFileUpload = async (file: File) => {
     setIsCompressing(true);
     setSubmitErrorMessage(null);
+    setAiAutoRoutedNotice(null);
     try {
       // 1. Client-Side Canvas 2D Compression (Throttles 10MB phone camera to ~60-90KB)
       const compression = await compressImage(file, 800, 800, 0.75);
@@ -752,7 +805,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         
         // Auto-select detected category if valid
         if (visionData.category && SWACHHATA_CATEGORIES.some(c => c.id === visionData.category)) {
+          const prevCat = selectedCategory;
           setSelectedCategory(visionData.category);
+          if (prevCat !== visionData.category && visionData.isCivicIssue !== false) {
+            const newCatObj = SWACHHATA_CATEGORIES.find(c => c.id === visionData.category);
+            setAiAutoRoutedNotice(`AI detected this as [${newCatObj?.name || visionData.hazardName}] based on visual evidence (Auto-Routed to ${visionData.recommendedDepartment || newCatObj?.department || 'Public Works'}).`);
+          }
         }
 
         if (visionData.isCivicIssue === false) {
@@ -787,7 +845,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   const handleSelectCategory = (catId: string) => {
     setSelectedCategory(catId as HazardCategory);
-    pushView('FORM');
+    pushView('FORM', 2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -876,7 +934,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   return (
-    <div className="w-full flex-1 bg-[#EEF2F6] overflow-y-auto pb-28 sm:pb-32 md:pb-8 overflow-x-hidden font-sans">
+    <div className="w-full h-full min-h-screen flex-1 bg-[#EEF2F6] overflow-y-auto overscroll-contain no-scrollbar pb-28 sm:pb-32 md:pb-8 overflow-x-hidden font-sans">
       {/* 
         ========================================================================
         DESKTOP LAYOUT (md and above) -> 2-COLUMN FULL-WIDTH DASHBOARD 
@@ -1441,7 +1499,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <span className="text-[10px] text-slate-500 font-medium">Choose File</span>
                         </button>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-2">Auto-analyzed with Gemini AI & compressed (&lt;100KB)</p>
+                      <p className="text-[11px] text-slate-500 mt-2">Auto-analyzed with Autonomous Vision & compressed (&lt;100KB)</p>
                     </div>
                   )}
                   <input
@@ -2112,94 +2170,131 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
         )}
 
-        {/* VIEW 3: COMPLAINT SUBMISSION FORM (3-STEP INTUITIVE WIZARD) */}
+        {/* VIEW 3: COMPLAINT SUBMISSION FORM (4-STEP INTUITIVE WIZARD) */}
         {currentView === 'FORM' && (
-          <div className="flex flex-col bg-white rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-            {/* 3-Step Wizard Header & Progress Bar */}
-            <div className="bg-slate-900 px-4 py-3.5 text-white shrink-0 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={popView}
-                    className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
-                    title={formStep > 1 ? "Go to previous step" : "Go back"}
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  <div>
-                    <h2 className="text-base font-bold tracking-tight">
-                      {formStep === 1 && 'Step 1: Smart Capture & AI Triage'}
-                      {formStep === 2 && 'Step 2: Incident Location & Ward'}
-                      {formStep === 3 && 'Step 3: Review & Submit Grievance'}
-                    </h2>
-                    <p className="text-[11px] text-slate-300 font-medium">
-                      {SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Civic Infrastructure'}
-                    </p>
-                  </div>
+          <div key={`grievance-wizard-container-${formSessionId}`} className="flex flex-col bg-white rounded-t-3xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-visible">
+            {/* Compact, Lightweight Wizard Header */}
+            <div className="bg-white px-4 py-2.5 border-b border-slate-200 flex items-center justify-between sticky top-0 z-30 shadow-2xs rounded-t-3xl sm:rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={handleBack}
+                  className="p-1.5 -ml-1 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Go back"
+                >
+                  <ArrowLeft className="w-4 h-4"/>
+                </button>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-900 leading-tight">File Grievance</h2>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    {formStep === 1 && 'Step 1 of 4 • Select Issue'}
+                    {formStep === 2 && 'Step 2 of 4 • Photo & AI Triage'}
+                    {formStep === 3 && 'Step 3 of 4 • Location & Geocoding'}
+                    {formStep === 4 && 'Step 4 of 4 • Review & Final Submit'}
+                  </p>
                 </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-orange-300">
-                  Step {formStep} of 3
-                </span>
               </div>
-
-              {/* Progress Steps Track */}
-              <div className="grid grid-cols-3 gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setFormStep(1)}
-                  className="flex flex-col gap-1 text-left cursor-pointer"
-                >
-                  <div className={`h-1.5 rounded-full transition-all ${formStep >= 1 ? 'bg-orange-500' : 'bg-slate-700'}`} />
-                  <span className={`text-[10px] font-bold text-center ${formStep === 1 ? 'text-orange-400' : formStep > 1 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                    1. Photo & AI
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (photoUrl && visionResult?.isCivicIssue !== false) {
-                      setFormStep(2);
+              
+              {/* Micro Step Indicator Dots */}
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4].map((i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      if (i === 1) goToStep(1);
+                      else if (i === 2) goToStep(2);
+                      else if (i === 3 && photoUrl && visionResult?.isCivicIssue !== false) goToStep(3);
+                      else if (i === 4 && photoUrl && landmark.trim() && visionResult?.isCivicIssue !== false) goToStep(4);
+                    }}
+                    disabled={
+                      (i === 3 && (!photoUrl || isAnalyzingVision || visionResult?.isCivicIssue === false)) ||
+                      (i === 4 && (!photoUrl || !landmark.trim() || isAnalyzingVision || visionResult?.isCivicIssue === false))
                     }
-                  }}
-                  disabled={!photoUrl || isAnalyzingVision || visionResult?.isCivicIssue === false}
-                  className={`flex flex-col gap-1 text-left ${(!photoUrl || isAnalyzingVision || visionResult?.isCivicIssue === false) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  <div className={`h-1.5 rounded-full transition-all ${formStep >= 2 ? 'bg-orange-500' : 'bg-slate-700'}`} />
-                  <span className={`text-[10px] font-bold text-center ${formStep === 2 ? 'text-orange-400' : formStep > 2 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                    2. Location
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (photoUrl && landmark.trim() && visionResult?.isCivicIssue !== false) {
-                      setFormStep(3);
-                    }
-                  }}
-                  disabled={!photoUrl || !landmark.trim() || isAnalyzingVision || visionResult?.isCivicIssue === false}
-                  className={`flex flex-col gap-1 text-left ${(!photoUrl || !landmark.trim() || isAnalyzingVision || visionResult?.isCivicIssue === false) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  <div className={`h-1.5 rounded-full transition-all ${formStep >= 3 ? 'bg-orange-500' : 'bg-slate-700'}`} />
-                  <span className={`text-[10px] font-bold text-center ${formStep === 3 ? 'text-orange-400' : 'text-slate-500'}`}>
-                    3. Submit
-                  </span>
-                </button>
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === formStep ? 'w-5 bg-blue-600' : i < formStep ? 'w-2 bg-blue-300' : 'w-2 bg-slate-200'
+                    } ${((i === 3 && (!photoUrl || isAnalyzingVision || visionResult?.isCivicIssue === false)) || (i === 4 && (!photoUrl || !landmark.trim() || isAnalyzingVision || visionResult?.isCivicIssue === false))) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                    title={`Step ${i}`}
+                  />
+                ))}
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain pb-28">
+            {/* Fluid Scrollable Body */}
+            <form onSubmit={handleSubmit} className="p-4 space-y-4 pb-32">
               {/* ============================================================ */}
-              {/* STEP 1: SMART CAPTURE & AI TRIAGE (Mandatory Photo Gate) */}
+              {/* STEP 1: STREAMLINED SUB-CATEGORY GRID */}
               {/* ============================================================ */}
               {formStep === 1 && (
+                <div className="space-y-3.5 animate-fade-in">
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Select Civic Issue Type
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Select an issue below to auto-advance to Photo & AI Triage.
+                    </p>
+                  </div>
+
+                  {/* 2-Column Sub-Category Grid with Distinct Icons & Full Wrapping Text */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      { id: 'GARBAGE_DUMP' as const, name: 'Garbage Dump / Overflow', icon: Trash2, iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+                      { id: 'GARBAGE_VEHICLE' as const, name: 'Garbage Vehicle Stoppage', icon: Truck, iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+                      { id: 'SWEEPING_NOT_DONE' as const, name: 'Street Sweeping Pending', icon: Sparkles, iconBg: 'bg-amber-50 text-amber-600 border-amber-200' },
+                      { id: 'CANAL_IRRIGATION_OVERFLOW' as const, name: 'Canal / Drainage Blockage', icon: Droplets, iconBg: 'bg-blue-50 text-blue-600 border-blue-200' },
+                      { id: 'AGRICULTURAL_RUNOFF_BLOCK' as const, name: 'Agricultural Debris', icon: Tractor, iconBg: 'bg-lime-50 text-lime-700 border-lime-200' },
+                      { id: 'RURAL_GARBAGE_DUMP' as const, name: 'Open Waste Burning', icon: Flame, iconBg: 'bg-orange-50 text-orange-600 border-orange-200' },
+                      { id: 'DOWNED_POWER_LINE' as const, name: 'Downed Power Cable / Pole', icon: Zap, iconBg: 'bg-rose-50 text-rose-600 border-rose-200' },
+                      { id: 'DEEP_POTHOLE' as const, name: 'Potholes / Road Damage', icon: Construction, iconBg: 'bg-amber-50 text-amber-600 border-amber-200' },
+                      { id: 'STRUCTURAL_SINKHOLE' as const, name: 'Road Cave-in / Cavity Void', icon: AlertOctagon, iconBg: 'bg-rose-50 text-rose-600 border-rose-200' },
+                      { id: 'OPEN_MANHOLES' as const, name: 'Open Manholes / Missing Lid', icon: ShieldAlert, iconBg: 'bg-rose-50 text-rose-600 border-rose-200' },
+                      { id: 'WATERLOGGING' as const, name: 'Street Waterlogging', icon: Waves, iconBg: 'bg-blue-50 text-blue-600 border-blue-200' },
+                      { id: 'FLOODING_WATER_MAIN' as const, name: 'Water Pipe Leak / Burst', icon: Droplets, iconBg: 'bg-sky-50 text-sky-600 border-sky-200' },
+                      { id: 'STREETLIGHT_OUTAGE' as const, name: 'Streetlight Outage / Dark Spot', icon: SunMedium, iconBg: 'bg-yellow-50 text-yellow-600 border-yellow-200' },
+                      { id: 'PUBLIC_TOILET_CLEANING' as const, name: 'Public Toilet Blockage', icon: Bath, iconBg: 'bg-teal-50 text-teal-600 border-teal-200' },
+                      { id: 'TRAFFIC_SIGNAL_FAILURE' as const, name: 'Traffic Signal Outage', icon: Radio, iconBg: 'bg-violet-50 text-violet-600 border-violet-200' }
+                    ].map((item) => {
+                      const IconComponent = item.icon;
+                      const isSelected = selectedCategory === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory(item.id);
+                            goToStep(2);
+                          }}
+                          className={`p-2.5 bg-white border rounded-xl shadow-2xs flex items-center gap-2 hover:border-blue-400 active:scale-[0.98] transition-all text-left group cursor-pointer ${
+                            isSelected 
+                              ? 'border-blue-600 bg-blue-50/50 ring-1.5 ring-blue-500 shadow-xs' 
+                              : 'border-slate-200/90 hover:bg-slate-50/80'
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border ${item.iconBg} group-hover:scale-105 transition-transform`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-[11px] font-semibold leading-snug line-clamp-2 ${isSelected ? 'text-blue-900 font-bold' : 'text-slate-800'}`}>
+                              {item.name}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ============================================================ */}
+              {/* STEP 2: PHOTO CAPTURE & GEMINI VISION ANALYSIS */}
+              {/* ============================================================ */}
+              {formStep === 2 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                        Capture / Upload Geo-Tagged Photo <span className="text-rose-600 font-bold">*</span>
+                        Geo-Tagged Defect Photo <span className="text-rose-600 font-bold">*</span>
                       </label>
                       {isAnalyzingVision && (
                         <span className="text-[11px] font-semibold text-orange-600 flex items-center gap-1 animate-pulse">
@@ -2208,6 +2303,14 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         </span>
                       )}
                     </div>
+
+                    {/* Dynamic Auto-Route Notification Banner */}
+                    {aiAutoRoutedNotice && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 font-medium flex items-center gap-2 animate-fade-in shadow-2xs">
+                        <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>{aiAutoRoutedNotice}</span>
+                      </div>
+                    )}
 
                     {photoUrl ? (
                       <div className="space-y-3">
@@ -2221,7 +2324,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           {isAnalyzingVision ? (
                             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
                               <Sparkles className="w-6 h-6 text-orange-300 animate-spin" />
-                              <p className="text-xs font-bold">Evaluating pavement hazard & civic priority with Gemini...</p>
+                              <p className="text-xs font-bold">Evaluating pavement hazard & civic priority with Automated Vision Engine...</p>
                             </div>
                           ) : (
                             <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5">
@@ -2262,6 +2365,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                                 setVisionResult(null);
                                 setCompressionStats(null);
                                 setShowNonCivicWarning(false);
+                                setAiAutoRoutedNotice(null);
                               }}
                               className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center"
                               title="Remove Photo"
@@ -2274,38 +2378,38 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         {/* Animated Agentic HUD while analyzing */}
                         {isAnalyzingVision && renderAgenticHUD()}
 
-                        {/* Strict Gemini Hallucination Gate Rejection Alert */}
+                        {/* STRICT GEMINI HALLUCINATION GATE: Non-Civic Rejection Alert */}
                         {visionResult && !isAnalyzingVision && visionResult.isCivicIssue === false && (
-                          <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl space-y-2.5 text-rose-900 shadow-sm animate-fade-in">
+                          <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-2xl space-y-3 text-rose-950 shadow-sm animate-fade-in">
                             <div className="flex items-start gap-3">
-                              <div className="w-9 h-9 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700 shrink-0">
-                                <AlertTriangle className="w-5 h-5" />
+                              <div className="w-10 h-10 rounded-full bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0">
+                                <AlertTriangle className="w-6 h-6" />
                               </div>
-                              <div className="space-y-1">
-                                <h4 className="font-bold text-sm text-rose-950">
-                                  No Municipal Hazard Detected
+                              <div className="space-y-1 flex-1">
+                                <h4 className="font-bold text-sm text-rose-950 flex items-center gap-1.5">
+                                  <span>⚠️ Invalid Image: No Municipal Hazard Detected</span>
                                 </h4>
                                 <p className="text-xs text-rose-800 leading-relaxed font-medium">
-                                  {visionResult.rejectionReason || 'Image does not appear to show an authentic municipal civic issue (road damage, sanitation, drainage, or streetlighting). Please take a photo of the actual issue.'}
+                                  {visionResult.rejectionReason || 'This image does not show a recognized municipal civic issue (potholes, garbage, water leaks, streetlights, or drainage). Please upload a clear photo of the civic defect.'}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex gap-2 pt-1 border-t border-rose-200/60">
+                            <div className="flex gap-2 pt-1 border-t border-rose-200">
                               <button
                                 type="button"
                                 onClick={() => cameraInputRef.current?.click()}
-                                className="flex-1 py-2 px-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="flex-1 py-2.5 px-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                               >
-                                <Camera className="w-3.5 h-3.5" />
-                                <span>Retake Photo</span>
+                                <Camera className="w-4 h-4" />
+                                <span>Retake Real Photo</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => galleryInputRef.current?.click()}
-                                className="flex-1 py-2 px-3 bg-white hover:bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="flex-1 py-2.5 px-3 bg-white hover:bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
                               >
-                                <ImageIcon className="w-3.5 h-3.5 text-rose-700" />
-                                <span>Upload Other</span>
+                                <ImageIcon className="w-4 h-4 text-rose-700" />
+                                <span>Choose Other Image</span>
                               </button>
                             </div>
                           </div>
@@ -2353,7 +2457,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           </button>
                         </div>
                         <p className="text-xs text-slate-500 mt-3 font-medium">
-                          * Photo is required for automated Gemini AI vision triage and officer verification.
+                          * Photo is mandatory for automated AI vision triage and municipal engineer verification.
                         </p>
                       </div>
                     )}
@@ -2384,36 +2488,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       className="hidden"
                     />
                   </div>
-
-                  {/* Step 1 Navigation CTA */}
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormStep(2)}
-                      disabled={!photoUrl || isAnalyzingVision || isCompressing || visionResult?.isCivicIssue === false}
-                      className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      {isAnalyzingVision || isCompressing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-                          <span>Analyzing Hazard...</span>
-                        </>
-                      ) : !photoUrl ? (
-                        <span>Attach Photo to Continue →</span>
-                      ) : visionResult?.isCivicIssue === false ? (
-                        <span>Valid Civic Photo Required</span>
-                      ) : (
-                        <span>Continue to Location & Ward →</span>
-                      )}
-                    </button>
-                  </div>
                 </div>
               )}
 
               {/* ============================================================ */}
-              {/* STEP 2: REVERSE GEOCODING & INCIDENT LOCATION */}
+              {/* STEP 3: INCIDENT LOCATION & GEOCODING */}
               {/* ============================================================ */}
-              {formStep === 2 && (
+              {formStep === 3 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -2498,33 +2579,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       Auto-filled via Reverse Geocoding API. You may freely append landmark details.
                     </p>
                   </div>
-
-                  {/* Step 2 Navigation Actions */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormStep(1)}
-                      className="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-300 flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Back to Photo</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormStep(3)}
-                      disabled={!landmark.trim()}
-                      className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                    >
-                      <span>Continue to Details →</span>
-                    </button>
-                  </div>
                 </div>
               )}
 
               {/* ============================================================ */}
-              {/* STEP 3: CITIZEN DETAILS & FINAL CONFIRMATION */}
+              {/* STEP 4: REVIEW, VOICE NOTES & FINAL SUBMISSION */}
               {/* ============================================================ */}
-              {formStep === 3 && (
+              {formStep === 4 && (
                 <div className="space-y-4 animate-fade-in">
                   {/* Summary Review Snapshot Card */}
                   <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
@@ -2586,35 +2647,92 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       />
                     </div>
                   </div>
-
-                  {/* Step 3 Navigation CTA */}
-                  <div className="grid grid-cols-3 gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormStep(2)}
-                      className="col-span-1 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-300 flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Location</span>
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isDispatching || isSubmittingForm}
-                      className="col-span-2 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      {(isDispatching || isSubmittingForm) ? (
-                        <>
-                          <Loader2 className="w-4 h-4 text-white animate-spin" />
-                          <span>Registering Grievance...</span>
-                        </>
-                      ) : (
-                        <span>Confirm & Submit Grievance</span>
-                      )}
-                    </button>
-                  </div>
                 </div>
               )}
             </form>
+
+            {/* STICKY FOOTER NAVIGATION (Elevated to prevent mobile clipping) */}
+            <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md p-3 border-t border-slate-200/80 mb-16 sm:mb-0 shadow-lg rounded-b-3xl sm:rounded-b-2xl flex items-center justify-between gap-3">
+              {formStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="py-2.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="py-2.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition border border-slate-200 cursor-pointer active:scale-[0.98]"
+                >
+                  <span>Cancel</span>
+                </button>
+              )}
+
+              {formStep === 1 && (
+                <button
+                  type="button"
+                  onClick={() => goToStep(2)}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Continue to Photo & AI →</span>
+                </button>
+              )}
+
+              {formStep === 2 && (
+                <button
+                  type="button"
+                  onClick={() => goToStep(3)}
+                  disabled={!photoUrl || isAnalyzingVision || isCompressing || visionResult?.isCivicIssue === false}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isAnalyzingVision || isCompressing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+                      <span>Analyzing Photo...</span>
+                    </>
+                  ) : !photoUrl ? (
+                    <span>Attach Photo to Continue →</span>
+                  ) : visionResult?.isCivicIssue === false ? (
+                    <span>Valid Civic Photo Required</span>
+                  ) : (
+                    <span>Continue to Location & Ward →</span>
+                  )}
+                </button>
+              )}
+
+              {formStep === 3 && (
+                <button
+                  type="button"
+                  onClick={() => goToStep(4)}
+                  disabled={!landmark.trim()}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Continue to Review & Submit →</span>
+                </button>
+              )}
+
+              {formStep === 4 && (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isDispatching || isSubmittingForm}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {(isDispatching || isSubmittingForm) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 text-white animate-spin" />
+                      <span>Registering Grievance...</span>
+                    </>
+                  ) : (
+                    <span>Confirm & Submit Grievance</span>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

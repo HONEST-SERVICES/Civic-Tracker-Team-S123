@@ -71,7 +71,8 @@ import {
   Activity,
   Globe,
   Eye,
-  Building
+  Building,
+  MapPin
 } from 'lucide-react';
 import { useTheme } from './context/ThemeContext';
 import { useLanguage } from './context/LanguageContext';
@@ -787,7 +788,7 @@ export default function App() {
                           className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
                         >
                           <Sparkles className="w-4 h-4 text-blue-600" />
-                          <span>Gemini AI Copilot</span>
+                          <span>AI Civic Copilot</span>
                         </button>
 
                         <button
@@ -1041,12 +1042,15 @@ export default function App() {
 
       {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Role-Tailored for Citizens & Staff) */}
       <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2 text-slate-900">
-        {userRole === 'CITIZEN' ? (
+        {(userRole === 'CITIZEN' || isOfficerCitizenMode) ? (
           <>
             {/* Tab 1: Home */}
             <button
               id="mobile-nav-home"
-              onClick={() => navigateTo('/')}
+              onClick={() => {
+                setCitizenTab('HOME');
+                navigateTo('/');
+              }}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'HOME' && !showSurveyModal ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
@@ -1055,19 +1059,26 @@ export default function App() {
               <span>{t('home')}</span>
             </button>
 
-            {/* Tab 2: Events / Activity */}
+            {/* Tab 2: Complaints */}
             <button
-              id="mobile-nav-events"
-              onClick={() => setCitizenTab('EVENTS')}
+              id="mobile-nav-complaints"
+              onClick={() => {
+                if (!currentUser) {
+                  setShowAuthModal(true);
+                } else {
+                  setCitizenTab('COMPLAINTS');
+                  navigateTo('/track');
+                }
+              }}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'EVENTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+                citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
             >
-              <Calendar className="w-5 h-5" />
-              <span>{t('events')}</span>
+              <ClipboardList className="w-5 h-5" />
+              <span>Complaints</span>
             </button>
 
-            {/* Center Elevated Floating (+) Button -> Directly Triggers Live Camera */}
+            {/* Center Elevated Floating (+) Button -> Post */}
             <div className="flex-1 flex justify-center -mt-6">
               <button
                 id="mobile-nav-post-complaint"
@@ -1090,28 +1101,28 @@ export default function App() {
               </button>
             </div>
 
-            {/* Tab 3: Complaints */}
+            {/* Tab 4: Facilities */}
             <button
-              id="mobile-nav-complaints"
+              id="mobile-nav-facilities"
               onClick={() => {
-                if (!currentUser) {
-                  setShowAuthModal(true);
-                } else {
-                  navigateTo('/track');
-                }
+                setCitizenTab('FACILITIES');
+                navigateTo('/facilities');
               }}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
+                citizenTab === 'FACILITIES' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}
             >
-              <ClipboardList className="w-5 h-5" />
-              <span>Complaints</span>
+              <MapPin className="w-5 h-5" />
+              <span>Facilities</span>
             </button>
 
-            {/* Tab 4: Profile */}
+            {/* Tab 5: Profile */}
             <button
               id="mobile-nav-profile"
-              onClick={() => navigateTo('/profile')}
+              onClick={() => {
+                setCitizenTab('PROFILE');
+                navigateTo('/profile');
+              }}
               className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
                 citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
               }`}

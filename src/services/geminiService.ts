@@ -100,14 +100,20 @@ export async function analyzeHazardWithGeminiVision(
         properties: {
           isCivicIssue: {
             type: Type.BOOLEAN,
-            description: "TRUE if image shows valid municipal hazard/issue. FALSE if photo is a selfie, portrait, indoor item, pet, or non-civic object."
+            description: "TRUE if image shows valid municipal hazard/issue. FALSE if photo is a selfie, portrait, human hand/foot, indoor item, pet, food, receipt, document, vehicle interior, or non-civic object."
           },
           rejectionReason: {
             type: Type.STRING,
-            description: "Reason if isCivicIssue is false"
+            description: "If not civic, explain why e.g. 'Image appears to be a person/selfie, not a civic hazard'"
           },
-          aiConfidence: { type: Type.NUMBER },
-          aiReasoning: { type: Type.STRING },
+          detectedHazard: {
+            type: Type.STRING,
+            description: "Concise title of the detected civic defect"
+          },
+          recommendedCategory: {
+            type: Type.STRING,
+            description: "One of: SANITATION, ROADS, WATER, ELECTRICITY, HEALTH"
+          },
           category: {
             type: Type.STRING,
             description: "Category: DEEP_POTHOLE, GARBAGE_DUMP, GARBAGE_VEHICLE, SWEEPING_NOT_DONE, OPEN_MANHOLES, WATERLOGGING, STREETLIGHT_OUTAGE, PUBLIC_TOILET_CLEANING, STRUCTURAL_SINKHOLE, FLOODING_WATER_MAIN, DOWNED_POWER_LINE, or TRAFFIC_SIGNAL_FAILURE"
@@ -115,9 +121,14 @@ export async function analyzeHazardWithGeminiVision(
           hazardName: { type: Type.STRING },
           severity: { type: Type.STRING },
           priority: { type: Type.STRING },
+          department: { type: Type.STRING },
+          recommendedDepartment: { type: Type.STRING },
+          confidence: { type: Type.NUMBER },
+          aiConfidence: { type: Type.NUMBER },
+          reasoning: { type: Type.STRING },
+          aiReasoning: { type: Type.STRING },
           riskScore: { type: Type.NUMBER },
           hazardDescription: { type: Type.STRING },
-          recommendedDepartment: { type: Type.STRING },
           recommendedCrew: { type: Type.STRING },
           estimatedRepairTimeMinutes: { type: Type.NUMBER },
           safetyDirectives: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -138,13 +149,30 @@ export async function analyzeHazardWithGeminiVision(
         ]
       };
 
+      const systemPrompt = `You are an expert municipal triage AI for Indian cities. 
+Analyze the provided image strictly for authentic civic infrastructure hazards:
+1. Valid Civic Issues: Potholes, broken roads, overflowing garbage bins, open manholes, waterlogging, street light outages, fallen electric wires, broken water pipes, illegal construction debris.
+2. STRICT NON-CIVIC REJECTION: If the image shows a person, selfie, human hand/foot, pet, animal, food, receipt, document, indoor furniture, vehicle interior, computer screen, or any non-infrastructure object, you MUST set isCivicIssue: false.
+
+Return JSON matching schema:
+{
+  "isCivicIssue": boolean,
+  "rejectionReason": string (if not civic, explain why e.g. "Image appears to be a person/selfie, not a civic hazard"),
+  "detectedHazard": string,
+  "recommendedCategory": "SANITATION" | "ROADS" | "WATER" | "ELECTRICITY" | "HEALTH",
+  "priority": "P1_CRITICAL" | "P2_URGENT" | "P3_NORMAL",
+  "department": string,
+  "confidence": number (0-100),
+  "reasoning": string
+}`;
+
       const response = await callGeminiClientWithFallback(ai, {
         contents: [
           {
             role: 'user',
             parts: [
               {
-                text: 'You are the Swachhata-MoHUA AI Vision Inspector. Determine if photo shows a valid municipal civic hazard/defect (isCivicIssue: true). If the photo shows a hand, human selfie/portrait, pet, receipt, meme, food, or non-civic indoor room/object, strictly set isCivicIssue: false and set rejectionReason: "⚠️ No Municipal Hazard Detected: Image does not appear to show a civic issue (road damage, sanitation, drainage, or streetlighting). Please take a photo of the actual issue." If valid, set isCivicIssue: true, aiConfidence: 95-99, aiReasoning (1-sentence justification of category/department/severity), and return full structured JSON.'
+                text: `${systemPrompt}\n\nInspect this civic hazard photograph and return detailed municipal diagnostic data.`
               },
               {
                 inlineData: {
@@ -176,13 +204,18 @@ export async function analyzeHazardWithGeminiVision(
     isCivicIssue: true,
     rejectionReason: '',
     aiConfidence: 96,
+    confidence: 96,
     aiReasoning: 'Localized asphalt void and rim-impact damage identified on high-density municipal transit corridor, necessitating Public Works intervention.',
+    reasoning: 'Localized asphalt void and rim-impact damage identified on high-density municipal transit corridor, necessitating Public Works intervention.',
+    detectedHazard: 'Pothole & Asphalt Degradation',
+    recommendedCategory: 'ROADS',
     category: 'DEEP_POTHOLE',
-    hazardName: 'Pothole Void & Road Surface Distress',
+    hazardName: 'Road Surface Pothole & Asphalt Degradation',
     severity: 'URGENT',
     priority: 'P2_URGENT',
     riskScore: 78,
     hazardDescription: 'Visual inspection identified localized pavement degradation and structural voiding on municipal transit corridor.',
+    department: 'PUBLIC_WORKS',
     recommendedDepartment: 'PUBLIC_WORKS',
     recommendedCrew: 'Unit 01 - Rapid Asphalt Patcher',
     estimatedRepairTimeMinutes: 45,

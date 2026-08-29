@@ -106,11 +106,14 @@ export interface ScannerData {
 export interface GeminiVisionResult {
   category: HazardCategory;
   hazardName: string;
+  detectedHazard?: string;
+  recommendedCategory?: 'SANITATION' | 'ROADS' | 'WATER' | 'ELECTRICITY' | 'HEALTH';
   severity: 'CRITICAL' | 'URGENT' | 'NORMAL';
   priority: PriorityLevel;
   riskScore: number;
   hazardDescription: string;
   recommendedDepartment: DepartmentType;
+  department?: string;
   recommendedCrew: string;
   estimatedRepairTimeMinutes: number;
   safetyDirectives: string[];
@@ -118,7 +121,9 @@ export interface GeminiVisionResult {
   analyzedWithGemini?: boolean;
   isCivicIssue?: boolean;
   rejectionReason?: string;
+  confidence?: number;
   aiConfidence?: number;
+  reasoning?: string;
   aiReasoning?: string;
 }
 
