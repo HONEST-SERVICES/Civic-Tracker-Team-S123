@@ -485,9 +485,9 @@ export default function App() {
       <div className="h-screen w-screen bg-slate-50 flex flex-col font-sans overflow-hidden select-none text-slate-900">
         {/* Floating/Header Pill for Officer Citizen Mode */}
         {isOfficerCitizenMode && userRole !== 'CITIZEN' && (
-          <div className="bg-amber-500 text-slate-950 px-4 py-2 flex items-center justify-between text-xs font-bold shadow-md relative z-50 border-b border-amber-600">
+          <div className="py-1.5 px-3 bg-amber-500 text-slate-950 flex items-center justify-between text-xs font-medium shadow-xs relative z-50 border-b border-amber-600">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-950 animate-pulse shrink-0"></span>
+              <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse shrink-0"></span>
               <span className="tracking-tight font-extrabold text-slate-950 truncate">
                 Viewing as Citizen (Officer Mode) • Active Session Preserved
               </span>
@@ -495,7 +495,7 @@ export default function App() {
             <button
               id="switch-back-to-command-hq-btn"
               onClick={() => setIsOfficerCitizenMode(false)}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold text-[11px] shadow-xs cursor-pointer transition flex items-center gap-1.5 shrink-0 ml-2"
+              className="bg-slate-950 hover:bg-slate-900 text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-semibold transition-all shrink-0 ml-2 cursor-pointer"
             >
               <Building className="w-3.5 h-3.5 text-amber-400" />
               <span>Switch Back to Command HQ</span>
@@ -505,13 +505,13 @@ export default function App() {
 
         {/* 1. TOP HEADER (Rendered for Citizen, Crew, Volunteers and Profile views) */}
         {!isOfficerCommandView && (
-          <header className="h-14 bg-white text-slate-900 px-3 sm:px-5 flex items-center justify-between border-b border-slate-200/90 shadow-xs relative z-40">
+          <header className="h-14 px-4 bg-white text-slate-900 flex items-center justify-between border-b border-slate-200/90 shadow-xs relative z-40">
             {/* Left: CivicPulse Logo & Title */}
             <div className="flex items-center gap-2.5 min-w-0">
               <img 
                 src="/logo.png" 
                 alt="CivicPulse Logo" 
-                className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-lg flex-shrink-0"
+                className="h-9 sm:h-10 w-auto object-contain flex-shrink-0"
                 referrerPolicy="no-referrer"
               />
               <div className="min-w-0">
@@ -528,8 +528,8 @@ export default function App() {
             </div>
 
             {/* Center: Live Municipal Sync & Quick Controls (Desktop & Mobile) */}
-            <div className="flex items-center gap-2">
-              <div className="hidden lg:flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs mr-2">
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
                 <Radio className="w-3 h-3 text-emerald-500 animate-pulse" strokeWidth={1.75} />
                 <span>{t('online')}</span>
               </div>
@@ -539,7 +539,7 @@ export default function App() {
                 <button
                   id="header-lang-en"
                   onClick={() => setLanguage('en')}
-                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full transition cursor-pointer ${
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-full transition cursor-pointer ${
                     language === 'en'
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -550,7 +550,7 @@ export default function App() {
                 <button
                   id="header-lang-hi"
                   onClick={() => setLanguage('hi')}
-                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full transition cursor-pointer ${
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-full transition cursor-pointer ${
                     language === 'hi'
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -561,7 +561,7 @@ export default function App() {
                 <button
                   id="header-lang-te"
                   onClick={() => setLanguage('te')}
-                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full transition cursor-pointer ${
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-full transition cursor-pointer ${
                     language === 'te'
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'

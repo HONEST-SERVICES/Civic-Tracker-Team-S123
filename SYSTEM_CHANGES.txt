@@ -257,5 +257,34 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
   * Preserved typography hierarchy: Title (`font-bold text-slate-900 text-sm tracking-tight`), Subtitle (`font-normal text-slate-500 text-xs leading-relaxed mt-1`).
 
 =======================================================
-Status: Production-Ready GovTech Release (Custom Icon Asset Pipeline Active)
+23. UI POLISH: HEADER HIERARCHY, LOGO SCALING & ACTION CARD GRAPHIC PROPORTIONS:
+=======================================================
+- Header Logo & Branding Refactor (`App.tsx`, `MunicipalOfficerCommandCenter.tsx`):
+  * Scaled the brand emblem image cleanly to `h-9 sm:h-10 w-auto object-contain` for optimal visual impact across mobile and desktop.
+  * Standardized header layout container (`h-14 px-4 bg-white border-b border-slate-200/90 flex items-center justify-between shadow-xs`).
+  * Styled language selection switch ([ English ] | [ हिन्दी ] | [ తెలుగు ]) into a compact rounded pill cluster (`text-xs py-1 px-2.5 font-semibold`) with clean spacing.
+- Compact Top Demo Indicator Banner (`App.tsx`):
+  * Reduced Officer Citizen-Mode banner height (`py-1.5 px-3 bg-amber-500 text-slate-950 flex items-center justify-between text-xs font-medium shadow-xs`).
+  * Styled the "Switch Back to Command HQ" button into a sleek compact dark chip (`bg-slate-950 hover:bg-slate-900 text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-semibold transition-all`).
+- Expanded Action Card Graphic Footprint (`CitizenPortal.tsx`):
+  * Increased icon frame size to `w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-2.5 mb-3 shrink-0`.
+  * Refined card typography: Title (`text-sm font-bold text-slate-900 leading-snug`), Subtitle (`text-xs text-slate-500 font-normal leading-normal mt-0.5`).
+  * Optimized card padding and hover states (`p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all`).
+
+=======================================================
+24. MOBILE OFFICER GIS COMMAND DESK & RICH GRAPHIC THUMBNAILS:
+=======================================================
+- Tabbed Sub-View Navigation on Mobile Viewports (<768px) (`MunicipalOfficerCommandCenter.tsx`):
+  * Replaced long stacked mobile page with an interactive sub-nav switcher: `[ 🗺️ Tactical Map ] | [ 📋 Incident Queue (X) ] | [ ⚡ Dispatch Desk ]`.
+  * Sub-View 1 (Tactical Map): Full height interactive map (`h-[calc(100vh-14rem)]`) with live pins, status filter chips, and floating ticket preview bar.
+  * Sub-View 2 (Incident Queue): Telemetry KPI metric matrix, department filter, and full-width scrollable incident table.
+  * Sub-View 3 (Dispatch Desk): Active ticket details, high-res citizen geo-photo attachment, Manual Triage Gate officer verification buttons, field crew dispatch panel, and resolution verification trigger.
+  * Preserved full 3-column operational grid (`lg:grid-cols-12`) for desktop screens (`md:`).
+- Rich Graphic Action Card Thumbnails (`CitizenPortal.tsx`):
+  * Upgraded 4 Citizen Quick Action cards to feature a dedicated `h-20` top graphic frame with full-width slate background and brand images (`/icon-file-grievance.png`, `/icon-track-grievances.png`, `/icon-public-facilities.png`, `/icon-citizen-survey.png`).
+  * Structured image elements with `onError` handlers hiding broken image tags and revealing Lucide fallback icons (`FileText`, `Clock3`, `MapPin`, `CheckCircle2`).
+  * Applied card dimensions `h-44` with line-clamp text formatting for crisp visual alignment across mobile and desktop devices.
+
+=======================================================
+Status: Production-Ready Mobile GIS Desk & Graphic Action Cards Complete
 =======================================================
