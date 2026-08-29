@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, 
   MapPin, 
@@ -223,11 +223,15 @@ export const MunicipalGovernanceView: React.FC<MunicipalGovernanceViewProps> = (
     }
   };
 
-  const filteredWards = wards.filter(w => 
-    w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.subAreas.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredWards = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return wards;
+    return wards.filter(w => 
+      w.name.toLowerCase().includes(q) ||
+      w.district.toLowerCase().includes(q) ||
+      w.subAreas.some(s => s.toLowerCase().includes(q))
+    );
+  }, [wards, searchQuery]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden font-sans">

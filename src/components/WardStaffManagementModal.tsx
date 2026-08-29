@@ -94,10 +94,14 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
     const unsubscribe = subscribeToAllUsers(
       (liveUsers) => {
         if (liveUsers && liveUsers.length > 0) {
-          // Merge live users with initial demo users ensuring no duplicate UIDs
+          // Merge live users with initial demo users ensuring no duplicate UIDs (O(1) Set lookup)
+          const existingIds = new Set(liveUsers.map((u) => u.uid));
+          const existingEmails = new Set(liveUsers.map((u) => u.email).filter((e): e is string => Boolean(e)));
           const combined = [...liveUsers];
           INITIAL_DEMO_USERS.forEach((demoU) => {
-            if (!combined.some((u) => u.uid === demoU.uid || (u.email && u.email === demoU.email))) {
+            const hasId = existingIds.has(demoU.uid);
+            const hasEmail = Boolean(demoU.email && existingEmails.has(demoU.email));
+            if (!hasId && !hasEmail) {
               combined.push(demoU);
             }
           });

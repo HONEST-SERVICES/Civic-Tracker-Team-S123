@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ClipboardCheck, 
   Building2, 
@@ -43,18 +43,38 @@ export const SwachhSurvekshanAuditorDesk: React.FC<SwachhSurvekshanAuditorDeskPr
   const designation = currentUser?.designation || 'MoHUA National Quality Inspector';
 
   // Filter incidents for audit
-  const filteredIncidents = incidents.filter((inc) => {
-    const matchesWard = selectedWard === 'ALL' || (inc.ward || inc.location.zone || '').includes(selectedWard);
-    const matchesSearch = (inc.title + ' ' + inc.description + ' ' + inc.location.address).toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesWard && matchesSearch;
-  });
+  const filteredIncidents = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return incidents.filter((inc) => {
+      const matchesWard = selectedWard === 'ALL' || (inc.ward || inc.location.zone || '').includes(selectedWard);
+      if (!matchesWard) return false;
+      if (!q) return true;
+      return (inc.title + ' ' + inc.description + ' ' + inc.location.address).toLowerCase().includes(q);
+    });
+  }, [incidents, selectedWard, searchQuery]);
 
-  const resolvedIncidents = filteredIncidents.filter(i => i.status === 'RESOLVED');
-  const auditedCount = filteredIncidents.filter(i => i.auditorComplianceScore !== undefined && i.auditorComplianceScore !== null).length;
-  
-  // Calculate average compliance score
-  const scores = filteredIncidents.map(i => i.auditorComplianceScore).filter((s): s is number => typeof s === 'number');
-  const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 88;
+  // Single-pass metric aggregation over filteredIncidents
+  const { resolvedIncidentsCount, auditedCount, avgScore } = useMemo(() => {
+    let resolved = 0;
+    let audited = 0;
+    let scoreSum = 0;
+    let scoreCount = 0;
+
+    for (let i = 0; i < filteredIncidents.length; i++) {
+      const inc = filteredIncidents[i];
+      if (inc.status === 'RESOLVED') resolved++;
+      if (inc.auditorComplianceScore !== undefined && inc.auditorComplianceScore !== null) {
+        audited++;
+      }
+      if (typeof inc.auditorComplianceScore === 'number') {
+        scoreSum += inc.auditorComplianceScore;
+        scoreCount++;
+      }
+    }
+
+    const calculatedAvg = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 88;
+    return { resolvedIncidentsCount: resolved, auditedCount: audited, avgScore: calculatedAvg };
+  }, [filteredIncidents]);
 
   const handleSaveAudit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +137,7 @@ export const SwachhSurvekshanAuditorDesk: React.FC<SwachhSurvekshanAuditorDeskPr
             </div>
             <div className="w-px h-8 bg-white/20" />
             <div className="text-center px-2">
-              <span className="text-2xl font-bold text-amber-300">{resolvedIncidents.length}</span>
+              <span className="text-2xl font-bold text-amber-300">{resolvedIncidentsCount}</span>
               <p className="text-[10px] text-amber-200/80 uppercase font-semibold tracking-wider">Ready for Audit</p>
             </div>
           </div>

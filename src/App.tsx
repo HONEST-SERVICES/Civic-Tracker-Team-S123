@@ -285,7 +285,7 @@ export default function App() {
       ]);
 
       if (result && result.thoughtLogs && result.thoughtLogs.length > 0) {
-        setThoughtLogs(prev => [...prev, ...result.thoughtLogs]);
+        setThoughtLogs(prev => [...prev.slice(-49), ...result.thoughtLogs].slice(-50));
       }
 
       if (result && result.dispatchedUnit) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { 
   Filter, 
   Crosshair, 
@@ -77,6 +77,9 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
   const [ratingSuccessMsg, setRatingSuccessMsg] = useState<string | null>(null);
 
   const defaultCenter = activeZoneCenter || { lat: 31.2530, lng: 75.7030 };
+
+  // O(1) Incident Lookup Table
+  const incidentMap = useMemo(() => new Map(incidents.map(inc => [inc.id, inc])), [incidents]);
 
   // Subscribe to real-time public facilities from Firestore
   useEffect(() => {
@@ -298,7 +301,7 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
           googleMarkersRef.current.push(marker);
 
           if (unit.assignedIncidentId) {
-            const targetInc = incidents.find((i) => i.id === unit.assignedIncidentId);
+            const targetInc = incidentMap.get(unit.assignedIncidentId);
             if (targetInc) {
               const targetLat = targetInc.location?.lat ?? 31.2530;
               const targetLng = targetInc.location?.lng ?? 75.7030;
@@ -420,7 +423,7 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
           lg.addLayer(unitMarker);
 
           if (unit.assignedIncidentId) {
-            const targetInc = incidents.find((i) => i.id === unit.assignedIncidentId);
+            const targetInc = incidentMap.get(unit.assignedIncidentId);
             if (targetInc) {
               const targetLat = targetInc.location?.lat ?? 31.2530;
               const targetLng = targetInc.location?.lng ?? 75.7030;

@@ -249,7 +249,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   // Filtered public facilities for the dedicated locator view
   const filteredFacilities = useMemo(() => {
-    return publicFacilities.filter(fac => {
+    const q = facilitySearchQuery.toLowerCase().trim();
+    const centerLat = selectedCoords?.lat ?? 31.2530;
+    const centerLng = selectedCoords?.lng ?? 75.7030;
+
+    const items = publicFacilities.filter(fac => {
       // Type / Feature filter
       if (facilityFilterState === 'TOILET' && fac.type !== 'TOILET') return false;
       if (facilityFilterState === 'WASTE_CENTER' && fac.type !== 'WASTE_CENTER') return false;
@@ -257,8 +261,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       if (facilityFilterState === 'TOP_RATED' && fac.rating < 4.0) return false;
 
       // Search Query
-      if (facilitySearchQuery.trim()) {
-        const q = facilitySearchQuery.toLowerCase().trim();
+      if (q) {
         const matchName = fac.name?.toLowerCase().includes(q) ?? false;
         const matchAddr = fac.location?.address?.toLowerCase().includes(q) ?? false;
         const matchWard = (fac.ward || '').toLowerCase().includes(q);
@@ -267,18 +270,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       }
 
       return true;
-    }).sort((a, b) => {
-      // Sort nearest first
-      const latA = a.location?.lat ?? 31.2530;
-      const lngA = a.location?.lng ?? 75.7030;
-      const latB = b.location?.lat ?? 31.2530;
-      const lngB = b.location?.lng ?? 75.7030;
-      const centerLat = selectedCoords?.lat ?? 31.2530;
-      const centerLng = selectedCoords?.lng ?? 75.7030;
-      const distA = calculateDistanceKm(centerLat, centerLng, latA, lngA);
-      const distB = calculateDistanceKm(centerLat, centerLng, latB, lngB);
-      return distA - distB;
     });
+
+    // O(N) pre-calculate distances once per facility instead of O(N log N) trig recalculations during sort
+    const distMap = new Map<string, number>();
+    for (let i = 0; i < items.length; i++) {
+      const f = items[i];
+      const lat = f.location?.lat ?? 31.2530;
+      const lng = f.location?.lng ?? 75.7030;
+      distMap.set(f.id, calculateDistanceKm(centerLat, centerLng, lat, lng));
+    }
+
+    return items.sort((a, b) => (distMap.get(a.id) ?? 0) - (distMap.get(b.id) ?? 0));
   }, [publicFacilities, facilityFilterState, facilitySearchQuery, selectedCoords]);
 
   // Subscribe to real-time SBM Public Facilities
@@ -481,10 +484,14 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   // Strict citizen scoping for "My Complaints"
   const citizenComplaints = useMemo(() => {
     if (!currentUser) return [];
+    const uid = currentUser.uid;
+    const nameNorm = currentUser.name ? currentUser.name.toLowerCase().trim() : null;
+    const phoneNorm = currentUser.phone ? currentUser.phone.replace(/\s+/g, '') : null;
+
     return incidents.filter(ticket => {
-      if (ticket.citizenUid && currentUser.uid && ticket.citizenUid === currentUser.uid) return true;
-      if (currentUser.name && ticket.reporterName && ticket.reporterName.toLowerCase().trim() === currentUser.name.toLowerCase().trim()) return true;
-      if (currentUser.phone && ticket.reporterPhone && ticket.reporterPhone.replace(/\s+/g, '') === currentUser.phone.replace(/\s+/g, '')) return true;
+      if (ticket.citizenUid && uid && ticket.citizenUid === uid) return true;
+      if (nameNorm && ticket.reporterName && ticket.reporterName.toLowerCase().trim() === nameNorm) return true;
+      if (phoneNorm && ticket.reporterPhone && ticket.reporterPhone.replace(/\s+/g, '') === phoneNorm) return true;
       return false;
     });
   }, [incidents, currentUser]);
@@ -1615,7 +1622,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
               {/* 2. Refined Active Ticket Banner / Empty State */}
               {activeComplaint ? (
-                <div className="bg-white border border-slate-200/90 border-l-4 border-l-blue-600 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+                <div className="bg-gradient-to-r from-blue-50 via-indigo-50/40 to-white border border-blue-200/80 rounded-2xl shadow-sm p-4 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-xs font-semibold text-slate-600 truncate">
@@ -1631,13 +1638,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     </div>
                     <button
                       onClick={() => setTrackedIncident(activeComplaint)}
-                      className="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-lg hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
+                      className="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-lg hover:bg-slate-800 transition cursor-pointer flex-shrink-0 shadow-xs"
                     >
                       View Details
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/60">
                     <p className="font-bold text-slate-800 text-sm truncate max-w-[200px]">
                       {activeComplaint.title}
                     </p>
@@ -1647,7 +1654,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-sm flex items-center justify-between gap-2.5">
+                <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl p-4 border border-slate-200/90 shadow-sm flex items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0">
                       <CheckCircle2 className="w-4 h-4 text-blue-600" />
@@ -1659,7 +1666,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </div>
                   <button
                     onClick={() => pushView('CATEGORIES')}
-                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition cursor-pointer shrink-0"
+                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 shadow-xs"
                   >
                     + Report
                   </button>
@@ -1672,10 +1679,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 1: File Grievance */}
               <div
                 onClick={() => pushView('CATEGORIES')}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-gradient-to-br from-rose-50/80 to-pink-50/40 border border-rose-200/70 hover:border-rose-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/60 border border-slate-100 flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <FileText className="w-8 h-8 text-blue-600 absolute" />
+                <div className="w-full h-20 rounded-xl bg-white/90 border border-rose-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
+                  <FileText className="w-8 h-8 text-rose-600 absolute" />
                   <img
                     src="/icon-file-grievance.png"
                     alt="File Grievance"
@@ -1686,7 +1693,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug tracking-tight group-hover:text-blue-600 transition">
+                  <h3 className="text-sm font-bold text-rose-950 leading-snug tracking-tight group-hover:text-rose-700 transition">
                     File Grievance
                   </h3>
                   <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
@@ -1698,9 +1705,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 2: Track Grievances */}
               <div
                 onClick={() => pushView('COMPLAINTS')}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-gradient-to-br from-amber-50/80 to-yellow-50/40 border border-amber-200/70 hover:border-amber-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/60 border border-slate-100 flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
+                <div className="w-full h-20 rounded-xl bg-white/90 border border-amber-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
                   <Clock3 className="w-8 h-8 text-amber-600 absolute" />
                   <img
                     src="/icon-track-grievances.png"
@@ -1712,7 +1719,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug tracking-tight group-hover:text-amber-700 transition">
+                  <h3 className="text-sm font-bold text-amber-950 leading-snug tracking-tight group-hover:text-amber-700 transition">
                     Track Grievances
                   </h3>
                   <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
@@ -1724,10 +1731,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 3: Public Facilities */}
               <div
                 onClick={() => pushView('FACILITIES')}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200/70 hover:border-emerald-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/60 border border-slate-100 flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <MapPin className="w-8 h-8 text-teal-600 absolute" />
+                <div className="w-full h-20 rounded-xl bg-white/90 border border-emerald-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
+                  <MapPin className="w-8 h-8 text-emerald-600 absolute" />
                   <img
                     src="/icon-public-facilities.png"
                     alt="Public Facilities"
@@ -1738,7 +1745,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug tracking-tight group-hover:text-teal-700 transition">
+                  <h3 className="text-sm font-bold text-emerald-950 leading-snug tracking-tight group-hover:text-emerald-700 transition">
                     Public Facilities
                   </h3>
                   <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
@@ -1752,10 +1759,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => {
                   setShowSurvekshanModal(true);
                 }}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-3.5 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-gradient-to-br from-violet-50/80 to-purple-50/40 border border-violet-200/70 hover:border-violet-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/60 border border-slate-100 flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-600 absolute" />
+                <div className="w-full h-20 rounded-xl bg-white/90 border border-violet-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
+                  <CheckCircle2 className="w-8 h-8 text-violet-600 absolute" />
                   <img
                     src="/icon-citizen-survey.png"
                     alt="Citizen Survey"
@@ -1766,7 +1773,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug tracking-tight group-hover:text-emerald-600 transition">
+                  <h3 className="text-sm font-bold text-violet-950 leading-snug tracking-tight group-hover:text-violet-700 transition">
                     Citizen Survey
                   </h3>
                   <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">

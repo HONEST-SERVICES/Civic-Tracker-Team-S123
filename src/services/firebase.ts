@@ -902,7 +902,7 @@ export async function updateComplaintInFirestore(
   updates: Partial<CrisisIncident> & { proofUrl?: string; notes?: string }
 ) {
   try {
-    let docRef = doc(complaintsCollection, incidentId);
+    const docRef = doc(complaintsCollection, incidentId);
     
     let displayStatus: string | undefined = undefined;
     if (updates.status) {
@@ -921,40 +921,14 @@ export async function updateComplaintInFirestore(
     if (updates.priority) updatePayload.priority = updates.priority;
     if (updates.department) updatePayload.department = updates.department;
     if (updates.status === 'RESOLVED') updatePayload.resolvedAt = Date.now();
+    if (updates.auditorComplianceScore !== undefined) updatePayload.auditorComplianceScore = updates.auditorComplianceScore;
+    if (updates.auditorNotes) updatePayload.auditorNotes = updates.auditorNotes;
 
     await updateDoc(docRef, updatePayload);
     console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Write Successful: Doc ID #${incidentId} updated`);
-  } catch (err) {
-    console.warn("[Firebase Diagnostic] Direct updateDoc by ID failed, querying by id field:", err);
-    try {
-      const q = query(complaintsCollection);
-      const snap = await getDocs(q);
-      snap.forEach(async (d) => {
-        if (d.data().id === incidentId || d.id === incidentId) {
-          let displayStatus: string | undefined = undefined;
-          if (updates.status) {
-            if (updates.status === 'RESOLVED') displayStatus = 'Resolved';
-            else if (updates.status === 'IN_PROGRESS') displayStatus = 'In Remediation';
-            else if (updates.status === 'DISPATCHED') displayStatus = 'Assigned';
-            else displayStatus = 'Registered';
-          }
-          const p: Record<string, any> = {};
-          if (displayStatus) p.status = displayStatus;
-          if (updates.assignedUnitName) p.assignedCrew = updates.assignedUnitName;
-          if (updates.assignedUnitId) p.assignedUnitId = updates.assignedUnitId;
-          if (updates.proofOfFixUrl || updates.proofUrl) p.proofOfFixUrl = updates.proofOfFixUrl || updates.proofUrl;
-          if (updates.officerNotes || updates.notes) p.officerNotes = updates.officerNotes || updates.notes;
-          if (updates.priority) p.priority = updates.priority;
-          if (updates.department) p.department = updates.department;
-          if (updates.status === 'RESOLVED') p.resolvedAt = Date.now();
-          await updateDoc(d.ref, p);
-          console.log(`[Firebase Diagnostic] Connected to omnisync-pothole -> Write Successful: Doc ID #${d.id} updated`);
-        }
-      });
-    } catch (innerErr) {
-      console.error("[Firebase Diagnostic] Failed to update complaint in omnisync-pothole:", innerErr);
-      handleFirestoreError(innerErr, OperationType.UPDATE, `complaints/${incidentId}`);
-    }
+  } catch (err: any) {
+    console.warn(`[Firebase Diagnostic] Direct updateDoc for ID #${incidentId} failed:`, err?.message || err);
+    handleFirestoreError(err, OperationType.UPDATE, `complaints/${incidentId}`);
   }
 }
 

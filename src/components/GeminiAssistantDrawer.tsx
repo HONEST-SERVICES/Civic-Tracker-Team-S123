@@ -95,7 +95,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev.slice(-49), userMsg]);
     if (!textToSend) setInputVal('');
     setIsLoading(true);
 
@@ -113,11 +113,11 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
-      setMessages(prev => [...prev, assistantMsg]);
+      setMessages(prev => [...prev.slice(-49), assistantMsg]);
     } catch (err) {
       console.warn('Assistant error:', err);
       setMessages(prev => [
-        ...prev,
+        ...prev.slice(-49),
         {
           role: 'assistant',
           content: "I encountered a temporary communication timeout with the municipal decision engine. Please try again.",

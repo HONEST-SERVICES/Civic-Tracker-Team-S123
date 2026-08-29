@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   MapPin, 
   Clock, 
@@ -78,20 +78,31 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
     }
   }, [currentUser, isSuperAdmin]);
 
-  // Count manual triage items
-  const manualTriageCount = incidents.filter(i => i.requiresManualVerification || i.status === 'PENDING_MANUAL_TRIAGE' || i.isCivicIssue === false).length;
-
-  // Filter incidents for officer desk
-  const filteredIncidents = incidents.filter((inc) => {
-    if (filterStatus === 'PENDING_MANUAL_TRIAGE') {
-      return Boolean(inc.requiresManualVerification || inc.status === 'PENDING_MANUAL_TRIAGE' || inc.isCivicIssue === false);
+  // Count manual triage items with memoization
+  const manualTriageCount = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < incidents.length; i++) {
+      const inc = incidents[i];
+      if (inc.requiresManualVerification || inc.status === 'PENDING_MANUAL_TRIAGE' || inc.isCivicIssue === false) {
+        count++;
+      }
     }
-    if (filterStatus === 'OPEN' && (inc.status === 'RESOLVED' || inc.status === 'PENDING_MANUAL_TRIAGE')) return false;
-    if (filterStatus === 'RESOLVED' && inc.status !== 'RESOLVED') return false;
-    if (filterStatus === 'IN_PROGRESS' && (inc.status === 'OPEN' || inc.status === 'RESOLVED' || inc.status === 'PENDING_MANUAL_TRIAGE')) return false;
-    if (filterDepartment !== 'ALL' && inc.department !== filterDepartment) return false;
-    return true;
-  });
+    return count;
+  }, [incidents]);
+
+  // Filter incidents for officer desk with memoization
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((inc) => {
+      if (filterStatus === 'PENDING_MANUAL_TRIAGE') {
+        return Boolean(inc.requiresManualVerification || inc.status === 'PENDING_MANUAL_TRIAGE' || inc.isCivicIssue === false);
+      }
+      if (filterStatus === 'OPEN' && (inc.status === 'RESOLVED' || inc.status === 'PENDING_MANUAL_TRIAGE')) return false;
+      if (filterStatus === 'RESOLVED' && inc.status !== 'RESOLVED') return false;
+      if (filterStatus === 'IN_PROGRESS' && (inc.status === 'OPEN' || inc.status === 'RESOLVED' || inc.status === 'PENDING_MANUAL_TRIAGE')) return false;
+      if (filterDepartment !== 'ALL' && inc.department !== filterDepartment) return false;
+      return true;
+    });
+  }, [incidents, filterStatus, filterDepartment]);
 
   const activeTicket = selectedIncident || filteredIncidents[0];
 
@@ -108,10 +119,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   const userRoleLabel = isSuperAdmin ? 'Super Admin' : (currentUser?.designation || 'Ward Officer');
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-full w-full bg-slate-100/80 overflow-hidden font-sans select-none">
       
       {/* 1. STREAMLINED TOP GOVTECH HEADER (SINGLE PURE WHITE BAR) */}
-      <header className="bg-white border-b border-slate-200/90 h-16 px-4 sm:px-6 flex items-center justify-between shadow-xs flex-shrink-0 z-30">
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs h-16 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-30">
         {/* Left: CivicPulse Brand, Title & User Pill */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2.5">
@@ -334,31 +345,31 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
               <div className="flex-1 flex flex-col min-h-0 space-y-2 overflow-y-auto">
                 {/* Telemetry KPI Cards */}
                 <div className="grid grid-cols-2 gap-2 shrink-0">
-                  <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Total Logged</p>
-                    <p className="text-lg font-extrabold text-slate-900 mt-0.5">{incidents.length}</p>
-                    <span className="text-[10px] text-teal-700 font-semibold">100% Synced</span>
+                  <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200/70 text-blue-900 shadow-2xs">
+                    <p className="text-[10px] font-semibold uppercase opacity-80">Total Logged</p>
+                    <p className="text-lg font-extrabold mt-0.5">{incidents.length}</p>
+                    <span className="text-[10px] font-semibold opacity-90">100% Synced</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 shadow-2xs">
-                    <p className="text-[10px] font-semibold text-rose-700 uppercase">Open / Pending</p>
-                    <p className="text-lg font-extrabold text-rose-900 mt-0.5">
+                  <div className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-200/70 text-rose-900 shadow-2xs">
+                    <p className="text-[10px] font-semibold uppercase opacity-80">Open / Pending</p>
+                    <p className="text-lg font-extrabold mt-0.5">
                       {incidents.filter(i => i.status === 'OPEN').length}
                     </p>
-                    <span className="text-[10px] text-rose-600 font-semibold">Needs Dispatch</span>
+                    <span className="text-[10px] font-semibold opacity-90">Needs Dispatch</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 shadow-2xs">
-                    <p className="text-[10px] font-semibold text-amber-700 uppercase">In Progress</p>
-                    <p className="text-lg font-extrabold text-amber-900 mt-0.5">
+                  <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200/70 text-amber-900 shadow-2xs">
+                    <p className="text-[10px] font-semibold uppercase opacity-80">In Progress</p>
+                    <p className="text-lg font-extrabold mt-0.5">
                       {incidents.filter(i => i.status === 'IN_PROGRESS' || i.status === 'DISPATCHED').length}
                     </p>
-                    <span className="text-[10px] text-amber-600 font-semibold">Crews Active</span>
+                    <span className="text-[10px] font-semibold opacity-90">Crews Active</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 shadow-2xs">
-                    <p className="text-[10px] font-semibold text-emerald-700 uppercase">Resolved</p>
-                    <p className="text-lg font-extrabold text-emerald-900 mt-0.5">
+                  <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/70 text-emerald-900 shadow-2xs">
+                    <p className="text-[10px] font-semibold uppercase opacity-80">Resolved</p>
+                    <p className="text-lg font-extrabold mt-0.5">
                       {incidents.filter(i => i.status === 'RESOLVED').length}
                     </p>
-                    <span className="text-[10px] text-emerald-600 font-semibold">Verified SOP</span>
+                    <span className="text-[10px] font-semibold opacity-90">Verified SOP</span>
                   </div>
                 </div>
 
@@ -615,10 +626,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
              ======================================================= */}
           <div className="hidden md:grid h-full grid-cols-12 gap-4 p-4 overflow-hidden">
             {/* COLUMN 1: LEFT FILTERS & KPIS (3 Cols) */}
-            <div className="col-span-12 lg:col-span-3 h-full flex flex-col justify-between bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm overflow-y-auto">
+            <div className="col-span-12 lg:col-span-3 h-full flex flex-col justify-between bg-white rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all p-4 overflow-y-auto">
               <div className="space-y-4">
                 {/* Jurisdiction Zone Card */}
-                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div className="p-3.5 bg-slate-50/70 border-b border-slate-100 rounded-xl space-y-1.5 border border-slate-200/80">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-teal-600" />
@@ -642,31 +653,31 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                     Ward Live Telemetry & KPIs
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                      <p className="text-[10px] font-semibold text-slate-500 uppercase">Total Logged</p>
-                      <p className="text-xl font-extrabold text-slate-900 mt-0.5">{incidents.length}</p>
-                      <span className="text-[10px] text-teal-700 font-semibold">100% Synced</span>
+                    <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200/70 text-blue-900 shadow-2xs">
+                      <p className="text-[10px] font-semibold uppercase opacity-80">Total Logged</p>
+                      <p className="text-xl font-extrabold mt-0.5">{incidents.length}</p>
+                      <span className="text-[10px] font-semibold opacity-90">100% Synced</span>
                     </div>
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200">
-                      <p className="text-[10px] font-semibold text-rose-700 uppercase">Open / Pending</p>
-                      <p className="text-xl font-extrabold text-rose-900 mt-0.5">
+                    <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-200/70 text-rose-900 shadow-2xs">
+                      <p className="text-[10px] font-semibold uppercase opacity-80">Open / Pending</p>
+                      <p className="text-xl font-extrabold mt-0.5">
                         {incidents.filter(i => i.status === 'OPEN').length}
                       </p>
-                      <span className="text-[10px] text-rose-600 font-semibold">Needs Dispatch</span>
+                      <span className="text-[10px] font-semibold opacity-90">Needs Dispatch</span>
                     </div>
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
-                      <p className="text-[10px] font-semibold text-amber-700 uppercase">In Progress</p>
-                      <p className="text-xl font-extrabold text-amber-900 mt-0.5">
+                    <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/70 text-amber-900 shadow-2xs">
+                      <p className="text-[10px] font-semibold uppercase opacity-80">In Progress</p>
+                      <p className="text-xl font-extrabold mt-0.5">
                         {incidents.filter(i => i.status === 'IN_PROGRESS' || i.status === 'DISPATCHED').length}
                       </p>
-                      <span className="text-[10px] text-amber-600 font-semibold">Crews Active</span>
+                      <span className="text-[10px] font-semibold opacity-90">Crews Active</span>
                     </div>
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                      <p className="text-[10px] font-semibold text-emerald-700 uppercase">Resolved</p>
-                      <p className="text-xl font-extrabold text-emerald-900 mt-0.5">
+                    <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/70 text-emerald-900 shadow-2xs">
+                      <p className="text-[10px] font-semibold uppercase opacity-80">Resolved</p>
+                      <p className="text-xl font-extrabold mt-0.5">
                         {incidents.filter(i => i.status === 'RESOLVED').length}
                       </p>
-                      <span className="text-[10px] text-emerald-600 font-semibold">Verified SOP</span>
+                      <span className="text-[10px] font-semibold opacity-90">Verified SOP</span>
                     </div>
                   </div>
                 </div>
@@ -751,7 +762,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
             {/* COLUMN 2: CENTER MAP & LIVE INCIDENT TABLE (5 Cols) */}
             <div className="col-span-12 lg:col-span-5 h-full flex flex-col gap-4 overflow-hidden">
               {/* Top 55% Height: Interactive GIS Tactical Map */}
-              <div className="h-[55%] min-h-0 w-full rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative bg-slate-100">
+              <div className="h-[55%] min-h-0 w-full rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all overflow-hidden relative bg-slate-100">
                 <GoogleTacticalMap
                   incidents={filteredIncidents}
                   units={units}
@@ -765,7 +776,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
               </div>
 
               {/* Bottom 45% Height: Live Incident Queue table */}
-              <div className="h-[45%] min-h-0 w-full rounded-2xl border border-slate-200 overflow-hidden shadow-sm bg-white flex flex-col">
+              <div className="h-[45%] min-h-0 w-full rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all overflow-hidden bg-white flex flex-col">
                 <LiveIncidentQueue
                   incidents={filteredIncidents}
                   selectedIncident={selectedIncident}
@@ -776,11 +787,11 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
             </div>
 
             {/* COLUMN 3: RIGHT INCIDENT ACTION DESK (4 Cols) */}
-            <div className="col-span-12 lg:col-span-4 h-full bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between overflow-y-auto">
+            <div className="col-span-12 lg:col-span-4 h-full bg-white rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all p-4 flex flex-col justify-between overflow-y-auto">
               
               <div className="space-y-4">
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="bg-slate-50/70 border-b border-slate-100 rounded-t-2xl p-3 flex items-center justify-between -mx-4 -mt-4 mb-2">
                   <div className="flex items-center gap-2">
                     <FileCheck className="w-4 h-4 text-teal-700" />
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
