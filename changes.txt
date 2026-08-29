@@ -69,6 +69,14 @@ SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 - Civic Copy & Typography: Applied `Plus Jakarta Sans, Inter, system-ui` font stack with standard municipal terminology ("File Grievance", "Track Grievances", "Public Facilities", "Citizen Survey") and high-contrast styling.
 - Refined Active Ticket Banner: Implemented left-accent status card (`border-l-4 border-l-blue-600 rounded-2xl p-3.5 shadow-sm`) with structured ticket badge, status indicator, and dark "View Details" button.
 
+11. DUAL CAMERA & GALLERY CAPTURE OPTIONS:
+- Replaced single file input in grievance submission flows (`CitizenPortal.tsx`, `CitizenIngestionPanel.tsx`, and `FieldCrewWorkOrders.tsx`) with a dual-option selector:
+  * "Take Photo" (Live Rear Camera): Uses native `accept="image/*"` with `capture="environment"` to trigger instant camera capture on mobile devices.
+  * "Upload from Gallery": Standard file browser selector allowing users to upload existing photos from device gallery or storage.
+- Rendered as side-by-side interactive action cards with Lucide `Camera` and `ImageIcon` icons and dedicated hover/active states.
+- Maintained client-side canvas compression pipeline (`compressImage`) to ensure <100 KB payload limits and automated Gemini AI vision triage across both capture modes.
+- Added a preview action bar with 1-tap "Retake" (Camera), "Gallery" switch, and "Remove" (Trash) actions.
+
 =======================================================
 Status: Production-Ready GovTech Release
 =======================================================

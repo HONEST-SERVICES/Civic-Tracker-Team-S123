@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   HelpCircle,
   Eye,
-  Info
+  Info,
+  Image as ImageIcon
 } from 'lucide-react';
 import { HazardCategory, PriorityLevel, CrisisIncident, ScannerData } from '../types';
 import { ZONES } from '../mockData';
@@ -99,7 +100,8 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
   const [areaText, setAreaText] = useState<string>(SAMPLE_HAZARD_PREVIEWS[0].area);
   const [detectedAnomalies, setDetectedAnomalies] = useState<string[]>(SAMPLE_HAZARD_PREVIEWS[0].anomalies);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleSelectSample = (sample: typeof SAMPLE_HAZARD_PREVIEWS[0]) => {
     setCategory(sample.category);
@@ -217,18 +219,41 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <span>Hazard Photo & Verification</span>
             </label>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1 cursor-pointer transition-colors"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Upload Custom Photo</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="text-xs text-orange-400 hover:text-orange-300 font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                title="Take live photo"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Camera</span>
+              </button>
+              <span className="text-slate-600">|</span>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                title="Upload from gallery"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>Gallery</span>
+              </button>
+            </div>
             <input
               type="file"
-              ref={fileInputRef}
+              ref={cameraInputRef}
               accept="image/*"
+              capture="environment"
+              id="camera-capture-input-ingestion"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <input
+              type="file"
+              ref={galleryInputRef}
+              accept="image/*"
+              id="gallery-upload-input-ingestion"
               className="hidden"
               onChange={handleFileUpload}
             />

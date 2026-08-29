@@ -16,7 +16,8 @@ import {
   Layers,
   Phone,
   RefreshCw,
-  X
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
 import { CrisisIncident, UserProfile, IncidentStatus } from '../types';
 import { compressImage } from '../utils/imageCompressor';
@@ -56,7 +57,8 @@ export const FieldCrewWorkOrders: React.FC<FieldCrewWorkOrdersProps> = ({
   const [proofUrl, setProofUrl] = useState<string>(SAMPLE_PROOF_PHOTOS[0].url);
   const [crewNotes, setCrewNotes] = useState<string>('Repairs executed according to MoHUA Standard Operating Procedure. Area cleaned and cleared for public use.');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const assignedWard = currentUser?.assignedWard || 'Ward 4';
   const assignedCrew = currentUser?.assignedCrew || 'UNIT_04';
@@ -394,23 +396,50 @@ export const FieldCrewWorkOrders: React.FC<FieldCrewWorkOrdersProps> = ({
                     <span>Geo-Tagged Verified Fix</span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-2 right-2 bg-white/95 hover:bg-white text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Upload Custom Photo</span>
-                  </button>
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="bg-white/95 hover:bg-white text-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer border border-slate-200"
+                      title="Take photo with camera"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Camera</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="bg-white/95 hover:bg-white text-slate-800 text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer border border-slate-200"
+                      title="Upload from gallery"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Gallery</span>
+                    </button>
+                  </div>
                 </div>
 
                 <input
                   type="file"
-                  ref={fileInputRef}
+                  ref={cameraInputRef}
                   accept="image/*"
+                  capture="environment"
+                  id="camera-capture-input-crew"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleCustomFileUpload(file);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+                <input
+                  type="file"
+                  ref={galleryInputRef}
+                  accept="image/*"
+                  id="gallery-upload-input-crew"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleCustomFileUpload(file);
+                    e.target.value = '';
                   }}
                   className="hidden"
                 />

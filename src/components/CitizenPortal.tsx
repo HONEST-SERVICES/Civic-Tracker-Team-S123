@@ -7,6 +7,7 @@ import {
   Clock, 
   Truck, 
   Camera, 
+  Image as ImageIcon,
   Sparkles, 
   Crosshair, 
   AlertTriangle,
@@ -224,7 +225,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     }
   };
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Strict citizen scoping for "My Complaints"
   const citizenComplaints = useMemo(() => {
@@ -846,7 +848,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                   {photoUrl ? (
                     <div className="space-y-2">
-                      <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden h-44">
+                      <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden h-44 group">
                         <img
                           src={photoUrl}
                           alt="Hazard"
@@ -859,14 +861,46 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             <p className="text-xs font-bold">Evaluating pavement hazard & civic priority...</p>
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="absolute bottom-2 right-2 bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition"
-                        >
-                          <Camera className="w-3 h-3 text-orange-600" />
-                          <span>Change Photo</span>
-                        </button>
+                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                          <div className="bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Photo Attached</span>
+                          </div>
+                        </div>
+
+                        {/* Retake / Gallery / Remove Action Bar */}
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => cameraInputRef.current?.click()}
+                            className="bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200"
+                            title="Take new photo with camera"
+                          >
+                            <Camera className="w-3.5 h-3.5 text-orange-600" />
+                            <span>Retake</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => galleryInputRef.current?.click()}
+                            className="bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200"
+                            title="Choose another photo from gallery"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5 text-slate-700" />
+                            <span>Gallery</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPhotoUrl(null);
+                              setVisionResult(null);
+                              setCompressionStats(null);
+                            }}
+                            className="bg-rose-600 hover:bg-rose-700 text-white p-1 rounded-lg text-xs shadow-xs cursor-pointer transition flex items-center justify-center"
+                            title="Remove Photo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Vision Result Diagnostic Card */}
@@ -906,26 +940,65 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     </div>
                   ) : (
                     <div
-                      onClick={() => fileInputRef.current?.click()}
                       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                       onDragLeave={() => setIsDragOver(false)}
                       onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition text-center ${
-                        isDragOver ? 'border-orange-500 bg-orange-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+                      className={`border-2 border-dashed rounded-xl p-3.5 transition text-center ${
+                        isDragOver ? 'border-orange-500 bg-orange-50' : 'border-slate-300 bg-slate-50/80'
                       }`}
                     >
-                      <Camera className="w-5 h-5 text-orange-600 mb-1" />
-                      <p className="text-xs font-bold text-slate-800">Click to upload or drag & drop photo</p>
-                      <p className="text-[11px] text-slate-500">Auto-verified for immediate municipal crew routing</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          id="quick-modal-camera-btn"
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-200 hover:border-orange-500 hover:bg-orange-50/60 active:scale-95 transition shadow-xs group cursor-pointer"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mb-1.5 group-hover:scale-105 transition-transform">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-900">Take Photo</span>
+                          <span className="text-[10px] text-slate-500 font-medium">Live Camera</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          id="quick-modal-gallery-btn"
+                          onClick={() => galleryInputRef.current?.click()}
+                          className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-100 active:scale-95 transition shadow-xs group cursor-pointer"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mb-1.5 group-hover:scale-105 transition-transform">
+                            <ImageIcon className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-900">Upload Gallery</span>
+                          <span className="text-[10px] text-slate-500 font-medium">Choose File</span>
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-2">Auto-analyzed with Gemini AI & compressed (&lt;100KB)</p>
                     </div>
                   )}
                   <input
                     type="file"
-                    ref={fileInputRef}
                     accept="image/*"
+                    capture="environment"
+                    id="camera-capture-input"
+                    ref={cameraInputRef}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) handleFileUpload(f);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="gallery-upload-input"
+                    ref={galleryInputRef}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFileUpload(f);
+                      e.target.value = '';
                     }}
                     className="hidden"
                   />
@@ -1484,14 +1557,39 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-3 right-3 bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Camera className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Retake Photo</span>
-                      </button>
+                      {/* Retake / Gallery / Remove Action Bar */}
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                          title="Take new photo with camera"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-orange-600" />
+                          <span>Retake</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => galleryInputRef.current?.click()}
+                          className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                          title="Choose photo from gallery"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5 text-slate-700" />
+                          <span>Gallery</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhotoUrl(null);
+                            setVisionResult(null);
+                            setCompressionStats(null);
+                          }}
+                          className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center"
+                          title="Remove Photo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Vision Diagnostic Assessment */}
@@ -1528,29 +1626,66 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </div>
                 ) : (
                   <div
-                    onClick={() => fileInputRef.current?.click()}
                     onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                     onDragLeave={() => setIsDragOver(false)}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition text-center min-h-[140px] ${
-                      isDragOver ? 'border-blue-500 bg-blue-50/60' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+                    className={`border-2 border-dashed rounded-xl p-5 transition text-center ${
+                      isDragOver ? 'border-orange-500 bg-orange-50/70' : 'border-slate-300 bg-slate-50/80'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-xs mb-2">
-                      <Camera className="w-6 h-6" />
+                    <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                      <button
+                        type="button"
+                        id="full-form-camera-btn"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500 hover:bg-orange-50/60 active:scale-95 transition shadow-xs group cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mb-2 group-hover:scale-105 transition-transform">
+                          <Camera className="w-6 h-6" />
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">Take Photo</span>
+                        <span className="text-xs text-slate-500 font-medium mt-0.5">Live Rear Camera</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        id="full-form-gallery-btn"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-100 active:scale-95 transition shadow-xs group cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mb-2 group-hover:scale-105 transition-transform">
+                          <ImageIcon className="w-6 h-6" />
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">Upload Gallery</span>
+                        <span className="text-xs text-slate-500 font-medium mt-0.5">Browse Files</span>
+                      </button>
                     </div>
-                    <p className="text-sm font-semibold text-slate-800">Tap to take photo of civic issue</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Auto-verified for immediate municipal crew routing</p>
+                    <p className="text-xs text-slate-500 mt-3">Auto-analyzed with Gemini AI & compressed under 100 KB</p>
                   </div>
                 )}
 
                 <input
                   type="file"
-                  ref={fileInputRef}
                   accept="image/*"
+                  capture="environment"
+                  id="camera-capture-input-form"
+                  ref={cameraInputRef}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleFileUpload(file);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="gallery-upload-input-form"
+                  ref={galleryInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                    e.target.value = '';
                   }}
                   className="hidden"
                 />
