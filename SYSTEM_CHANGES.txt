@@ -457,4 +457,28 @@ Status: Visual Contrast, Deep Surface Boundaries & Admin Multi-Section Architect
 Status: Persistent AI Decision Breakdown & Citizen Triage Confirmation Card Complete
 ========================================================
 
+=======================================================
+32. MOBILE VIEWPORT AI TRIAGE BREAKDOWN & RESPONSIVE SCROLLING:
+=======================================================
+- Mobile Viewport Triage Breakdown Card Audit (`CitizenPortal.tsx` & `CitizenIngestionPanel.tsx`):
+  * Audited grievance submission flows to ensure zero `hidden md:block` or `hidden sm:flex` responsive hiding classes exist on the AI Triage Breakdown Card container (`renderAIDecisionBreakdown()`).
+  * Enforced `block w-full` styling on the confirmation card container so it renders identically across mobile, tablet, and desktop viewports.
+- Mobile Viewport Overflow & Scrollable Body Architecture (`CitizenPortal.tsx`):
+  * Updated mobile grievance submission modal/drawer container height: `max-h-[90vh] sm:max-h-[85vh] flex flex-col bg-white rounded-t-3xl sm:rounded-2xl overflow-hidden`.
+  * Set inner form scrollable body area: `flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain`.
+  * Positioned the AI Breakdown Card directly after the image upload preview and BEFORE the description and submit controls.
+  * Verified 4 breakdown badges stack cleanly on mobile viewports: `grid grid-cols-1 sm:grid-cols-2 gap-2.5`.
+  * Formatted AI reasoning box: `p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 leading-relaxed`.
+- Automatic Auto-Scroll to Breakdown Card (`CitizenPortal.tsx`):
+  * Created `triageCardRef` (`useRef<HTMLDivElement>(null)`).
+  * Implemented automated smooth scrolling upon Gemini vision analysis completion:
+    `triageCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });`
+- Build Verification:
+  * Passed TypeScript compilation (`tsc --noEmit`), ESLint (`lint_applet`), and production builds (`compile_applet`) with zero errors.
+
+=======================================================
+Status: Mobile Viewport AI Triage Breakdown & Responsive Scrolling Complete
+=======================================================
+
+
 

@@ -255,7 +255,7 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
       </div>
 
       {/* Form Body */}
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
         {/* Section 1: Photo & AI Verification */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">

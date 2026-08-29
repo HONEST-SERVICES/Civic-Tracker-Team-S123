@@ -175,6 +175,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [requiresManualReview, setRequiresManualReview] = useState<boolean>(false);
   const [citizenConfirmedTriage, setCitizenConfirmedTriage] = useState<boolean>(true);
   const [isOverrideMode, setIsOverrideMode] = useState<boolean>(false);
+  const triageCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isAnalyzingVision) {
@@ -378,7 +379,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       'Municipal Engineering & Utilities Wing';
 
     return (
-      <div className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm space-y-3.5 my-3 animate-fade-in text-left">
+      <div
+        ref={triageCardRef}
+        className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm space-y-3.5 my-3 animate-fade-in text-left block w-full"
+      >
         {/* Header / Confidence Tag */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
@@ -652,6 +656,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
         console.warn('Vision analysis notice:', err);
       } finally {
         setIsAnalyzingVision(false);
+        setTimeout(() => {
+          triageCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
       }
     } catch (err: any) {
       console.error('Image compression pipeline error:', err);
@@ -2005,8 +2012,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
         {/* VIEW 3: COMPLAINT SUBMISSION FORM */}
         {currentView === 'FORM' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center gap-3">
+          <div className="max-h-[90vh] sm:max-h-[85vh] flex flex-col bg-white rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+            <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center gap-3 shrink-0">
               <button
                 onClick={popView}
                 className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
@@ -2022,7 +2029,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
               {/* Photo Upload Box */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
