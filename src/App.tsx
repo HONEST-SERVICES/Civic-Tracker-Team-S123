@@ -70,16 +70,6 @@ import {
   Activity
 } from 'lucide-react';
 
-const DEFAULT_CITIZEN_USER: UserProfile = {
-  uid: 'citizen-default',
-  name: 'Sangit Sharma',
-  phone: '+91 98765 43210',
-  email: 'citizen.sangit@swachhbharat.gov.in',
-  role: 'CITIZEN',
-  assignedWard: 'Ward 4 - Central Zone',
-  designation: 'Verified Citizen Resident'
-};
-
 function getDisplayRoleName(role: UserRole, ward?: string | null): string {
   switch (role) {
     case 'SUPER_ADMIN':
@@ -102,7 +92,8 @@ function getDisplayRoleName(role: UserRole, ward?: string | null): string {
 
 export default function App() {
   // Authentication & Current User Profile (Determined solely by Firebase Auth + Firestore role)
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(DEFAULT_CITIZEN_USER);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
 
   // Application Data State (Subscribed 100% to Firestore)
   const [incidents, setIncidents] = useState<CrisisIncident[]>([]);
@@ -160,7 +151,7 @@ export default function App() {
   // Listen to Firebase Auth state for strict RBAC resolution with instant optimistic update
   useEffect(() => {
     let isInitial = true;
-    const unsubscribeAuth = onAuthChange((firebaseUser) => {
+    const unsubscribeAuth = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
         const startTime = performance.now();
         // 1. Instant optimistic profile update (<10ms)
@@ -174,18 +165,22 @@ export default function App() {
         });
 
         // 2. Non-blocking asynchronous Firestore background profile sync
-        syncUserProfile(firebaseUser).then((remoteProfile) => {
+        try {
+          const remoteProfile = await syncUserProfile(firebaseUser);
           setCurrentUser(remoteProfile);
-        }).catch((e) => {
+        } catch (e) {
           console.warn('[Firebase Diagnostic] Background profile sync warning:', e);
-        });
+        }
 
         const elapsed = Math.round(performance.now() - startTime);
         if (isInitial) {
           console.log(`[Auth Performance] Auth state initialized in: ${elapsed} ms`);
           isInitial = false;
         }
+      } else {
+        setCurrentUser(null);
       }
+      setAuthLoading(false);
     });
 
     return () => {
@@ -236,12 +231,14 @@ export default function App() {
     } catch (e) {
       console.error('Logout error:', e);
     } finally {
-      // Clear authenticated session and revert to login screen
+      // Clear authenticated session and revert to clean unauthenticated home view
       setCurrentUser(null);
+      setCitizenTab('HOME');
       setSelectedIncident(null);
       setSelectedUnit(null);
       setShowSettingsModal(false);
       setShowGeminiAssistant(false);
+      setShowProfileMenu(false);
       setThoughtLogs([]);
     }
   };
@@ -269,7 +266,7 @@ export default function App() {
       },
       imageUrl: incidentData.imageUrl,
       createdAt: Date.now(),
-      reporterName: incidentData.reporterName || currentUser?.name || 'Sangit Sharma',
+      reporterName: incidentData.reporterName || currentUser?.name || 'Citizen',
       reporterPhone: incidentData.reporterPhone || currentUser?.phone || '',
       citizenUid: currentUser?.uid || ''
     };
@@ -516,106 +513,117 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right: Clean Profile Avatar / Account Action Only */}
+        {/* Right: Clean Profile Avatar / Sign In Action */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          {/* User Profile Menu Trigger */}
-          <div className="relative">
+          {!authLoading && !currentUser ? (
             <button
-              id="header-profile-btn"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              title="User Profile & Settings"
-              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
+              id="header-signin-btn"
+              onClick={() => setShowAuthModal(true)}
+              className="bg-slate-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold hover:bg-slate-800 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              {currentUser?.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt={currentUser.name}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <UserCircle className="w-5 h-5 text-slate-600" strokeWidth={1.75} />
-              )}
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
             </button>
+          ) : (
+            /* User Profile Menu Trigger */
+            <div className="relative">
+              <button
+                id="header-profile-btn"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                title="User Profile & Settings"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
+              >
+                {currentUser?.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.name}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <UserCircle className="w-5 h-5 text-slate-600" strokeWidth={1.75} />
+                )}
+              </button>
 
-            {/* Profile Dropdown Drawer */}
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
-                <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 font-bold overflow-hidden">
-                    {currentUser?.photoURL ? (
-                      <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      <User className="w-5 h-5 text-blue-600" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
-                    <div className="mt-0.5">
-                      <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                        {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
-                      </span>
+              {/* Profile Dropdown Drawer */}
+              {showProfileMenu && currentUser && (
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
+                  <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 font-bold overflow-hidden">
+                      {currentUser?.photoURL ? (
+                        <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <User className="w-5 h-5 text-blue-600" />
+                      )}
                     </div>
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{currentUser.email || currentUser.phone}</p>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
+                      <div className="mt-0.5">
+                        <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{currentUser.email || currentUser.phone}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="py-2 space-y-1">
-                  <button
-                    id="menu-gemini-btn"
-                    onClick={() => {
-                      setShowGeminiAssistant(true);
-                      setShowProfileMenu(false);
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <span>Gemini AI Copilot</span>
-                  </button>
-
-                  <button
-                    id="menu-settings-btn"
-                    onClick={() => {
-                      setShowSettingsModal(true);
-                      setShowProfileMenu(false);
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <Settings className="w-4 h-4 text-slate-500" />
-                    <span>Preferences & Settings</span>
-                  </button>
-
-                  {userRole === 'SUPER_ADMIN' && (
+                  <div className="py-2 space-y-1">
                     <button
-                      id="menu-staff-btn"
+                      id="menu-gemini-btn"
                       onClick={() => {
-                        setShowStaffManagementModal(true);
+                        setShowGeminiAssistant(true);
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 text-blue-600" />
+                      <span>Gemini AI Copilot</span>
+                    </button>
+
+                    <button
+                      id="menu-settings-btn"
+                      onClick={() => {
+                        setShowSettingsModal(true);
                         setShowProfileMenu(false);
                       }}
                       className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
                     >
-                      <Users className="w-4 h-4 text-slate-500" />
-                      <span>Staff Delegations</span>
+                      <Settings className="w-4 h-4 text-slate-500" />
+                      <span>Preferences & Settings</span>
                     </button>
-                  )}
-                </div>
 
-                <div className="pt-2 border-t border-slate-100">
-                  <button
-                    id="menu-signout-btn"
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      handleSignOut();
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center gap-2 font-semibold cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4 text-rose-500" />
-                    <span>Sign Out</span>
-                  </button>
+                    {userRole === 'SUPER_ADMIN' && (
+                      <button
+                        id="menu-staff-btn"
+                        onClick={() => {
+                          setShowStaffManagementModal(true);
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition flex items-center gap-2 font-medium cursor-pointer"
+                      >
+                        <Users className="w-4 h-4 text-slate-500" />
+                        <span>Staff Delegations</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100">
+                    <button
+                      id="menu-signout-btn"
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleSignOut();
+                      }}
+                      className="w-full text-left px-2.5 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center gap-2 font-semibold cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-500" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -722,92 +730,117 @@ export default function App() {
               <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
                 <div className="w-full max-w-2xl bg-white rounded-2xl p-5 md:p-8 border border-slate-200 shadow-sm space-y-6">
                   {currentUser ? (
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 text-center sm:text-left">
-                      <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="w-20 h-20 rounded-full overflow-hidden bg-orange-50 border-2 border-orange-500/40 flex items-center justify-center text-2xl font-bold text-orange-600 shrink-0 shadow-xs">
-                          {currentUser.photoURL ? (
-                            <img
-                              src={currentUser.photoURL}
-                              alt={currentUser.name}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <span>{currentUser.name.charAt(0)}</span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-bold text-slate-900 truncate">{currentUser.name}</h3>
-                          <p className="text-xs text-slate-500 truncate mt-0.5">
-                            {currentUser.phone || currentUser.email || 'citizen@swachhbharat.gov.in'}
-                          </p>
-                          <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
-                            <span className="text-[11px] font-bold text-orange-800 bg-orange-100/70 px-3 py-1 rounded-full border border-orange-200/60">
-                              {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
-                            </span>
-                            {currentUser.assignedWard && (
-                              <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                                {currentUser.assignedWard}
-                              </span>
+                    <>
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 pb-5 border-b border-slate-100 text-center sm:text-left">
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          <div className="w-20 h-20 rounded-full overflow-hidden bg-orange-50 border-2 border-orange-500/40 flex items-center justify-center text-2xl font-bold text-orange-600 shrink-0 shadow-xs">
+                            {currentUser.photoURL ? (
+                              <img
+                                src={currentUser.photoURL}
+                                alt={currentUser.name}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <span>{currentUser.name?.charAt(0) || 'C'}</span>
                             )}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-bold text-slate-900 truncate">{currentUser.name}</h3>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                              {currentUser.phone || currentUser.email || 'citizen@swachhbharat.gov.in'}
+                            </p>
+                            <div className="flex items-center justify-center sm:justify-start gap-2 mt-2 flex-wrap">
+                              <span className="text-[11px] font-bold text-orange-800 bg-orange-100/70 px-3 py-1 rounded-full border border-orange-200/60">
+                                {getDisplayRoleName(currentUser.role, currentUser.assignedWard)}
+                              </span>
+                              {currentUser.assignedWard && (
+                                <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                                  {currentUser.assignedWard}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 border border-slate-200"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+
+                      {/* Citizen / Officer Metadata Grid */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                          Citizen Verification & Deployment Info
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
+                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                            <span className="text-slate-500 font-medium block text-[11px]">Assigned Ward</span>
+                            <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                              {currentUser.assignedWard || 'Ward 4 - Central Zone'}
+                            </span>
+                          </div>
+                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                            <span className="text-slate-500 font-medium block text-[11px]">Account Status</span>
+                            <span className="font-bold text-emerald-700 text-sm mt-0.5 block">
+                              Verified Official Record ✓
+                            </span>
+                          </div>
+                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                            <span className="text-slate-500 font-medium block text-[11px]">Primary Contact</span>
+                            <span className="font-bold text-slate-900 text-sm mt-0.5 block truncate">
+                              {currentUser.phone || currentUser.email || 'Registered Citizen'}
+                            </span>
+                          </div>
+                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                            <div>
+                              <span className="text-slate-500 font-medium block text-[11px]">System Status</span>
+                              <span className="font-bold text-slate-900 text-sm mt-0.5 block">Redressal Online</span>
+                            </div>
+                            <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200 text-xs inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Online ✓
+                            </span>
                           </div>
                         </div>
                       </div>
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 border border-slate-200"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {/* Sanitized Citizen / Officer Metadata Grid */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Citizen Verification & Deployment Info
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
-                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                        <span className="text-slate-500 font-medium block text-[11px]">Assigned Ward</span>
-                        <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                          {currentUser?.assignedWard || 'Ward 4 - Central Zone'}
-                        </span>
+                    </>
+                  ) : (
+                    <div className="text-center py-6 space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto text-slate-700 shadow-xs">
+                        <UserCircle className="w-10 h-10 text-slate-600" strokeWidth={1.5} />
                       </div>
-                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                        <span className="text-slate-500 font-medium block text-[11px]">Account Status</span>
-                        <span className="font-bold text-emerald-700 text-sm mt-0.5 block">
-                          Verified Official Record ✓
-                        </span>
+                      <div className="max-w-md mx-auto space-y-1.5">
+                        <h3 className="text-lg font-bold text-slate-900">CivicPulse Citizen Profile</h3>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Sign in to access your personal grievance history, track resolution timelines, and submit verified feedback to municipal officers.
+                        </p>
                       </div>
-                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                        <span className="text-slate-500 font-medium block text-[11px]">Primary Contact</span>
-                        <span className="font-bold text-slate-900 text-sm mt-0.5 block truncate">
-                          {currentUser?.phone || currentUser?.email || '+91 98765 43210'}
-                        </span>
-                      </div>
-                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                        <div>
-                          <span className="text-slate-500 font-medium block text-[11px]">System Status</span>
-                          <span className="font-bold text-slate-900 text-sm mt-0.5 block">Redressal Online</span>
-                        </div>
-                        <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-bold border border-emerald-200 text-xs inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          Online ✓
-                        </span>
+                      <div className="pt-2">
+                        <button
+                          onClick={() => setShowAuthModal(true)}
+                          className="w-full max-w-sm mx-auto min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <LogIn className="w-4 h-4" />
+                          <span>Sign In to CivicPulse</span>
+                        </button>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="pt-2 space-y-3">
-                    <button
-                      onClick={() => setShowAuthModal(true)}
-                      className="w-full min-h-[48px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Shield className="w-4 h-4 text-blue-400" />
-                      <span>Switch Account / Sign In with Another Profile</span>
-                    </button>
+                    {currentUser && (
+                      <button
+                        onClick={() => setShowAuthModal(true)}
+                        className="w-full min-h-[48px] bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Shield className="w-4 h-4 text-blue-400" />
+                        <span>Switch Account / Sign In with Another Profile</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setShowSettingsModal(true)}
@@ -873,7 +906,13 @@ export default function App() {
           {/* Center Elevated Floating (+) Button */}
           <div className="flex-1 flex justify-center -mt-6">
             <button
-              onClick={() => setCitizenTab('CATEGORIES')}
+              onClick={() => {
+                if (!currentUser) {
+                  setShowAuthModal(true);
+                } else {
+                  setCitizenTab('CATEGORIES');
+                }
+              }}
               title="Post a Complaint"
               className="w-12 h-12 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-50 transition-all cursor-pointer"
             >
@@ -883,7 +922,13 @@ export default function App() {
 
           {/* Tab 3: Complaints */}
           <button
-            onClick={() => setCitizenTab('COMPLAINTS')}
+            onClick={() => {
+              if (!currentUser) {
+                setShowAuthModal(true);
+              } else {
+                setCitizenTab('COMPLAINTS');
+              }
+            }}
             className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
               citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
             }`}

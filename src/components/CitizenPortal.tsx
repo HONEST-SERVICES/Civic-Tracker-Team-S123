@@ -90,8 +90,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   const [isAnalyzingVision, setIsAnalyzingVision] = useState<boolean>(false);
   const [visionResult, setVisionResult] = useState<GeminiVisionResult | null>(null);
   const [landmark, setLandmark] = useState<string>('Cinema Road, Outside Verad Gate');
-  const [reporterName, setReporterName] = useState<string>(currentUser?.name || 'Sangit');
-  const [reporterPhone, setReporterPhone] = useState<string>(currentUser?.phone || '+91 98765 43210');
+  const [reporterName, setReporterName] = useState<string>(currentUser?.name || '');
+  const [reporterPhone, setReporterPhone] = useState<string>(currentUser?.phone || '');
   const [submittedSuccess, setSubmittedSuccess] = useState<boolean>(false);
   const [lastSubmittedId, setLastSubmittedId] = useState<string>('');
   const [trackedIncident, setTrackedIncident] = useState<CrisisIncident | null>(null);
@@ -228,7 +228,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
   // Strict citizen scoping for "My Complaints"
   const citizenComplaints = useMemo(() => {
-    if (!currentUser) return incidents;
+    if (!currentUser) return [];
     return incidents.filter(ticket => {
       if (ticket.citizenUid && currentUser.uid && ticket.citizenUid === currentUser.uid) return true;
       if (currentUser.name && ticket.reporterName && ticket.reporterName.toLowerCase().trim() === currentUser.name.toLowerCase().trim()) return true;
@@ -1190,16 +1190,16 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-sm font-bold text-slate-900 tracking-tight truncate">
-                      Welcome, {reporterName}
+                      {currentUser?.name ? `Welcome, ${currentUser.name}` : 'Welcome to CivicPulse'}
                     </h2>
                     <p className="text-[11px] text-slate-500 truncate font-normal">
-                      Here are today's actions for you
+                      {currentUser ? "Here are today's actions for you" : 'Swachh Bharat Citizen Redressal Portal'}
                     </p>
                   </div>
                 </div>
                 <div className="flex-shrink-0">
                   <span className="text-xs px-2.5 py-0.5 bg-blue-50 rounded-md text-blue-700 font-semibold inline-block border border-blue-200/80">
-                    Ward 4
+                    {currentUser?.assignedWard || 'Ward 4'}
                   </span>
                 </div>
               </div>
@@ -1664,16 +1664,29 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto">
                   <ClipboardList className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">No active grievances logged</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {!currentUser ? 'Sign In to View Grievance History' : 'No active grievances logged'}
+                </h3>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Tap '+' or 'Post a Complaint' to report a civic issue in your ward.
+                  {!currentUser 
+                    ? 'Sign in to track real-time resolution status and municipal inspector updates for your complaints.' 
+                    : "Tap '+' or 'Post a Complaint' to report a civic issue in your ward."}
                 </p>
-                <button
-                  onClick={() => pushView('CATEGORIES')}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800 transition cursor-pointer"
-                >
-                  + Report an Issue
-                </button>
+                {!currentUser ? (
+                  <button
+                    onClick={() => onOpenAuth?.()}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    Sign In to Track
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => pushView('CATEGORIES')}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    + Report an Issue
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
