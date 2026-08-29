@@ -1,0 +1,74 @@
+=======================================================
+SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
+=======================================================
+
+1. CIVIC DESIGN SYSTEM: WARM SAFFRON & PASTEL AMBER PALETTE:
+- Transitioned primary accents and navigation from cold slate/teal to authentic warm civic saffron & amber:
+  * Primary Civic Header & Accents: Deep Indian Saffron / Warm Amber (`#c2410c` / `#ea580c` / `#f97316`)
+  * Canvas & Backgrounds: Soft warm off-white (`#fffaf5` / warm ivory `#fafaf9`)
+  * Card Surfaces: Crisp pure white (`#ffffff`) with subtle warm hairline borders (`border-orange-100/80` or `border-amber-100`)
+  * Action Card Icon Badges:
+    - Post a Complaint: Soft pastel orange container (`bg-orange-50 text-orange-600 border border-orange-200/60`)
+    - My Complaints: Soft warm amber container (`bg-amber-50 text-amber-600 border border-amber-200/60`)
+    - SBM Toilet Locator: Soft sky blue container (`bg-sky-50 text-sky-600 border border-sky-200/60`)
+    - Swachh Survekshan: Soft emerald container (`bg-emerald-50 text-emerald-600 border border-emerald-200/60`)
+  * Mobile Bottom Navigation: Refined pure white surface with warm saffron active indicators (`text-orange-600`) and glowing saffron center action button (`bg-gradient-to-r from-orange-600 to-amber-600`).
+
+2. MULTILINGUAL CITIZEN & OFFICER SUPPORT:
+- Integrated zero-dependency localization engine in `src/utils/translations.ts` supporting:
+  * English (`en`)
+  * हिन्दी (Hindi - `hi`)
+  * తెలుగు (Telugu - `te`)
+- Seamless language toggle accessible across Citizen Portal, Auth Screens, and Settings Dialog.
+
+3. GOOGLE MAPS PLATFORM & SBM TOILET GIS INTEGRATION:
+- Standardized pin styling across GIS maps:
+  * Red Pin (#ef4444): Critical / P1 Potholes & Road Damage
+  * Amber Pin (#f59e0b): In Progress / Dispatched Work Orders
+  * Green Pin (#10b981): Resolved & Verified / Fleet Units
+  * Blue / Cyan Pin (#0891b2): SBM Public Toilet & Sanitation Facilities
+- Clean map style switcher (Standard Street vs. Satellite) positioned in top-right control deck.
+- Integrated Swachh Bharat Mission (SBM) Public Toilet locator with citizen star-rating synchronization and live review submissions.
+
+4. CITIZEN ACTION CARD REFINEMENT & MOBILE BOTTOM NAVIGATION:
+- Refactored the 4 main Citizen Action Cards ("Post a Complaint", "My Complaints", "SBM Toilet Locator", "Swachh Survekshan") to pure white cards with dedicated 36x36px square icon containers in soft pastel tints.
+- Upgraded Mobile Bottom Navigation Bar to crisp `bg-white/95 backdrop-blur-md border-t border-orange-100` with elevated warm saffron center action button and clean `text-xs font-medium` typography.
+- Maintained `pb-28` safe bottom scroll padding for all citizen view flows.
+
+5. MOBILE VIEWPORT SPACING & ABOVE-THE-FOLD LOCK:
+- Streamlined vertical container spacing to `space-y-2.5` and `px-4 py-3`.
+- Reduced Welcome Card padding to `py-2.5 px-4` with compact `w-9 h-9` avatar and `text-sm font-bold` heading.
+- Optimized Active Incident Banner padding to `py-2 px-3.5` with concise ticket IDs, compact status badges, and `px-2.5 py-1 text-xs` Track button.
+- Adjusted 4 Quick Action cards to compact `h-32` height with `p-3.5` padding, `w-9 h-9` icons, and `leading-snug text-xs` subtext to guarantee all 4 cards fit cleanly above the fold on mobile viewports.
+- Removed Cleanliness Drives from the Home view to guarantee zero card clipping above the bottom bar.
+
+6. DEDICATED EVENTS & SBM CAMPAIGNS TAB:
+- Migrated Ward Cleanliness Drives & SBM Campaigns to a full-screen dedicated `EventsView` under the "Events" bottom nav tab.
+- Integrated search, dynamic filter chips (`All Drives`, `Upcoming`, `Registered`, `Past`), interactive volunteer sign-up toggle with SBM Karma Points (+50), safety kit details, and drive modal inspector.
+- Preserved `pb-28` safe bottom scroll padding for an unobstructed mobile navigation experience.
+
+7. PRODUCTION CIVIC AUTH & ONBOARDING PORTAL:
+- Standardized onboarding card centered on clean `#fffaf5` canvas with "CivicPulse" title and "Autonomous Municipal Redressal & Smart Governance" subtitle.
+- Implemented Google SSO and Mobile OTP authentication with +91 country prefix.
+- Integrated "MoHUA Civic Tech Standard • Role-Protected & Encrypted" security badge and explicit terms agreement statement.
+
+8. BALANCED 3-COLUMN MUNICIPAL OFFICER COMMAND CENTER:
+- Left Column (25% width / w-72 xl:w-80): Ward Telemetry & Status Filters. Pure white card container with clean slate counters and live KPI sync.
+- Center Column (45% width / flex-1): Tactical GIS Map spanning full viewport height with live pin clustering, street/satellite switcher, and SBM facility overlay.
+- Right Column (30% width / w-96 xl:w-[420px]): Live Incident Queue & Action Desk with quick "Assign Crew Unit", SLA countdown, status transitions, and photo inspection modal.
+- Zero horizontal scrollbars or cramped layout overlap across 1080p and 1440p displays.
+
+9. END-TO-END DATA INTEGRITY & PRODUCTION STATE:
+- Verified real-time synchronization with Firestore on project `omnisync-pothole` (database `civictracker`).
+- Validated TypeScript compilation (`tsc --noEmit`) and production builds with zero errors or warnings.
+
+10. NATIVE APP POLISH, VIEWPORT FIT & TYPOGRAPHY REFINEMENT:
+- Removed residual green indicator bar under header; established pure white navigation surface with crisp hairline border (`border-b border-slate-200/80`) and vertically centered brand identity.
+- Viewport fit: Wrapped citizen home screen in full-height flex container (`min-h-[calc(100vh-4rem)] flex flex-col justify-between pb-24 px-4 pt-3`) to eliminate awkward bottom gaps.
+- 4 Quick Action Cards: Expanded to dynamically fill vertical space (`flex-1 grid grid-cols-2 gap-3.5`) with native rounded cards (`bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm`), dedicated 40x40px rounded-xl icon containers (`PlusCircle`, `Clock3`, `MapPin`, `CheckCircle2`), and removed floating notification counters.
+- Civic Copy & Typography: Applied `Plus Jakarta Sans, Inter, system-ui` font stack with standard municipal terminology ("File Grievance", "Track Grievances", "Public Facilities", "Citizen Survey") and high-contrast styling.
+- Refined Active Ticket Banner: Implemented left-accent status card (`border-l-4 border-l-blue-600 rounded-2xl p-3.5 shadow-sm`) with structured ticket badge, status indicator, and dark "View Details" button.
+
+=======================================================
+Status: Production-Ready GovTech Release
+=======================================================
