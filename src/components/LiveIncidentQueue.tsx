@@ -79,7 +79,7 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
   return (
     <div className="w-full h-full bg-white flex flex-col overflow-hidden text-sm font-sans select-none text-slate-900">
       {/* Queue Header */}
-      <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+      <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">
@@ -99,16 +99,16 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
       <div className="flex-1 overflow-y-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-700 uppercase tracking-wider sticky top-0 z-10">
-              <th className="py-2 px-3">Ticket ID & Priority</th>
-              <th className="py-2 px-3">Category & Title</th>
-              <th className="py-2 px-3">Location</th>
-              <th className="py-2 px-3">Assigned Crew</th>
-              <th className="py-2 px-3">SLA Status</th>
-              <th className="py-2 px-3 text-right">Action</th>
+            <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-bold text-slate-700 uppercase tracking-wider sticky top-0 z-10">
+              <th className="py-2.5 px-3">Ticket ID & Priority</th>
+              <th className="py-2.5 px-3">Category & Title</th>
+              <th className="py-2.5 px-3">Location</th>
+              <th className="py-2.5 px-3">Assigned Crew</th>
+              <th className="py-2.5 px-3">SLA Status</th>
+              <th className="py-2.5 px-3 text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
+          <tbody className="text-xs text-slate-800">
             {incidents.map((incident) => {
               const isSelected = selectedIncident?.id === incident.id;
               const isResolved = incident.status === 'RESOLVED';
@@ -117,10 +117,8 @@ export const LiveIncidentQueue: React.FC<LiveIncidentQueueProps> = ({
                 <tr
                   key={incident.id}
                   onClick={() => onSelectIncident(incident)}
-                  className={`cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-blue-50/80'
-                      : 'hover:bg-slate-50'
+                  className={`cursor-pointer odd:bg-white even:bg-slate-50/70 hover:bg-blue-50/50 transition-colors border-b border-slate-200/80 ${
+                    isSelected ? 'bg-blue-100/80 font-medium' : ''
                   }`}
                 >
                   {/* ID & Priority */}

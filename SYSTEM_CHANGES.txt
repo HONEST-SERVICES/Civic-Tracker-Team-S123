@@ -406,4 +406,28 @@ Status: Targeted Performance & Memory Optimizations Complete
 Status: UI Polish, Elevation Shadows & Pastel Tinting Complete
 =======================================================
 
+=======================================================
+30. OVERHAUL VISUAL CONTRAST, DEEP SURFACE BOUNDARIES & ADMIN MULTI-SECTION ARCHITECTURE:
+=======================================================
+- Resolved "Bleeding White" & Fixed Inner Card Artifacts (`CitizenPortal.tsx`):
+  * Framing Canvas: Updated page background to a grounded light slate `#EEF2F6` (`bg-[#EEF2F6]`) for immediate crisp boundary definition.
+  * 4 Citizen Action Cards: Eliminated inner white rectangular boxes inside cards entirely; transformed each card into a solid tinted surface with a 2px distinct border:
+    1. File Grievance: `bg-[#FFF1F2] border-2 border-rose-300/80 shadow-sm hover:shadow-md rounded-2xl p-4`
+    2. Track Grievances: `bg-[#FEFCE8] border-2 border-amber-300/80 shadow-sm hover:shadow-md rounded-2xl p-4`
+    3. Public Facilities: `bg-[#F0FDF4] border-2 border-emerald-300/80 shadow-sm hover:shadow-md rounded-2xl p-4`
+    4. Citizen Survey: `bg-[#FAF5FF] border-2 border-violet-300/80 shadow-sm hover:shadow-md rounded-2xl p-4`
+  * Icon Frame: Positioned PNG brand icons directly on solid tinted card surfaces with high-contrast drop shadow (`filter drop-shadow-md w-14 h-14 object-contain mx-auto`).
+- Admin Command Desk Restructuring (`MunicipalOfficerCommandCenter.tsx` & `LiveIncidentQueue.tsx`):
+  * Framing Canvas: Configured page background to `#EEF2F6` (`bg-[#EEF2F6]`) with clean dark header border (`border-b border-slate-300`).
+  * Card Boundaries & Elevation: Enclosed major operational cards in defined high-contrast borders and elevated shadows (`bg-white border border-slate-300/90 shadow-md shadow-slate-300/40 rounded-2xl overflow-hidden`).
+  * Middle Column: Expanded GIS Tactical Map height to 65% of viewport (`h-[65%]`) and Live Incident Queue to 35% (`h-[35%]`).
+  * Incident Queue Table & Header: Styled header bar with solid high-contrast bar (`bg-slate-100 border-b border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 uppercase tracking-wider`); added alternating row striping (`odd:bg-white even:bg-slate-50/70 hover:bg-blue-50/50 transition-colors border-b border-slate-200/80`).
+  * Right Action Desk: Enclosed in an elevated slate container (`border border-slate-300/90 shadow-md shadow-slate-300/40 rounded-2xl overflow-hidden bg-white p-4`) with distinct section dividers for Ticket Summary, Citizen Geo-Photo Attachment (`p-3 bg-white border-2 border-slate-200 rounded-xl space-y-1.5 shadow-2xs`), and Field Crew Dispatch Drawer (`p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2`).
+- Build Verification:
+  * Verified TypeScript compilation (`tsc --noEmit`) and production builds (`compile_applet`) with zero errors.
+
+=======================================================
+Status: Visual Contrast, Deep Surface Boundaries & Admin Multi-Section Architecture Complete
+=======================================================
+
 

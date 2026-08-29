@@ -119,10 +119,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   const userRoleLabel = isSuperAdmin ? 'Super Admin' : (currentUser?.designation || 'Ward Officer');
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-100/80 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-full w-full bg-[#EEF2F6] overflow-hidden font-sans select-none">
       
       {/* 1. STREAMLINED TOP GOVTECH HEADER (SINGLE PURE WHITE BAR) */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs h-16 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-30">
+      <header className="bg-white border-b border-slate-300 shadow-xs h-16 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-30">
         {/* Left: CivicPulse Brand, Title & User Pill */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2.5">
@@ -626,7 +626,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
              ======================================================= */}
           <div className="hidden md:grid h-full grid-cols-12 gap-4 p-4 overflow-hidden">
             {/* COLUMN 1: LEFT FILTERS & KPIS (3 Cols) */}
-            <div className="col-span-12 lg:col-span-3 h-full flex flex-col justify-between bg-white rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all p-4 overflow-y-auto">
+            <div className="col-span-12 lg:col-span-3 h-full flex flex-col justify-between bg-white rounded-2xl border border-slate-300/90 shadow-md shadow-slate-300/40 transition-all p-4 overflow-y-auto">
               <div className="space-y-4">
                 {/* Jurisdiction Zone Card */}
                 <div className="p-3.5 bg-slate-50/70 border-b border-slate-100 rounded-xl space-y-1.5 border border-slate-200/80">
@@ -761,8 +761,8 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
 
             {/* COLUMN 2: CENTER MAP & LIVE INCIDENT TABLE (5 Cols) */}
             <div className="col-span-12 lg:col-span-5 h-full flex flex-col gap-4 overflow-hidden">
-              {/* Top 55% Height: Interactive GIS Tactical Map */}
-              <div className="h-[55%] min-h-0 w-full rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all overflow-hidden relative bg-slate-100">
+              {/* Top 65% Height: Interactive GIS Tactical Map */}
+              <div className="h-[65%] min-h-0 w-full rounded-2xl border border-slate-300/90 shadow-md shadow-slate-300/40 transition-all overflow-hidden relative bg-slate-100">
                 <GoogleTacticalMap
                   incidents={filteredIncidents}
                   units={units}
@@ -775,8 +775,8 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                 />
               </div>
 
-              {/* Bottom 45% Height: Live Incident Queue table */}
-              <div className="h-[45%] min-h-0 w-full rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all overflow-hidden bg-white flex flex-col">
+              {/* Bottom 35% Height: Live Incident Queue table */}
+              <div className="h-[35%] min-h-0 w-full rounded-2xl border border-slate-300/90 shadow-md shadow-slate-300/40 transition-all overflow-hidden bg-white flex flex-col">
                 <LiveIncidentQueue
                   incidents={filteredIncidents}
                   selectedIncident={selectedIncident}
@@ -787,7 +787,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
             </div>
 
             {/* COLUMN 3: RIGHT INCIDENT ACTION DESK (4 Cols) */}
-            <div className="col-span-12 lg:col-span-4 h-full bg-white rounded-2xl border border-slate-200/90 shadow-md shadow-slate-200/60 transition-all p-4 flex flex-col justify-between overflow-y-auto">
+            <div className="col-span-12 lg:col-span-4 h-full bg-white rounded-2xl border border-slate-300/90 shadow-md shadow-slate-300/40 transition-all p-4 flex flex-col justify-between overflow-y-auto">
               
               <div className="space-y-4">
                 {/* Header */}
@@ -861,13 +861,13 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
 
                     {/* Photo Attachment Container */}
                     {activeTicket.imageUrl && (
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 block">Citizen Geo-Photo Attachment:</label>
-                        <div className="h-40 rounded-xl overflow-hidden border border-slate-200 relative bg-slate-900 shadow-xs">
+                      <div className="p-3 bg-white border-2 border-slate-200 rounded-xl space-y-1.5 shadow-2xs">
+                        <label className="text-xs font-bold text-slate-800 block">Citizen Geo-Photo Attachment:</label>
+                        <div className="h-40 rounded-lg overflow-hidden border border-slate-200 relative bg-slate-900 shadow-xs">
                           <img
                             src={activeTicket.imageUrl}
                             alt="Hazard"
-                            className="max-h-48 w-full object-cover rounded-xl border border-slate-200"
+                            className="max-h-48 w-full object-cover"
                             referrerPolicy="no-referrer"
                           />
                         </div>

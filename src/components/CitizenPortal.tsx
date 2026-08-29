@@ -664,7 +664,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   return (
-    <div className="w-full flex-1 bg-slate-100 overflow-y-auto pb-28 sm:pb-32 md:pb-8 overflow-x-hidden font-sans">
+    <div className="w-full flex-1 bg-[#EEF2F6] overflow-y-auto pb-28 sm:pb-32 md:pb-8 overflow-x-hidden font-sans">
       {/* 
         ========================================================================
         DESKTOP LAYOUT (md and above) -> 2-COLUMN FULL-WIDTH DASHBOARD 
@@ -1679,18 +1679,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 1: File Grievance */}
               <div
                 onClick={() => pushView('CATEGORIES')}
-                className="bg-gradient-to-br from-rose-50/80 to-pink-50/40 border border-rose-200/70 hover:border-rose-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#FFF1F2] border-2 border-rose-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-white/90 border border-rose-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <FileText className="w-8 h-8 text-rose-600 absolute" />
+                <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-file-grievance.png"
                     alt="File Grievance"
-                    className="h-14 w-14 object-contain transition-transform hover:scale-105 relative z-10"
+                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
                     }}
                   />
+                  <FileText className="w-10 h-10 text-rose-600 hidden filter drop-shadow-md mx-auto" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-rose-950 leading-snug tracking-tight group-hover:text-rose-700 transition">
@@ -1705,18 +1707,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 2: Track Grievances */}
               <div
                 onClick={() => pushView('COMPLAINTS')}
-                className="bg-gradient-to-br from-amber-50/80 to-yellow-50/40 border border-amber-200/70 hover:border-amber-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#FEFCE8] border-2 border-amber-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-white/90 border border-amber-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <Clock3 className="w-8 h-8 text-amber-600 absolute" />
+                <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-track-grievances.png"
                     alt="Track Grievances"
-                    className="h-14 w-14 object-contain transition-transform hover:scale-105 relative z-10"
+                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
                     }}
                   />
+                  <Clock3 className="w-10 h-10 text-amber-600 hidden filter drop-shadow-md mx-auto" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-amber-950 leading-snug tracking-tight group-hover:text-amber-700 transition">
@@ -1731,18 +1735,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 3: Public Facilities */}
               <div
                 onClick={() => pushView('FACILITIES')}
-                className="bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200/70 hover:border-emerald-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#F0FDF4] border-2 border-emerald-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-white/90 border border-emerald-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <MapPin className="w-8 h-8 text-emerald-600 absolute" />
+                <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-public-facilities.png"
                     alt="Public Facilities"
-                    className="h-14 w-14 object-contain transition-transform hover:scale-105 relative z-10"
+                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
                     }}
                   />
+                  <MapPin className="w-10 h-10 text-emerald-600 hidden filter drop-shadow-md mx-auto" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-emerald-950 leading-snug tracking-tight group-hover:text-emerald-700 transition">
@@ -1759,18 +1765,20 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 onClick={() => {
                   setShowSurvekshanModal(true);
                 }}
-                className="bg-gradient-to-br from-violet-50/80 to-purple-50/40 border border-violet-200/70 hover:border-violet-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#FAF5FF] border-2 border-violet-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
               >
-                <div className="w-full h-20 rounded-xl bg-white/90 border border-violet-100/80 shadow-xs flex items-center justify-center mb-2 overflow-hidden relative shrink-0">
-                  <CheckCircle2 className="w-8 h-8 text-violet-600 absolute" />
+                <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-citizen-survey.png"
                     alt="Citizen Survey"
-                    className="h-14 w-14 object-contain transition-transform hover:scale-105 relative z-10"
+                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
                     }}
                   />
+                  <CheckCircle2 className="w-10 h-10 text-violet-600 hidden filter drop-shadow-md mx-auto" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-violet-950 leading-snug tracking-tight group-hover:text-violet-700 transition">
