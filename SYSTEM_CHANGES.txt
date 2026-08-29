@@ -1,4 +1,30 @@
 =======================================================
+17. MUNICIPAL CATEGORY ICONS, BACK-TRACING & CITIZEN IDENTITY POLISH:
+=======================================================
+- Upgraded Municipal Grievance Category Icons (`src/config/categoryConfig.tsx`):
+  * Replaced default emoji containers with rich Lucide-React icons inside styled circular tinted containers:
+    - Sanitation & Waste (`SANITATION`): `Trash2` / `Recycle` (`bg-emerald-50 text-emerald-600 border border-emerald-200`)
+    - Roads & Potholes (`ROADS` / `PUBLIC_WORKS`): `Construction` / `AlertTriangle` (`bg-amber-50 text-amber-600 border border-amber-200`)
+    - Water Supply & Drainage (`WATER` / `WATER_SUPPLY`): `Droplets` / `Pipette` (`bg-blue-50 text-blue-600 border border-blue-200`)
+    - Streetlighting & Electricity (`ELECTRICITY`): `Zap` / `Lightbulb` (`bg-yellow-50 text-yellow-600 border border-yellow-200`)
+    - Public Health & Encroachment (`HEALTH` / `HEALTH_SBM`): `ShieldAlert` / `Stethoscope` (`bg-rose-50 text-rose-600 border border-rose-200`)
+  * Sector/Zone Classification domain buttons:
+    - Urban Core: `Building2`
+    - Suburban Belt: `Home`
+    - Rural Periphery: `Tractor`
+- Native Back-Tracing & Browser History Sync (`App.tsx` & `CitizenPortal.tsx`):
+  * Integrated active `window.history.pushState` and `popstate` listeners on all sub-view navigations (`#home`, `#file-grievance`, `#track`, `#facilities`, `#profile`).
+  * Hardware back button on mobile smooth-retreats to previous views or closes active lightboxes/modals instead of exiting the app.
+- Clean Header Profile (`App.tsx`):
+  * Removed redundant top-right profile avatar when navigating to Profile view (`citizenTab === 'PROFILE'`), leaving strictly the CivicPulse Brand Logo & Language Switcher.
+- Strict Citizen vs. Officer Role Separation (`ProfileView.tsx`):
+  * Citizens (`role === 'CITIZEN'`) see ONLY citizen-oriented services: My Grievance Stats (Total, Active, Resolved), AI Civic Copilot (Gemini), Install App (PWA), App Language Toggle, Notification Preferences, and Log Out. Removed administrative switch options for citizens.
+  * Officers/Admins see full Administrative Command Suite, Staff Management, and Ward Governance tools.
+- Human-Readable Citizen & Ticket Identifiers (`src/utils/idUtils.ts`, `ProfileView.tsx`, `CitizenPortal.tsx`):
+  * Formatted User IDs as `#CP-8492` with 1-tap copy button and copy feedback.
+  * Formatted Ticket IDs as `#TK-XXXX` consistently across grievance cards and submission receipts.
+
+=======================================================
 SWACHHATA-AI PLATFORM: SYSTEM CHANGES & COMPLIANCE LOG
 =======================================================
 
@@ -730,4 +756,39 @@ Status: Enterprise GovTech Redesign Complete
 =======================================================
 Status: Ward Governance Mobile UI/UX Overhaul Complete
 =======================================================
+
+=======================================================
+23. 3-STEP GRIEVANCE WIZARD, INSTANT CAMERA TRIGGER & GEMINI HALLUCINATION GATE:
+=======================================================
+- 1. Instant Camera Trigger on Bottom Navigation (+) Button:
+  * In `App.tsx`, wired the floating center `+` action button in the citizen bottom navigation bar to directly trigger native device camera intake (`<input type="file" accept="image/*" capture="environment" />`).
+  * On instant camera capture, automatically passes the image file into `CitizenPortal.tsx` via `initialCapturedFile` prop and navigates directly into the grievance wizard.
+
+- 2. 3-Step Intuitive Wizard Architecture (Zero Mobile Clipping):
+  * Replaced monolithic single-page grievance form with an interactive 3-step wizard with a top progress tracker (`[ 1. Photo & AI ] ── [ 2. Location ] ── [ 3. Submit ]`) and active step indicator (`Step X of 3`):
+    - **Step 1 (Smart Capture & AI Triage)**:
+      * Mandatory Photo Gate: Citizen must capture or upload a defect photo before advancing.
+      * Side-by-side Live Rear Camera and Device Gallery options.
+      * Automated client-side canvas compression (<100 KB payload) and real-time Gemini AI vision triage HUD.
+      * Strict Gemini Hallucination & Non-Civic Gate: If Gemini detects non-civic media (selfies, pets, documents, memes, clean indoor scenes), displays a high-contrast rejection banner (`⚠️ No Municipal Hazard Detected`) with AI reasoning and blocks progression until a valid civic photo is captured.
+      * AI Decision Breakdown Card: Displays detected category, match confidence (98%), priority & SLA badge (P1 Critical 4hr / P2 Urgent 24hr), and auto-routed department.
+    - **Step 2 (Reverse Geocoding & Incident Location)**:
+      * Interactive `GooglePinPickerMap` with draggable map pin.
+      * "Use My GPS" auto-detection with real-time coordinate readout (`lat.toFixed(4)°, lng.toFixed(4)°`).
+      * Auto-reverse geocoding to auto-fill street address and select municipal ward boundary.
+      * `GooglePlacesAutocompleteInput` for street address manual search and edits.
+    - **Step 3 (Citizen Details & Final Confirmation)**:
+      * Grievance Summary Review snapshot card with defect photo thumbnail, hazard title, priority badge, department, and geocoded landmark.
+      * `VoiceGrievanceInput` supporting real-time voice-to-text dictation (English/Hindi/Telugu) and 30-second audio note recorder.
+      * Citizen Name & Mobile number pre-filled from authenticated profile.
+      * High-elevation submit button with loading spinner during dispatch.
+  * Added `pb-28` safe bottom scroll padding ensuring all controls remain fully accessible above mobile navigation bars.
+
+- 3. Hardware Back & History Integration:
+  * In `CitizenPortal.tsx`, `popView` seamlessly moves between wizard steps (`3 -> 2 -> 1`) before popping view history.
+
+=======================================================
+Status: 3-Step Wizard, Camera Trigger & Hallucination Gate Complete
+=======================================================
+
 

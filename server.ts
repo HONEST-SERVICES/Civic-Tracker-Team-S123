@@ -203,10 +203,14 @@ async function startServer() {
 
       const systemPrompt = `You are the Swachhata-MoHUA Municipal AI Vision Inspector.
 Analyze the uploaded photo carefully.
-FIRST: Determine if the photo clearly shows a valid municipal civic issue/hazard (pothole, road damage, garbage dump, overflow, open manhole, waterlogging, broken street light, downed electrical line, etc.).
-If the photo is a selfie, portrait of a person, indoor room/furniture, pet, vehicle dashboard, or non-civic object, set isCivicIssue: false and state rejectionReason: "No structural hazard or municipal issue detected."
-If the photo IS a valid civic issue, set isCivicIssue: true, aiConfidence: 95-99, and provide a 1-sentence aiReasoning explaining why this severity level and department were selected.
-Extract structured diagnostic data adhering to the schema. Categorize precisely and evaluate public safety risk (0-100).`;
+FIRST & CRITICAL: Determine if the photo clearly shows an authentic, real-world municipal civic issue/hazard (pothole, pavement defect, garbage dump, uncollected waste, open manhole, road waterlogging, broken street light, downed electrical line, public toilet issue, etc.).
+STRICT HALLUCINATION & NON-CIVIC GATE:
+If the photo contains a hand, human selfie/portrait, pet/animal, receipt, document, meme, screenshot, food, vehicle interior/dashboard, or non-civic indoor room/furniture scene, you MUST set isCivicIssue: false and set rejectionReason to: "⚠️ No Municipal Hazard Detected: Image does not appear to show a civic issue (road damage, sanitation, drainage, or streetlighting). Please take a photo of the actual issue."
+If the photo IS a valid civic issue:
+- set isCivicIssue: true
+- set aiConfidence: 94 to 99
+- set aiReasoning: 1-sentence concise justification of why this severity level, municipal department, and category were assigned.
+- Extract diagnostic data matching the schema, accurately categorizing the municipal hazard and evaluating public safety risk (0-100).`;
 
       const response = await callGeminiWithFallback(ai, {
         contents: [

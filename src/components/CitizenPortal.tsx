@@ -44,20 +44,27 @@ import {
   Sliders,
   Building2,
   Shield,
-  AlertCircle
+  AlertCircle,
+  Home,
+  Tractor
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { CategoryIcon } from '../config/categoryConfig';
 
 export function formatTicketId(id?: string): string {
-  if (!id) return 'Ticket #5247';
-  if (id.startsWith('Ticket #')) return id;
-  if (id.startsWith('#')) return `Ticket ${id}`;
+  if (!id) return '#TK-5247';
+  if (id.startsWith('#TK-')) return id;
+  if (id.startsWith('Ticket #')) {
+    const num = id.replace(/[^0-9]/g, '');
+    return num ? `#TK-${num}` : id;
+  }
+  if (id.startsWith('#')) return `#TK-${id.replace('#', '')}`;
   const numMatches = id.match(/\d{4}$/) || id.match(/\d+/g);
   if (numMatches && numMatches.length > 0) {
     const lastDigits = numMatches[numMatches.length - 1];
-    return `Ticket #${lastDigits.slice(-4).padStart(4, '0')}`;
+    return `#TK-${lastDigits.slice(-4).padStart(4, '0')}`;
   }
-  return `Ticket #${id.slice(-4)}`;
+  return `#TK-${id.slice(-4).toUpperCase()}`;
 }
 import { CrisisIncident, HazardCategory, PriorityLevel, DepartmentType, GeminiVisionResult, UserProfile, PublicFacility, IncidentStatus } from '../types';
 import { SWACHHATA_CATEGORIES, INITIAL_PUBLIC_FACILITIES, ZONES } from '../mockData';
@@ -84,6 +91,8 @@ interface CitizenPortalProps {
   showSurveyModal?: boolean;
   onOpenSurvey?: () => void;
   onCloseSurvey?: () => void;
+  initialCapturedFile?: File | null;
+  onClearPendingFile?: () => void;
 }
 
 export const CitizenPortal: React.FC<CitizenPortalProps> = ({
@@ -98,7 +107,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   onUpdateUserProfile,
   showSurveyModal,
   onOpenSurvey,
-  onCloseSurvey
+  onCloseSurvey,
+  initialCapturedFile,
+  onClearPendingFile
 }) => {
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
@@ -137,6 +148,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
   const [currentView, setCurrentView] = useState<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>(activeScreen);
   const [viewHistory, setViewHistory] = useState<Array<'HOME' | 'CATEGORIES' | 'FORM' | 'COMPLAINTS' | 'FACILITIES'>>([activeScreen]);
+  const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
   const [selectedCategory, setSelectedCategory] = useState<HazardCategory>('DEEP_POTHOLE');
   const [categoryDomainFilter, setCategoryDomainFilter] = useState<'ALL' | 'URBAN_ROAD' | 'SANITATION_WATER' | 'RURAL_SUBURBAN'>('ALL');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -326,8 +338,19 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     }
   }, [currentUser]);
 
+  // Initial captured file triggered by bottom nav (+)
+  useEffect(() => {
+    if (initialCapturedFile) {
+      setCurrentView('FORM');
+      setFormStep(1);
+      handleFileUpload(initialCapturedFile);
+      onClearPendingFile?.();
+    }
+  }, [initialCapturedFile]);
+
   // Unified Reset Helper for Grievance Submission and Form State Hygiene
   const resetGrievanceForm = () => {
+    setFormStep(1);
     setSelectedCategory('DEEP_POTHOLE');
     setPhotoUrl(null);
     setVisionResult(null);
@@ -362,8 +385,53 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     }
     setViewHistory((prev) => (prev[prev.length - 1] === view ? prev : [...prev, view]));
     setCurrentView(view);
+    const slug = view.toLowerCase();
+    try {
+      window.history.pushState({ view: slug }, '', '#' + slug);
+    } catch {
+      // safe fallback
+    }
     onNavigate?.(view);
   };
+
+  // Hardware Back & Browser PopState Synchronization
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (showDriveModal) {
+        setShowDriveModal(false);
+        return;
+      }
+      if (showSurvekshanModal) {
+        setShowSurvekshanModal(false);
+        return;
+      }
+      if (showNonCivicWarning) {
+        setShowNonCivicWarning(false);
+        return;
+      }
+      if (focusedFacility) {
+        setFocusedFacility(null);
+        return;
+      }
+
+      if (e.state?.view) {
+        const v = String(e.state.view).toUpperCase();
+        if (['HOME', 'CATEGORIES', 'FORM', 'COMPLAINTS', 'FACILITIES'].includes(v)) {
+          setCurrentView(v as any);
+          return;
+        }
+      }
+      const hashView = window.location.hash.replace('#', '').toUpperCase();
+      if (['HOME', 'CATEGORIES', 'FORM', 'COMPLAINTS', 'FACILITIES'].includes(hashView)) {
+        setCurrentView(hashView as any);
+      } else {
+        setCurrentView('HOME');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showDriveModal, showSurvekshanModal, showNonCivicWarning, focusedFacility]);
 
   const renderAgenticHUD = () => (
     <div className="p-3.5 bg-slate-900 text-white rounded-xl space-y-2.5 border border-slate-700 shadow-md animate-fade-in">
@@ -617,6 +685,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   const popView = () => {
+    if (currentView === 'FORM' && formStep > 1) {
+      setFormStep((prev) => (prev - 1) as 1 | 2);
+      return;
+    }
     resetGrievanceForm();
     if (trackedIncident) {
       setTrackedIncident(null);
@@ -800,18 +872,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   };
 
   const getCategoryIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Road': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🛣️</div>;
-      case 'Trash2': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🗑️</div>;
-      case 'Truck': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🚛</div>;
-      case 'Sparkles': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🧹</div>;
-      case 'ShieldAlert': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">⚠️</div>;
-      case 'Droplets': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">💧</div>;
-      case 'Lightbulb': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">💡</div>;
-      case 'Radio': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">⚡</div>;
-      case 'Building': return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🌾</div>;
-      default: return <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-base">🏢</div>;
-    }
+    return <CategoryIcon categoryOrDeptOrIcon={iconName} size="md" />;
   };
 
   return (
@@ -1178,46 +1239,50 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <button
                   type="button"
                   onClick={() => setCategoryDomainFilter('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     categoryDomainFilter === 'ALL'
                       ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  All ({SWACHHATA_CATEGORIES.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>All ({SWACHHATA_CATEGORIES.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategoryDomainFilter('URBAN_ROAD')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     categoryDomainFilter === 'URBAN_ROAD'
                       ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  🛣️ Urban & Roads
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Urban Core</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategoryDomainFilter('SANITATION_WATER')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     categoryDomainFilter === 'SANITATION_WATER'
                       ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  💧 Sanitation
+                  <Home className="w-3.5 h-3.5" />
+                  <span>Suburban Belt</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategoryDomainFilter('RURAL_SUBURBAN')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     categoryDomainFilter === 'RURAL_SUBURBAN'
                       ? 'bg-white text-orange-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  🌾 Rural & Suburban
+                  <Tractor className="w-3.5 h-3.5" />
+                  <span>Rural Periphery</span>
                 </button>
               </div>
 
@@ -1973,46 +2038,50 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setCategoryDomainFilter('ALL')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   categoryDomainFilter === 'ALL'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                All ({SWACHHATA_CATEGORIES.length})
+                <Layers className="w-3.5 h-3.5" />
+                <span>All ({SWACHHATA_CATEGORIES.length})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCategoryDomainFilter('URBAN_ROAD')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   categoryDomainFilter === 'URBAN_ROAD'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                🛣️ Urban & Roads
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Urban Core</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCategoryDomainFilter('SANITATION_WATER')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   categoryDomainFilter === 'SANITATION_WATER'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                💧 Sanitation
+                <Home className="w-3.5 h-3.5" />
+                <span>Suburban Belt</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCategoryDomainFilter('RURAL_SUBURBAN')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                   categoryDomainFilter === 'RURAL_SUBURBAN'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                🌾 Rural & Suburban
+                <Tractor className="w-3.5 h-3.5" />
+                <span>Rural Periphery</span>
               </button>
             </div>
 
@@ -2043,301 +2112,508 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           </div>
         )}
 
-        {/* VIEW 3: COMPLAINT SUBMISSION FORM */}
+        {/* VIEW 3: COMPLAINT SUBMISSION FORM (3-STEP INTUITIVE WIZARD) */}
         {currentView === 'FORM' && (
-          <div className="max-h-[90vh] sm:max-h-[85vh] flex flex-col bg-white rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-            <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center gap-3 shrink-0">
-              <button
-                onClick={popView}
-                className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
-                title="Go back"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h2 className="text-base font-bold tracking-tight">Post Grievance</h2>
-                <p className="text-xs text-slate-300">
-                  {SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Civic Infrastructure'}
-                </p>
+          <div className="flex flex-col bg-white rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+            {/* 3-Step Wizard Header & Progress Bar */}
+            <div className="bg-slate-900 px-4 py-3.5 text-white shrink-0 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={popView}
+                    className="p-1 rounded-full hover:bg-white/20 transition cursor-pointer"
+                    title={formStep > 1 ? "Go to previous step" : "Go back"}
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div>
+                    <h2 className="text-base font-bold tracking-tight">
+                      {formStep === 1 && 'Step 1: Smart Capture & AI Triage'}
+                      {formStep === 2 && 'Step 2: Incident Location & Ward'}
+                      {formStep === 3 && 'Step 3: Review & Submit Grievance'}
+                    </h2>
+                    <p className="text-[11px] text-slate-300 font-medium">
+                      {SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Civic Infrastructure'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-orange-300">
+                  Step {formStep} of 3
+                </span>
+              </div>
+
+              {/* Progress Steps Track */}
+              <div className="grid grid-cols-3 gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setFormStep(1)}
+                  className="flex flex-col gap-1 text-left cursor-pointer"
+                >
+                  <div className={`h-1.5 rounded-full transition-all ${formStep >= 1 ? 'bg-orange-500' : 'bg-slate-700'}`} />
+                  <span className={`text-[10px] font-bold text-center ${formStep === 1 ? 'text-orange-400' : formStep > 1 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    1. Photo & AI
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (photoUrl && visionResult?.isCivicIssue !== false) {
+                      setFormStep(2);
+                    }
+                  }}
+                  disabled={!photoUrl || isAnalyzingVision || visionResult?.isCivicIssue === false}
+                  className={`flex flex-col gap-1 text-left ${(!photoUrl || isAnalyzingVision || visionResult?.isCivicIssue === false) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <div className={`h-1.5 rounded-full transition-all ${formStep >= 2 ? 'bg-orange-500' : 'bg-slate-700'}`} />
+                  <span className={`text-[10px] font-bold text-center ${formStep === 2 ? 'text-orange-400' : formStep > 2 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    2. Location
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (photoUrl && landmark.trim() && visionResult?.isCivicIssue !== false) {
+                      setFormStep(3);
+                    }
+                  }}
+                  disabled={!photoUrl || !landmark.trim() || isAnalyzingVision || visionResult?.isCivicIssue === false}
+                  className={`flex flex-col gap-1 text-left ${(!photoUrl || !landmark.trim() || isAnalyzingVision || visionResult?.isCivicIssue === false) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <div className={`h-1.5 rounded-full transition-all ${formStep >= 3 ? 'bg-orange-500' : 'bg-slate-700'}`} />
+                  <span className={`text-[10px] font-bold text-center ${formStep === 3 ? 'text-orange-400' : 'text-slate-500'}`}>
+                    3. Submit
+                  </span>
+                </button>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
-              {/* Photo Upload Box */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Capture / Upload Geo-Tagged Photo
-                  </label>
-                  {isAnalyzingVision && (
-                    <span className="text-[11px] font-semibold text-blue-700 flex items-center gap-1 animate-pulse">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Automated Triage In Progress...
-                    </span>
-                  )}
-                </div>
-
-                {photoUrl ? (
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain pb-28">
+              {/* ============================================================ */}
+              {/* STEP 1: SMART CAPTURE & AI TRIAGE (Mandatory Photo Gate) */}
+              {/* ============================================================ */}
+              {formStep === 1 && (
+                <div className="space-y-4 animate-fade-in">
                   <div className="space-y-2">
-                    <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden group">
-                      <img
-                        src={photoUrl}
-                        alt="Hazard preview"
-                        className="w-full h-48 object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      {isAnalyzingVision ? (
-                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
-                          <Sparkles className="w-6 h-6 text-blue-300 animate-spin" />
-                          <p className="text-xs font-bold">Evaluating pavement hazard & civic priority...</p>
-                        </div>
-                      ) : (
-                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Photo Attached</span>
-                        </div>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Capture / Upload Geo-Tagged Photo <span className="text-rose-600 font-bold">*</span>
+                      </label>
+                      {isAnalyzingVision && (
+                        <span className="text-[11px] font-semibold text-orange-600 flex items-center gap-1 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Automated Triage In Progress...
+                        </span>
                       )}
+                    </div>
 
-                      {/* Retake / Gallery / Remove Action Bar */}
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+                    {photoUrl ? (
+                      <div className="space-y-3">
+                        <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden group shadow-sm">
+                          <img
+                            src={photoUrl}
+                            alt="Hazard preview"
+                            className="w-full h-52 object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          {isAnalyzingVision ? (
+                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center text-white flex-col gap-2 p-4 text-center">
+                              <Sparkles className="w-6 h-6 text-orange-300 animate-spin" />
+                              <p className="text-xs font-bold">Evaluating pavement hazard & civic priority with Gemini...</p>
+                            </div>
+                          ) : (
+                            <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Photo Attached</span>
+                              {compressionStats && (
+                                <span className="text-[10px] text-slate-500 font-normal ml-1">
+                                  ({compressionStats.compressedKb} KB)
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Retake / Gallery / Remove Action Bar */}
+                          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => cameraInputRef.current?.click()}
+                              className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                              title="Take new photo with camera"
+                            >
+                              <Camera className="w-3.5 h-3.5 text-orange-600" />
+                              <span>Retake</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => galleryInputRef.current?.click()}
+                              className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                              title="Choose photo from gallery"
+                            >
+                              <ImageIcon className="w-3.5 h-3.5 text-slate-700" />
+                              <span>Gallery</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPhotoUrl(null);
+                                setVisionResult(null);
+                                setCompressionStats(null);
+                                setShowNonCivicWarning(false);
+                              }}
+                              className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center"
+                              title="Remove Photo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Animated Agentic HUD while analyzing */}
+                        {isAnalyzingVision && renderAgenticHUD()}
+
+                        {/* Strict Gemini Hallucination Gate Rejection Alert */}
+                        {visionResult && !isAnalyzingVision && visionResult.isCivicIssue === false && (
+                          <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl space-y-2.5 text-rose-900 shadow-sm animate-fade-in">
+                            <div className="flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700 shrink-0">
+                                <AlertTriangle className="w-5 h-5" />
+                              </div>
+                              <div className="space-y-1">
+                                <h4 className="font-bold text-sm text-rose-950">
+                                  No Municipal Hazard Detected
+                                </h4>
+                                <p className="text-xs text-rose-800 leading-relaxed font-medium">
+                                  {visionResult.rejectionReason || 'Image does not appear to show an authentic municipal civic issue (road damage, sanitation, drainage, or streetlighting). Please take a photo of the actual issue.'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 pt-1 border-t border-rose-200/60">
+                              <button
+                                type="button"
+                                onClick={() => cameraInputRef.current?.click()}
+                                className="flex-1 py-2 px-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <Camera className="w-3.5 h-3.5" />
+                                <span>Retake Photo</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => galleryInputRef.current?.click()}
+                                className="flex-1 py-2 px-3 bg-white hover:bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <ImageIcon className="w-3.5 h-3.5 text-rose-700" />
+                                <span>Upload Other</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Valid AI Triage & Confirmation Card */}
+                        {visionResult && !isAnalyzingVision && visionResult.isCivicIssue !== false && (
+                          renderAIDecisionBreakdown()
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={handleDrop}
+                        className={`border-2 border-dashed rounded-2xl p-6 transition text-center ${
+                          isDragOver ? 'border-orange-500 bg-orange-50/70' : 'border-slate-300 bg-slate-50/80'
+                        }`}
+                      >
+                        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                          <button
+                            type="button"
+                            id="full-form-camera-btn"
+                            onClick={() => cameraInputRef.current?.click()}
+                            className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500 hover:bg-orange-50/60 active:scale-95 transition shadow-xs group cursor-pointer"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mb-2 group-hover:scale-105 transition-transform">
+                              <Camera className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-bold text-slate-900">Take Photo</span>
+                            <span className="text-xs text-slate-500 font-medium mt-0.5">Live Rear Camera</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            id="full-form-gallery-btn"
+                            onClick={() => galleryInputRef.current?.click()}
+                            className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-100 active:scale-95 transition shadow-xs group cursor-pointer"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mb-2 group-hover:scale-105 transition-transform">
+                              <ImageIcon className="w-6 h-6" />
+                            </div>
+                            <span className="text-sm font-bold text-slate-900">Upload Gallery</span>
+                            <span className="text-xs text-slate-500 font-medium mt-0.5">Browse Files</span>
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-3 font-medium">
+                          * Photo is required for automated Gemini AI vision triage and officer verification.
+                        </p>
+                      </div>
+                    )}
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      id="camera-capture-input-form"
+                      ref={cameraInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="gallery-upload-input-form"
+                      ref={galleryInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* Step 1 Navigation CTA */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormStep(2)}
+                      disabled={!photoUrl || isAnalyzingVision || isCompressing || visionResult?.isCivicIssue === false}
+                      className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                    >
+                      {isAnalyzingVision || isCompressing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+                          <span>Analyzing Hazard...</span>
+                        </>
+                      ) : !photoUrl ? (
+                        <span>Attach Photo to Continue →</span>
+                      ) : visionResult?.isCivicIssue === false ? (
+                        <span>Valid Civic Photo Required</span>
+                      ) : (
+                        <span>Continue to Location & Ward →</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ============================================================ */}
+              {/* STEP 2: REVERSE GEOCODING & INCIDENT LOCATION */}
+              {/* ============================================================ */}
+              {formStep === 2 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Incident Location Pin (Google Map)
+                      </label>
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => cameraInputRef.current?.click()}
-                          className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-                          title="Take new photo with camera"
+                          onClick={handleCaptureGPSLocation}
+                          disabled={isGeocoding}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1 rounded-lg transition cursor-pointer shadow-2xs"
+                          title="Auto-detect high-precision GPS coordinates"
                         >
-                          <Camera className="w-3.5 h-3.5 text-orange-600" />
-                          <span>Retake</span>
+                          {isGeocoding ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-teal-600" />
+                          ) : (
+                            <Navigation className="w-3 h-3 text-teal-600" />
+                          )}
+                          <span>{isGeocoding ? 'Geocoding...' : 'Use My GPS'}</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => galleryInputRef.current?.click()}
-                          className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-                          title="Choose photo from gallery"
-                        >
-                          <ImageIcon className="w-3.5 h-3.5 text-slate-700" />
-                          <span>Gallery</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPhotoUrl(null);
-                            setVisionResult(null);
-                            setCompressionStats(null);
-                          }}
-                          className="bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center"
-                          title="Remove Photo"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <span className="text-xs font-mono text-blue-600 font-semibold">
+                          {selectedCoords.lat.toFixed(4)}°, {selectedCoords.lng.toFixed(4)}°
+                        </span>
                       </div>
                     </div>
 
-                      {/* Vision Triage & HUD Cards */}
-                      {isAnalyzingVision && renderAgenticHUD()}
-                      {visionResult && !isAnalyzingVision && renderAIDecisionBreakdown()}
-                    </div>
-                  ) : (
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                    onDragLeave={() => setIsDragOver(false)}
-                    onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-xl p-5 transition text-center ${
-                      isDragOver ? 'border-orange-500 bg-orange-50/70' : 'border-slate-300 bg-slate-50/80'
-                    }`}
-                  >
-                    <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
-                      <button
-                        type="button"
-                        id="full-form-camera-btn"
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500 hover:bg-orange-50/60 active:scale-95 transition shadow-xs group cursor-pointer"
-                      >
-                        <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mb-2 group-hover:scale-105 transition-transform">
-                          <Camera className="w-6 h-6" />
-                        </div>
-                        <span className="text-sm font-bold text-slate-900">Take Photo</span>
-                        <span className="text-xs text-slate-500 font-medium mt-0.5">Live Rear Camera</span>
-                      </button>
+                    <GooglePinPickerMap
+                      coords={selectedCoords}
+                      onCoordsChange={handleUpdateCoordsAndGeocode}
+                      onAddressDiscovered={(address, wardName) => {
+                        setLandmark(address);
+                        if (wardName) setSelectedWard(wardName);
+                      }}
+                      className="w-full h-44 rounded-xl border border-slate-200 overflow-hidden relative z-0 shadow-xs"
+                    />
 
-                      <button
-                        type="button"
-                        id="full-form-gallery-btn"
-                        onClick={() => galleryInputRef.current?.click()}
-                        className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-100 active:scale-95 transition shadow-xs group cursor-pointer"
+                    {/* Auto-detected Municipal Ward Selector */}
+                    <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                        <MapPin className="w-3.5 h-3.5 text-[#2d7a70]" />
+                        <span>Municipal Ward:</span>
+                      </div>
+                      <select
+                        value={selectedWard}
+                        onChange={(e) => setSelectedWard(e.target.value)}
+                        className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2d7a70] text-xs cursor-pointer"
                       >
-                        <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mb-2 group-hover:scale-105 transition-transform">
-                          <ImageIcon className="w-6 h-6" />
-                        </div>
-                        <span className="text-sm font-bold text-slate-900">Upload Gallery</span>
-                        <span className="text-xs text-slate-500 font-medium mt-0.5">Browse Files</span>
-                      </button>
+                        {ZONES.map((z) => (
+                          <option key={z.id} value={z.name}>
+                            {z.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <p className="text-xs text-slate-500 mt-3">Auto-analyzed with Gemini AI & compressed under 100 KB</p>
                   </div>
-                )}
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  id="camera-capture-input-form"
-                  ref={cameraInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                    e.target.value = '';
-                  }}
-                  className="hidden"
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  id="gallery-upload-input-form"
-                  ref={galleryInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                    e.target.value = '';
-                  }}
-                  className="hidden"
-                />
-              </div>
+                  {/* Landmark Input with Google Places & Reverse Geocode Auto-fill */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Street / Landmark Description (Google Places):
+                      </label>
+                      {isGeocoding && (
+                        <span className="text-[10px] text-teal-700 font-semibold animate-pulse flex items-center gap-1">
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          <span>Auto-filling address...</span>
+                        </span>
+                      )}
+                    </div>
+                    <GooglePlacesAutocompleteInput
+                      value={landmark}
+                      onChange={setLandmark}
+                      onPlaceSelect={(coords) => {
+                        handleUpdateCoordsAndGeocode(coords);
+                      }}
+                      placeholder="e.g. Cinema Road, Outside Verad Gate, Sector 4"
+                      className="h-11 text-sm"
+                      required
+                    />
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      Auto-filled via Reverse Geocoding API. You may freely append landmark details.
+                    </p>
+                  </div>
 
-              {/* Location & GPS Google Map Box with Reverse Geocoding */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Incident Location Pin (Google Map)
-                  </label>
-                  <div className="flex items-center gap-2">
+                  {/* Step 2 Navigation Actions */}
+                  <div className="grid grid-cols-2 gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={handleCaptureGPSLocation}
-                      disabled={isGeocoding}
-                      className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-0.5 rounded-lg transition cursor-pointer"
-                      title="Auto-detect high-precision GPS coordinates"
+                      onClick={() => setFormStep(1)}
+                      className="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-300 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      {isGeocoding ? (
-                        <Loader2 className="w-3 h-3 animate-spin text-teal-600" />
-                      ) : (
-                        <Navigation className="w-3 h-3 text-teal-600" />
-                      )}
-                      <span>{isGeocoding ? 'Geocoding...' : 'Use My GPS'}</span>
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Photo</span>
                     </button>
-                    <span className="text-xs font-mono text-blue-600 font-semibold">
-                      {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormStep(3)}
+                      disabled={!landmark.trim()}
+                      className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                    >
+                      <span>Continue to Details →</span>
+                    </button>
                   </div>
                 </div>
+              )}
 
-                <GooglePinPickerMap
-                  coords={selectedCoords}
-                  onCoordsChange={handleUpdateCoordsAndGeocode}
-                  onAddressDiscovered={(address, wardName) => {
-                    setLandmark(address);
-                    if (wardName) setSelectedWard(wardName);
-                  }}
-                  className="w-full h-44 rounded-xl border border-slate-200 overflow-hidden relative z-0"
-                />
-
-                {/* Auto-detected Municipal Ward Selector */}
-                <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                    <MapPin className="w-3.5 h-3.5 text-[#2d7a70]" />
-                    <span>Municipal Ward:</span>
+              {/* ============================================================ */}
+              {/* STEP 3: CITIZEN DETAILS & FINAL CONFIRMATION */}
+              {/* ============================================================ */}
+              {formStep === 3 && (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Summary Review Snapshot Card */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
+                    {photoUrl && (
+                      <img
+                        src={photoUrl}
+                        alt="Thumbnail"
+                        className="w-16 h-16 rounded-xl object-cover border border-slate-300 shrink-0"
+                      />
+                    )}
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900 truncate">
+                          {visionResult?.hazardName || SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory)?.name}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          visionResult?.priority === 'P1_CRITICAL' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}>
+                          {visionResult?.priority === 'P1_CRITICAL' ? 'P1 Critical' : 'P2 Urgent'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 truncate">
+                        📍 {selectedWard} • {landmark}
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        🏛️ Dept: {visionResult?.recommendedDepartment || 'Public Works Department'}
+                      </p>
+                    </div>
                   </div>
-                  <select
-                    value={selectedWard}
-                    onChange={(e) => setSelectedWard(e.target.value)}
-                    className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#2d7a70] text-xs cursor-pointer"
-                  >
-                    {ZONES.map((z) => (
-                      <option key={z.id} value={z.name}>
-                        {z.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              {/* Landmark Input with Google Places & Reverse Geocode Auto-fill */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Street / Landmark Description (Google Places):
-                  </label>
-                  {isGeocoding && (
-                    <span className="text-[10px] text-teal-700 font-semibold animate-pulse flex items-center gap-1">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                      <span>Auto-filling address...</span>
-                    </span>
-                  )}
-                </div>
-                <GooglePlacesAutocompleteInput
-                  value={landmark}
-                  onChange={setLandmark}
-                  onPlaceSelect={(coords) => {
-                    handleUpdateCoordsAndGeocode(coords);
-                  }}
-                  placeholder="e.g. Cinema Road, Outside Verad Gate, Sector 4"
-                  className="h-11 text-sm"
-                  required
-                />
-                <p className="text-[10px] text-slate-500">
-                  Auto-filled via Reverse Geocoding API pipeline. You may freely edit or append landmark details.
-                </p>
-              </div>
-
-              {/* Multimodal Grievance Description & Voice-to-Text */}
-              <VoiceGrievanceInput
-                value={grievanceDescription}
-                onChange={setGrievanceDescription}
-                onAudioChange={setVoiceNoteData}
-                placeholder="Describe hazard details or tap 'Voice Dictation' to speak in English/Hindi/Telugu..."
-              />
-
-              {/* Citizen Details */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700">Your Name</label>
-                  <input
-                    type="text"
-                    value={reporterName}
-                    onChange={(e) => setReporterName(e.target.value)}
-                    className="w-full h-11 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none"
-                    required
+                  {/* Multimodal Grievance Description & Voice-to-Text */}
+                  <VoiceGrievanceInput
+                    value={grievanceDescription}
+                    onChange={setGrievanceDescription}
+                    onAudioChange={setVoiceNoteData}
+                    placeholder="Describe hazard details or tap 'Voice Dictation' to speak in English/Hindi/Telugu..."
                   />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700">Mobile Number</label>
-                  <input
-                    type="text"
-                    value={reporterPhone}
-                    onChange={(e) => setReporterPhone(e.target.value)}
-                    className="w-full h-11 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none"
-                  />
-                </div>
-              </div>
 
-              {/* Persistent AI Decision Breakdown & Triage Card */}
-              {renderAIDecisionBreakdown()}
+                  {/* Citizen Details */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-700">Your Name</label>
+                      <input
+                        type="text"
+                        value={reporterName}
+                        onChange={(e) => setReporterName(e.target.value)}
+                        className="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-700">Mobile Number</label>
+                      <input
+                        type="text"
+                        value={reporterPhone}
+                        onChange={(e) => setReporterPhone(e.target.value)}
+                        className="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium"
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
+                  </div>
 
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                disabled={isDispatching || isSubmittingForm}
-                className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md min-h-[48px] mt-2"
-              >
-                {(isDispatching || isSubmittingForm) ? (
-                  <>
-                    <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    <span>Registering with Ward 4 Redressal...</span>
-                  </>
-                ) : (
-                  <span>Confirm & Submit Grievance</span>
-                )}
-              </button>
+                  {/* Step 3 Navigation CTA */}
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormStep(2)}
+                      className="col-span-1 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition border border-slate-300 flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Location</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isDispatching || isSubmittingForm}
+                      className="col-span-2 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                    >
+                      {(isDispatching || isSubmittingForm) ? (
+                        <>
+                          <Loader2 className="w-4 h-4 text-white animate-spin" />
+                          <span>Registering Grievance...</span>
+                        </>
+                      ) : (
+                        <span>Confirm & Submit Grievance</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         )}

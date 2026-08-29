@@ -144,7 +144,7 @@ export async function analyzeHazardWithGeminiVision(
             role: 'user',
             parts: [
               {
-                text: 'You are the Swachhata-MoHUA AI Vision Inspector. Determine if photo shows a valid civic issue (isCivicIssue). If false, set rejectionReason. If true, set isCivicIssue: true, aiConfidence (90-99), aiReasoning (1-sentence justification of category/department/severity), and return full structured JSON.'
+                text: 'You are the Swachhata-MoHUA AI Vision Inspector. Determine if photo shows a valid municipal civic hazard/defect (isCivicIssue: true). If the photo shows a hand, human selfie/portrait, pet, receipt, meme, food, or non-civic indoor room/object, strictly set isCivicIssue: false and set rejectionReason: "⚠️ No Municipal Hazard Detected: Image does not appear to show a civic issue (road damage, sanitation, drainage, or streetlighting). Please take a photo of the actual issue." If valid, set isCivicIssue: true, aiConfidence: 95-99, aiReasoning (1-sentence justification of category/department/severity), and return full structured JSON.'
               },
               {
                 inlineData: {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   INITIAL_INCIDENTS, 
   INITIAL_MUNICIPAL_UNITS, 
@@ -128,6 +128,10 @@ export default function App() {
   const [selectedUnit, setSelectedUnit] = useState<MunicipalUnit | null>(null);
   const [isDispatching, setIsDispatching] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+
+  // Direct Live Camera Intake from Navigation (+)
+  const navCameraInputRef = useRef<HTMLInputElement>(null);
+  const [pendingCapturedFile, setPendingCapturedFile] = useState<File | null>(null);
 
   // Helper to normalize route paths
   const normalizeRoutePath = (path: string) => {
@@ -718,10 +722,7 @@ export default function App() {
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign In</span>
                 </button>
-              ) : citizenTab === 'PROFILE' ? (
-                /* Static clean presence indicator when already on Profile screen */
-                <div className="w-9 h-9" />
-              ) : (
+              ) : citizenTab === 'PROFILE' ? null : (
                 /* User Profile Menu Trigger */
                 <div className="relative">
                   <button
@@ -1010,6 +1011,8 @@ export default function App() {
                       setShowSurveyModal(false);
                       navigateTo('/', true);
                     }}
+                    initialCapturedFile={pendingCapturedFile}
+                    onClearPendingFile={() => setPendingCapturedFile(null)}
                   />
                 )}
               </div>
@@ -1017,6 +1020,24 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Hidden Native Camera Input triggered directly by mobile floating (+) button */}
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        id="mobile-nav-live-camera-input"
+        ref={navCameraInputRef}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            setPendingCapturedFile(file);
+            navigateTo('/file-grievance');
+          }
+          e.target.value = '';
+        }}
+        className="hidden"
+      />
 
       {/* 3. SWACHHATA AUTHENTIC FIXED BOTTOM MOBILE BAR (Role-Tailored for Citizens & Staff) */}
       <nav className="block md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 z-40 flex justify-around items-center h-16 shadow-lg select-none px-2 text-slate-900">
@@ -1046,7 +1067,7 @@ export default function App() {
               <span>{t('events')}</span>
             </button>
 
-            {/* Center Elevated Floating (+) Button */}
+            {/* Center Elevated Floating (+) Button -> Directly Triggers Live Camera */}
             <div className="flex-1 flex justify-center -mt-6">
               <button
                 id="mobile-nav-post-complaint"
@@ -1054,13 +1075,18 @@ export default function App() {
                   if (!currentUser) {
                     setShowAuthModal(true);
                   } else {
-                    navigateTo('/file-grievance');
+                    // Instantly trigger native camera capture!
+                    if (navCameraInputRef.current) {
+                      navCameraInputRef.current.click();
+                    } else {
+                      navigateTo('/file-grievance');
+                    }
                   }
                 }}
-                title="Post a Complaint"
-                className="w-12 h-12 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-50 transition-all cursor-pointer"
+                title="Capture Hazard with Live Camera"
+                className="w-12 h-12 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md border-4 border-slate-50 transition-all cursor-pointer group"
               >
-                <Plus className="w-6 h-6 stroke-[3]" />
+                <Plus className="w-6 h-6 stroke-[3] group-hover:rotate-90 transition-transform duration-200" />
               </button>
             </div>
 
