@@ -818,7 +818,25 @@ Status: Ward Governance Mobile UI/UX Overhaul Complete
   * In `CitizenPortal.tsx`, `popView` seamlessly moves between wizard steps (`3 -> 2 -> 1`) before popping view history.
 
 =======================================================
-Status: 3-Step Wizard, Camera Trigger & Hallucination Gate Complete
+24. STRICT NON-CIVIC GATE ENFORCEMENT & STREAMLINED STEP 2 AI ASSESSMENT CARD:
+=======================================================
+- 1. Strict Non-Civic Image Rejection Gate (`geminiService.ts`, `server.ts`, `CitizenPortal.tsx`):
+  * Classification Prompt Enforcement:
+    - Updated Gemini vision system prompts in both `geminiService.ts` and `server.ts` to strictly classify human portraits, selfies, faces, pets, household objects, indoor spaces, receipts, or screenshots with no civic infrastructure hazard as `isCivicIssue: false`.
+    - Forces standardized rejection reason: `"No municipal hazard detected (non-civic image). Please upload a photo of a civic issue like potholes, garbage, or drainage."`
+  * Frontend Gate & Button Disabling (`CitizenPortal.tsx`):
+    - Renders high-visibility warning banner: `⚠️ Non-Civic Image Detected: Please upload a photo showing an actual municipal hazard.`
+    - Retake or Choose Other Image actions clear photo and vision state for seamless re-uploading.
+    - Completely disables the "Continue to Location & Ward" button (`disabled={!photoUrl || isAnalyzingVision || isCompressing || visionResult?.isCivicIssue === false}`) with text `Valid Civic Photo Required`.
+    - Hard-locks wizard step navigation (`goToStep`) so users cannot advance past Step 2 until a valid civic defect photo is uploaded.
+
+- 2. Streamlined Step 2 AI Triage Micro-Card (`CitizenPortal.tsx`):
+  * Streamlined Step 2 triage assessment card to prevent stat overload on mobile devices.
+  * Reduced card content to strictly 2 essential pills: `Detected Hazard` and `Assigned Department`.
+  * Removed extra match percentage rings and verbose SLA stat blocks from Step 2 to keep the layout lightweight, clean, and scroll-free on mobile viewports.
+
+=======================================================
+Status: Strict Non-Civic Gate & Streamlined Step 2 Triage Card Complete
 =======================================================
 
 

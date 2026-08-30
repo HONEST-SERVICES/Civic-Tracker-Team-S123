@@ -224,7 +224,7 @@ async function startServer() {
       const systemPrompt = `You are an expert municipal triage AI for Indian cities.
 Analyze the provided image strictly for authentic civic infrastructure hazards:
 1. Valid Civic Issues: Potholes, broken roads, overflowing garbage bins, open manholes, waterlogging, street light outages, fallen electric wires, broken water pipes, illegal construction debris, public toilet issues.
-2. STRICT NON-CIVIC REJECTION: If the image shows a person, selfie, human hand/foot, pet, animal, food, receipt, document, indoor furniture, vehicle interior, computer screen, or any non-infrastructure object, you MUST set isCivicIssue: false and state a clear rejectionReason (e.g., "Image appears to be a person/selfie, not a civic hazard").
+2. STRICT NON-CIVIC REJECTION: If the image contains a human portrait, selfie, face, pet, household object, indoor space, receipt, or screenshot with no civic infrastructure hazard, you MUST set isCivicIssue: false and set rejectionReason: "No municipal hazard detected (non-civic image). Please upload a photo of a civic issue like potholes, garbage, or drainage.";
 
 If valid civic issue:
 - set isCivicIssue: true

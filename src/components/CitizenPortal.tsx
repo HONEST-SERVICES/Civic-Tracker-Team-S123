@@ -388,6 +388,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   // Synchronized step navigation with browser history
   const goToStep = (step: 1 | 2 | 3 | 4) => {
     if (step === formStep) return;
+    if (step > 2 && visionResult?.isCivicIssue === false) {
+      return; // Do NOT allow advancing past Step 2 if non-civic image detected
+    }
     setFormStep(step);
     try {
       window.history.pushState({ modal: 'grievance', step, view: 'form' }, '', '#grievance-step-' + step);
@@ -527,10 +530,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     if (!visionResult || isAnalyzingVision) return null;
 
     const catObj = SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory);
-    const isCritical = visionResult.priority === 'P1_CRITICAL' || selectedCategory === 'OPEN_MANHOLES' || selectedCategory === 'DOWNED_POWER_LINE' || selectedCategory === 'STRUCTURAL_SINKHOLE';
-
-    const detectedHazard = visionResult.hazardName || catObj?.name || 'Overflowing Drain / Manhole';
-    const priority = visionResult.priority || (isCritical ? 'P1_CRITICAL' : 'P2_URGENT');
+    const detectedHazard = visionResult.hazardName || catObj?.name || 'Civic Infrastructure Hazard';
     
     const deptRaw = visionResult.recommendedDepartment || catObj?.department || 'PUBLIC_WORKS';
     const department = 
@@ -539,60 +539,33 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       deptRaw === 'ELECTRICAL' ? 'Electrical & Power Supply Division' :
       'Municipal Engineering & Utilities Wing';
 
-    const reasoning = visionResult.aiReasoning || visionResult.hazardDescription || `Automated MoHUA multimodal classification verified for ${detectedHazard}. High-confidence spatial hazard detected with auto-routing to ${department}.`;
-    const confidence = visionResult.aiConfidence || 98;
-
     return (
       <div
         ref={triageCardRef}
         className="mt-3 bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs space-y-2.5 animate-fadeIn text-left block w-full"
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse"/>
-            <span>Automated AI Triage Assessment</span>
-          </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            ⚡ {confidence}% Confidence
-          </span>
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+          <span>Automated AI Triage Assessment</span>
         </div>
 
-        {/* 3 Compact Triage Badges (Horizontal / Wrap Grid) */}
+        {/* 2 Essential Pills ONLY: Detected Hazard & Assigned Department */}
         <div className="grid grid-cols-2 gap-2 text-[11px]">
           <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2">
-            <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Detected Issue</span>
-            <span className="font-bold text-slate-800 truncate block">
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Detected Hazard</span>
+            <span className="font-bold text-slate-800 truncate block mt-0.5">
               {detectedHazard}
             </span>
           </div>
 
           <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2">
-            <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Target SLA</span>
-            <span className="font-bold text-rose-700 truncate block">
-              {priority === 'P1_CRITICAL' ? 'P1 Critical • 4h' : 'P2 Urgent • 24h'}
-            </span>
-          </div>
-
-          <div className="col-span-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Routing Wing</span>
-              <span className="font-bold text-slate-800 text-[11px]">
-                {department}
-              </span>
-            </div>
-            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold border border-emerald-200">
-              Auto-Assigned
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Assigned Department</span>
+            <span className="font-bold text-slate-800 truncate block mt-0.5">
+              {department}
             </span>
           </div>
         </div>
-
-        {/* Brief AI Rationale */}
-        {reasoning && (
-          <p className="text-[10px] text-slate-500 bg-slate-50/60 rounded-lg p-2 border border-slate-100 leading-relaxed italic">
-            "{reasoning}"
-          </p>
-        )}
 
         {/* Interactive Override Toggle */}
         <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
@@ -2378,7 +2351,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         {/* Animated Agentic HUD while analyzing */}
                         {isAnalyzingVision && renderAgenticHUD()}
 
-                        {/* STRICT GEMINI HALLUCINATION GATE: Non-Civic Rejection Alert */}
+                        {/* STRICT NON-CIVIC GATE: Rejection Alert */}
                         {visionResult && !isAnalyzingVision && visionResult.isCivicIssue === false && (
                           <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-2xl space-y-3 text-rose-950 shadow-sm animate-fade-in">
                             <div className="flex items-start gap-3">
@@ -2387,25 +2360,33 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               </div>
                               <div className="space-y-1 flex-1">
                                 <h4 className="font-bold text-sm text-rose-950 flex items-center gap-1.5">
-                                  <span>⚠️ Invalid Image: No Municipal Hazard Detected</span>
+                                  <span>⚠️ Non-Civic Image Detected: Please upload a photo showing an actual municipal hazard.</span>
                                 </h4>
                                 <p className="text-xs text-rose-800 leading-relaxed font-medium">
-                                  {visionResult.rejectionReason || 'This image does not show a recognized municipal civic issue (potholes, garbage, water leaks, streetlights, or drainage). Please upload a clear photo of the civic defect.'}
+                                  {visionResult.rejectionReason || 'No municipal hazard detected (non-civic image). Please upload a photo of a civic issue like potholes, garbage, or drainage.'}
                                 </p>
                               </div>
                             </div>
                             <div className="flex gap-2 pt-1 border-t border-rose-200">
                               <button
                                 type="button"
-                                onClick={() => cameraInputRef.current?.click()}
+                                onClick={() => {
+                                  setPhotoUrl(null);
+                                  setVisionResult(null);
+                                  cameraInputRef.current?.click();
+                                }}
                                 className="flex-1 py-2.5 px-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                               >
                                 <Camera className="w-4 h-4" />
-                                <span>Retake Real Photo</span>
+                                <span>Retake Photo</span>
                               </button>
                               <button
                                 type="button"
-                                onClick={() => galleryInputRef.current?.click()}
+                                onClick={() => {
+                                  setPhotoUrl(null);
+                                  setVisionResult(null);
+                                  galleryInputRef.current?.click();
+                                }}
                                 className="flex-1 py-2.5 px-3 bg-white hover:bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
                               >
                                 <ImageIcon className="w-4 h-4 text-rose-700" />
