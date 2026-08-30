@@ -507,7 +507,7 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
       {/* Unified Top Controls Overlay */}
       <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left: Compact Filter Chips */}
-        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-md border border-slate-200 pointer-events-auto">
+        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-md border border-slate-200 pointer-events-auto max-w-full overflow-x-auto no-scrollbar">
           {(['ALL', 'P1', 'P2', 'P3', 'CREWS'] as const).map((filter) => (
             <button
               key={filter}

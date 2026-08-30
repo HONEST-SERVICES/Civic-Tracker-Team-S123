@@ -43,6 +43,7 @@ import { GoogleTacticalMap } from './GoogleTacticalMap';
 import { LiveIncidentQueue } from './LiveIncidentQueue';
 import { MunicipalGovernanceView } from './MunicipalGovernanceView';
 import { ProfileView } from './ProfileView';
+import { WardStaffManagementView } from './WardStaffManagementView';
 
 interface MunicipalOfficerCommandCenterProps {
   incidents: CrisisIncident[];
@@ -62,8 +63,8 @@ interface MunicipalOfficerCommandCenterProps {
   onOpenStaffManagement?: () => void;
   onOpenProfile?: () => void;
   onOpenGeminiCopilot?: () => void;
-  initialTab?: 'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE';
-  onTabChange?: (tab: 'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE') => void;
+  initialTab?: 'COMMAND_DESK' | 'WARD_CONFIG' | 'STAFF_MANAGEMENT' | 'PROFILE';
+  onTabChange?: (tab: 'COMMAND_DESK' | 'WARD_CONFIG' | 'STAFF_MANAGEMENT' | 'PROFILE') => void;
 }
 
 export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCenterProps> = ({
@@ -88,7 +89,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const hasWardManagePerm = isSuperAdmin || (currentUser?.permissions?.includes('MANAGE_WARDS') || currentUser?.permissions?.includes('ALL_ACCESS'));
   const defaultWard = currentUser?.assignedWard || 'Ward 4 - Central Zone';
-  const [activeTab, setActiveTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'COMMAND_DESK' | 'WARD_CONFIG' | 'STAFF_MANAGEMENT' | 'PROFILE'>(initialTab);
 
   useEffect(() => {
     if (initialTab && initialTab !== activeTab) {
@@ -96,7 +97,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
     }
   }, [initialTab]);
 
-  const handleSwitchTab = (tab: 'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE') => {
+  const handleSwitchTab = (tab: 'COMMAND_DESK' | 'WARD_CONFIG' | 'STAFF_MANAGEMENT' | 'PROFILE') => {
     setActiveTab(tab);
     onTabChange?.(tab);
   };
@@ -225,42 +226,46 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
         } bg-slate-900 text-white flex flex-col justify-between border-r border-slate-800 shadow-xl z-40 transition-all duration-300 relative flex-shrink-0 hidden md:flex`}
       >
         {/* Sidebar Header: Brand + Collapse Button */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-slate-800/90 shrink-0">
-          {!isSidebarCollapsed && (
-            <div 
-              onClick={() => handleSwitchTab('COMMAND_DESK')}
-              className="flex items-center gap-2.5 cursor-pointer select-none group"
-              title="Return to GIS Command Desk"
-            >
-              <img 
-                src="/logo.png" 
-                alt="CivicPulse" 
-                className="h-8 w-auto object-contain flex-shrink-0 group-hover:scale-105 transition-transform"
-                referrerPolicy="no-referrer"
-              />
-              <div className="min-w-0">
-                <h1 className="font-bold text-sm text-white tracking-tight leading-none truncate group-hover:text-teal-300 transition-colors">
-                  CivicPulse HQ
-                </h1>
-                <span className="text-[10px] text-teal-400 font-semibold tracking-wide">Command Center</span>
+        <div className="h-14 px-3 flex items-center justify-between border-b border-slate-800/90 shrink-0">
+          {!isSidebarCollapsed ? (
+            <>
+              <div 
+                onClick={() => handleSwitchTab('COMMAND_DESK')}
+                className="flex items-center gap-2 cursor-pointer select-none group min-w-0"
+                title="Return to GIS Command Desk"
+              >
+                <img 
+                  src="/logo.png" 
+                  alt="CivicPulse" 
+                  className="h-7 w-auto object-contain flex-shrink-0 group-hover:scale-105 transition-transform"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="min-w-0">
+                  <h1 className="font-bold text-xs text-white tracking-tight leading-none truncate group-hover:text-amber-400 transition-colors">
+                    CivicPulse HQ
+                  </h1>
+                  <span className="text-[10px] text-amber-400 font-semibold tracking-wide">Command Center</span>
+                </div>
               </div>
+              <button
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+                title="Collapse Sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <div className="w-full flex items-center justify-center">
+              <button
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title="Expand Sidebar"
+              >
+                <PanelLeftOpen className="w-5 h-5 text-amber-400" />
+              </button>
             </div>
           )}
-          {isSidebarCollapsed && (
-            <img 
-              src="/logo.png" 
-              alt="CivicPulse" 
-              className="h-8 w-auto mx-auto object-contain cursor-pointer" 
-              onClick={() => handleSwitchTab('COMMAND_DESK')}
-            />
-          )}
-          <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-          </button>
         </div>
 
         {/* Navigation Sections */}
@@ -277,8 +282,8 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                 onClick={() => handleSwitchTab('COMMAND_DESK')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'COMMAND_DESK'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-slate-800 text-white border-l-2 border-amber-400 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
                 } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
                 title="GIS Command Map & Ticket Operations"
               >
@@ -287,7 +292,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                   <div className="flex items-center justify-between flex-1 min-w-0">
                     <span className="truncate">GIS Command Map</span>
                     {incidents.length > 0 && (
-                      <span className="bg-slate-800 text-teal-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                      <span className="bg-slate-800 text-teal-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-slate-700">
                         {incidents.length}
                       </span>
                     )}
@@ -300,39 +305,39 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                   onClick={() => handleSwitchTab('WARD_CONFIG')}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     activeTab === 'WARD_CONFIG'
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      ? 'bg-slate-800 text-white border-l-2 border-amber-400 shadow-xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
                   } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
                   title="Ward Governance & Service Metrics"
                 >
-                  <Layers className="w-4 h-4 text-blue-400 shrink-0" />
+                  <Layers className="w-4 h-4 text-sky-400 shrink-0" />
                   {!isSidebarCollapsed && <span className="truncate">Ward Governance</span>}
                 </button>
               )}
 
-              {onOpenStaffManagement && (
-                <button
-                  onClick={onOpenStaffManagement}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800 ${
-                    isSidebarCollapsed ? 'justify-center px-0' : ''
-                  }`}
-                  title="Manage Ward Staff & RBAC Delegations"
-                >
-                  <Users className="w-4 h-4 text-indigo-400 shrink-0" />
-                  {!isSidebarCollapsed && <span className="truncate">Staff Management</span>}
-                </button>
-              )}
+              <button
+                onClick={() => handleSwitchTab('STAFF_MANAGEMENT')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'STAFF_MANAGEMENT'
+                    ? 'bg-slate-800 text-white border-l-2 border-amber-400 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                title="Manage Ward Staff & RBAC Delegations"
+              >
+                <Users className="w-4 h-4 text-amber-400 shrink-0" />
+                {!isSidebarCollapsed && <span className="truncate">Staff & RBAC</span>}
+              </button>
 
               <button
                 onClick={() => onOpenProfile ? onOpenProfile() : handleSwitchTab('PROFILE')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'PROFILE'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-slate-800 text-white border-l-2 border-amber-400 shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
                 } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
                 title="Officer Profile & Preferences"
               >
-                <User className="w-4 h-4 text-amber-400 shrink-0" />
+                <User className="w-4 h-4 text-emerald-400 shrink-0" />
                 {!isSidebarCollapsed && <span className="truncate">Officer Profile</span>}
               </button>
             </div>
@@ -506,7 +511,17 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
             currentUser={currentUser || null}
             onSignOut={onLogout || (() => {})}
             onSwitchToTacticalDesk={() => setActiveTab('COMMAND_DESK')}
-            onOpenStaffManagement={onOpenStaffManagement}
+            onOpenStaffManagement={onOpenStaffManagement || (() => setActiveTab('STAFF_MANAGEMENT'))}
+          />
+        </div>
+      )}
+
+      {/* RENDER TAB 3: STAFF MANAGEMENT & RBAC FULL PAGE */}
+      {activeTab === 'STAFF_MANAGEMENT' && (
+        <div className="flex-1 flex overflow-hidden">
+          <WardStaffManagementView
+            currentUser={currentUser || null}
+            onBack={() => setActiveTab('COMMAND_DESK')}
           />
         </div>
       )}
@@ -1214,7 +1229,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
             <div className="flex-1 min-w-0 h-full flex flex-col gap-3 overflow-hidden transition-all duration-300 ease-in-out">
               
               {/* Unified Center Pill Dock & Split View Mode Controls */}
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs px-3.5 py-2 flex items-center justify-between shrink-0">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs px-3.5 py-2 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
                 {/* Left: Tactical Filter Dock */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   <button
