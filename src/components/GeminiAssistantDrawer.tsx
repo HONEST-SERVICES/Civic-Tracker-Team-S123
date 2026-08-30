@@ -19,11 +19,13 @@ import {
   Zap,
   Flame,
   ExternalLink,
-  Ticket
+  Ticket,
+  PhoneCall
 } from 'lucide-react';
 import { UserRole, CrisisIncident, MunicipalUnit } from '../types';
 import { queryGeminiAssistant, GeminiAssistantMessage } from '../services/geminiService';
 import { INITIAL_PUBLIC_FACILITIES } from '../mockData';
+import { GeminiLiveCallOverlay } from './GeminiLiveCallOverlay';
 
 interface GeminiAssistantDrawerProps {
   isOpen: boolean;
@@ -63,6 +65,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
   const [inputVal, setInputVal] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isLiveCallOpen, setIsLiveCallOpen] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -198,7 +201,16 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsLiveCallOpen(true)}
+              className="px-2.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-extrabold text-[11px] rounded-xl transition flex items-center gap-1 shadow-md cursor-pointer animate-pulse"
+              title="Start Real-Time Voice Call with Gemini AI"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Live Call</span>
+            </button>
+
             <button
               onClick={handleResetChat}
               title="Reset conversation"
@@ -403,6 +415,23 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
           </form>
         </div>
       </div>
+
+      <GeminiLiveCallOverlay
+        isOpen={isLiveCallOpen}
+        onClose={() => setIsLiveCallOpen(false)}
+        userRole={userRole}
+        userWard={userWard}
+        onInspectTicket={onInspectTicket}
+        onGrievanceTriggered={(data) => {
+          if (onApplyDraft) {
+            onApplyDraft({
+              title: `Voice Report: ${data.category}`,
+              category: data.category,
+              description: data.description
+            });
+          }
+        }}
+      />
     </div>
   );
 };

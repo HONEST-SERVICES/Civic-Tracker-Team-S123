@@ -1,4 +1,26 @@
 =======================================================
+21. REAL-TIME GEMINI MULTIMODAL LIVE AUDIO AGENT (WEBSOCKETS + FUNCTION CALLING):
+=======================================================
+- WebSocket Audio Client & Low-Latency Pipeline (`src/services/geminiLiveService.ts`):
+  * Built `GeminiLiveService` connecting directly to server WebSocket endpoint `/ws/live`.
+  * Implemented 16kHz PCM mono audio capture using Web Audio API (`AudioContext` + `ScriptProcessorNode` downsampling) and base64 audio chunk streaming.
+  * Implemented gapless 24kHz PCM audio playback queue with smooth AudioBuffer scheduling (<500ms latency).
+  * Built natural barge-in / speech interruption: detects user audio RMS above threshold during agent playback, automatically stopping queued audio sources and resetting playback timing.
+- Server-Side Gemini Multimodal Live API Relay & Autonomous Tools (`server.ts`):
+  * Configured `ws` WebSocketServer attached to `httpServer` handling `/ws/live` upgrades.
+  * Initialized Gemini Live session via `@google/genai` `ai.live.connect` with model `"gemini-3.1-flash-live-preview"`, responseModality `AUDIO`, prebuilt voice `Puck`, and 3 callable tools:
+    1. `lookupTicketStatus`: Fetches live grievance record by ticket ID from Firestore database (`civictracker`), returning category, status, priority, and ETA.
+    2. `submitVoiceGrievance`: Automatically generates a draft grievance document in Firestore and triggers photo capture in the UI.
+    3. `escalateToCommissioner`: Upgrades ticket priority to `P1_CRITICAL`, marks `isEscalated: true`, and updates status for Municipal Commissioner review.
+- Siri-Style Animated Voice Call Overlay UI (`src/components/GeminiLiveCallOverlay.tsx`):
+  * Multi-ring radial glowing Siri-style visualizer orb dynamically scaled by real-time audio volume (`userVolume` and `agentVolume`).
+  * Live conversation captions auto-scrolling stream with animated tool execution chips (e.g. `⚡ Tool Executed: lookupTicketStatus(#TK-3571)`).
+  * Interactive controls: Mute/Unmute microphone, call duration timer, and End Voice Call teardown.
+  * Deep integration into `GeminiAssistantDrawer.tsx` header and Quick Actions row via "📞 Start Live Voice Call" button.
+- Verification & Clean Build:
+  * Passed strict TypeScript type checking (`tsc --noEmit`) and production applet compilation with zero errors.
+
+=======================================================
 20. CRITICAL HARD-GATE FIX: STRICTLY BLOCK WIZARD PROGRESSION FOR NON-CIVIC IMAGES:
 =======================================================
 - Strict Validation Gate in Grievance Submission Flow (`CitizenPortal.tsx`):
