@@ -23,18 +23,23 @@ async function callGeminiClientWithFallback(
   generateParams: any,
   preferredModel = 'gemini-3.1-flash-lite'
 ) {
-  const modelsToTry = [preferredModel, 'gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-flash-latest'];
+  const rawPool = [preferredModel, 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.7-flash'];
+  const modelsToTry = Array.from(new Set(rawPool.filter(Boolean)));
   let lastErr: any = null;
 
   for (const model of modelsToTry) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
+        const config: any = { ...(generateParams.config || {}) };
+        if (model.includes('3.7')) {
+          config.thinkingConfig = { thinkingBudget: 0 };
+        } else {
+          delete config.thinkingConfig;
+        }
+
         const response = await ai.models.generateContent({
           ...generateParams,
-          config: {
-            thinkingConfig: { thinkingBudget: 0 },
-            ...(generateParams.config || {})
-          },
+          config,
           model,
         });
         return response;
@@ -51,7 +56,7 @@ async function callGeminiClientWithFallback(
           msg.includes('temporarily');
 
         if (isUnavailable && attempt === 0) {
-          await new Promise((r) => setTimeout(r, 400));
+          await new Promise((r) => setTimeout(r, 500));
           continue;
         }
         break;
@@ -211,7 +216,7 @@ Return JSON matching schema:
           responseMimeType: 'application/json',
           responseSchema: visionSchema
         }
-      }, 'gemini-3.7-flash');
+      }, 'gemini-3.1-flash-lite');
 
       const parsed = JSON.parse(response.text || '{}');
       return {

@@ -187,18 +187,24 @@ async function startServer() {
     generateParams: any,
     preferredModel = "gemini-3.1-flash-lite"
   ) {
-    const modelsToTry = [preferredModel, "gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-flash-latest"];
+    const rawPool = [preferredModel, "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
+    const modelsToTry = Array.from(new Set(rawPool.filter(Boolean)));
     let lastErr: any = null;
 
     for (const model of modelsToTry) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
+          const config: any = { ...(generateParams.config || {}) };
+          // Only pass thinkingConfig for models that support it (3.7+)
+          if (model.includes("3.7")) {
+            config.thinkingConfig = { thinkingBudget: 0 };
+          } else {
+            delete config.thinkingConfig;
+          }
+
           const response = await ai.models.generateContent({
             ...generateParams,
-            config: {
-              thinkingConfig: { thinkingBudget: 0 },
-              ...(generateParams.config || {})
-            },
+            config,
             model,
           });
           return response;
@@ -215,10 +221,11 @@ async function startServer() {
             msg.includes("temporarily");
 
           if (isUnavailable && attempt === 0) {
-            // Wait 400ms before retry
-            await new Promise((r) => setTimeout(r, 400));
+            // Wait 500ms before retrying same model once
+            await new Promise((r) => setTimeout(r, 500));
             continue;
           }
+          // Break to try next fallback model in list
           break;
         }
       }
@@ -418,7 +425,7 @@ If valid civic issue:
           responseMimeType: "application/json",
           responseSchema: visionSchema
         }
-      }, "gemini-3.7-flash");
+      }, "gemini-3.1-flash-lite");
 
       const parsed = JSON.parse(response.text || "{}");
       return res.json({

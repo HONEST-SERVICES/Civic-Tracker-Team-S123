@@ -1,4 +1,19 @@
 ======================================================
+31. MOBILE CANVAS IMAGE COMPRESSION, 5S SAFETY TIMEOUT & PREVIEW STABILITY:
+======================================================
+- Mobile Image Compression Pipeline (`src/utils/imageCompressor.ts`):
+  * Strictly capped maximum scaling dimensions to 1200px on mobile (`MAX_MOBILE_DIMENSION = 1200`) to prevent mobile GPU canvas memory exhaustion and crashes.
+  * Implemented an async 5-second safety timeout (`COMPRESSION_TIMEOUT_MS = 5000`) for canvas resizing operations. If processing stalls, times out, or throws an unhandled exception, cleanly falls back immediately to uncompressed FileReader base64 representation rather than locking the UI.
+  * Attached explicit `onload` and `onerror` handlers to all Image objects to handle unreadable/corrupted mobile photo formats.
+  * Implemented complete memory teardown: nullifies Image objects (`img.src = ''`, `img = null`) and clears Canvas dimensions (`canvas.width = 0`, `canvas.height = 0`) on completion or abort.
+- Profile Photo & Avatar Upload State Lock Resolution (`ProfileView.tsx` & `CitizenPortal.tsx`):
+  * Guaranteed that `isUploadingPhoto`, `isUploadingAvatar`, and `isCompressing` flags are consistently reset inside `finally {}` blocks.
+  * Added standardized non-blocking feedback toast on failure: `"Image processing failed. Please try selecting a smaller photo."`
+- Mobile Grievance Photo Preview Stability (`CitizenPortal.tsx` & `CitizenIngestionPanel.tsx`):
+  * Maintained instantaneous synchronous preview derivation via `FileReader.readAsDataURL(file)` so preview renders immediately upon selection while background AI triage runs.
+  * Enforced `min-h-[180px]`, `w-full`, `object-cover`, and `bg-slate-100` styling across all photo preview cards to prevent broken container height collapsing.
+
+======================================================
 30. LIVE WEBSOCKET MODEL MIGRATION (MODELS/GEMINI-2.0-FLASH-LIVE-001) & CLOUDFLARE KEY RESOLUTION:
 ======================================================
 - Model Identifier Migration (`src/services/geminiLiveService.ts` & `server.ts`):

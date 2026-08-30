@@ -149,8 +149,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       setTimeout(() => setAvatarStatusMsg(null), 3000);
     } catch (err) {
       console.error('Failed to update avatar:', err);
-      setAvatarStatusMsg('Failed to update avatar photo.');
-      setTimeout(() => setAvatarStatusMsg(null), 3000);
+      setAvatarStatusMsg('Image processing failed. Please try selecting a smaller photo.');
+      setTimeout(() => setAvatarStatusMsg(null), 4000);
     } finally {
       setIsUploadingAvatar(false);
       if (e.target) e.target.value = '';
@@ -813,8 +813,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     setIsCompressing(true);
     setSubmitErrorMessage(null);
     setAiAutoRoutedNotice(null);
+
+    // 1. Instant synchronous preview from raw FileReader base64 representation
+    const syncReader = new FileReader();
+    syncReader.onload = (ev) => {
+      if (typeof ev.target?.result === 'string') {
+        setPhotoUrl(ev.target.result);
+      }
+    };
+    syncReader.readAsDataURL(file);
+
     try {
-      // 1. Client-Side Canvas 2D Compression (Throttles 10MB phone camera to ~60-90KB)
+      // 2. Client-Side Canvas 2D Compression with 1200px max dimension cap & 5s timeout
       const compression = await compressImage(file, 800, 800, 0.75);
       setCompressionStats({
         originalKb: compression.originalSizeKb,
@@ -822,7 +832,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       });
       setPhotoUrl(compression.compressedBase64);
       
-      // 2. Auto-trigger Gemini 3.7 Flash Vision Analysis with 8s timeout
+      // 3. Auto-trigger Gemini 3.7 Flash Vision Analysis with 8s timeout
       setIsAnalyzingVision(true);
       try {
         const visionData = await Promise.race([
@@ -1453,11 +1463,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                   {photoUrl ? (
                     <div className="space-y-2">
-                      <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden w-full h-48 sm:h-56 group shadow-sm">
+                      <div className="relative rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden w-full h-48 sm:h-56 min-h-[180px] group shadow-sm">
                         <img
                           src={normalizeImageSrc(photoUrl)}
                           alt="Hazard"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full min-h-[180px] object-cover bg-slate-100"
                           onError={handleImageError}
                           referrerPolicy="no-referrer"
                         />
@@ -2386,11 +2396,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                     {photoUrl ? (
                       <div className="space-y-3">
-                        <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden w-full h-48 sm:h-56 group shadow-sm">
+                        <div className="relative rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden w-full h-48 sm:h-56 min-h-[180px] group shadow-sm">
                           <img
                             src={normalizeImageSrc(photoUrl)}
                             alt="Hazard preview"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full min-h-[180px] object-cover bg-slate-100"
                             onError={handleImageError}
                             referrerPolicy="no-referrer"
                           />

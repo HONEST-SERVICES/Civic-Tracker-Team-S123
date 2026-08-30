@@ -135,8 +135,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setTimeout(() => setPhotoNotice(null), 3000);
     } catch (err) {
       console.error('Failed to upload profile photo:', err);
-      setPhotoNotice('Photo update failed.');
-      setTimeout(() => setPhotoNotice(null), 3000);
+      setPhotoNotice('Image processing failed. Please try selecting a smaller photo.');
+      setTimeout(() => setPhotoNotice(null), 4000);
     } finally {
       setIsUploadingPhoto(false);
       if (e.target) e.target.value = '';
