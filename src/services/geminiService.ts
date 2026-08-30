@@ -1,4 +1,4 @@
-import { CrisisIncident, MunicipalUnit, AgentThoughtStep, GeminiVisionResult, UserRole, DepartmentType } from '../types';
+import { CrisisIncident, MunicipalUnit, AgentThoughtStep, GeminiVisionResult, UserRole } from '../types';
 import { getGeminiApiKey } from '../config/keys';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -23,23 +23,18 @@ async function callGeminiClientWithFallback(
   generateParams: any,
   preferredModel = 'gemini-3.1-flash-lite'
 ) {
-  const rawPool = [preferredModel, 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.7-flash'];
-  const modelsToTry = Array.from(new Set(rawPool.filter(Boolean)));
+  const modelsToTry = [preferredModel, 'gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-flash-latest'];
   let lastErr: any = null;
 
   for (const model of modelsToTry) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const config: any = { ...(generateParams.config || {}) };
-        if (model.includes('3.7')) {
-          config.thinkingConfig = { thinkingBudget: 0 };
-        } else {
-          delete config.thinkingConfig;
-        }
-
         const response = await ai.models.generateContent({
           ...generateParams,
-          config,
+          config: {
+            thinkingConfig: { thinkingBudget: 0 },
+            ...(generateParams.config || {})
+          },
           model,
         });
         return response;
@@ -56,7 +51,7 @@ async function callGeminiClientWithFallback(
           msg.includes('temporarily');
 
         if (isUnavailable && attempt === 0) {
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 400));
           continue;
         }
         break;
@@ -92,27 +87,7 @@ export async function analyzeHazardWithGeminiVision(
 
     if (res.ok) {
       const data: GeminiVisionResult = await res.json();
-      return {
-        isCivicIssue: data.isCivicIssue !== undefined ? data.isCivicIssue : true,
-        rejectionReason: data.rejectionReason || '',
-        category: data.category || 'DEEP_POTHOLE',
-        hazardName: data.hazardName || 'Civic Infrastructure Defect',
-        severity: data.severity || 'URGENT',
-        priority: data.priority || 'P2_URGENT',
-        department: (data.department || data.recommendedDepartment || 'PUBLIC_WORKS') as DepartmentType,
-        recommendedDepartment: (data.recommendedDepartment || data.department || 'PUBLIC_WORKS') as DepartmentType,
-        confidence: data.confidence || data.aiConfidence || 95,
-        aiConfidence: data.aiConfidence || data.confidence || 95,
-        reasoning: data.reasoning || data.aiReasoning || 'Visual evidence confirmed civic defect.',
-        aiReasoning: data.aiReasoning || data.reasoning || 'Visual evidence confirmed civic defect.',
-        riskScore: data.riskScore || 75,
-        hazardDescription: data.hazardDescription || 'Municipal infrastructure hazard identified.',
-        recommendedCrew: data.recommendedCrew || 'Rapid Response Unit',
-        estimatedRepairTimeMinutes: data.estimatedRepairTimeMinutes || 45,
-        safetyDirectives: data.safetyDirectives || ['Deploy warning markers', 'Inspect site'],
-        anomaliesDetected: data.anomaliesDetected || ['Structural Defect'],
-        analyzedWithGemini: data.analyzedWithGemini ?? true
-      };
+      return data;
     }
   } catch (err) {
     console.warn('Server vision endpoint notice, attempting client SDK fallback:', err);
@@ -216,7 +191,7 @@ Return JSON matching schema:
           responseMimeType: 'application/json',
           responseSchema: visionSchema
         }
-      }, 'gemini-3.1-flash-lite');
+      }, 'gemini-3.7-flash');
 
       const parsed = JSON.parse(response.text || '{}');
       return {

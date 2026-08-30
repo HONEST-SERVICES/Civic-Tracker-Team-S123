@@ -19,13 +19,11 @@ import {
   Zap,
   Flame,
   ExternalLink,
-  Ticket,
-  PhoneCall
+  Ticket
 } from 'lucide-react';
 import { UserRole, CrisisIncident, MunicipalUnit } from '../types';
 import { queryGeminiAssistant, GeminiAssistantMessage } from '../services/geminiService';
 import { INITIAL_PUBLIC_FACILITIES } from '../mockData';
-import { GeminiLiveCallOverlay } from './GeminiLiveCallOverlay';
 
 interface GeminiAssistantDrawerProps {
   isOpen: boolean;
@@ -35,7 +33,7 @@ interface GeminiAssistantDrawerProps {
   currentUser?: any;
   incidents: CrisisIncident[];
   availableUnits?: MunicipalUnit[];
-  onApplyDraft?: (draft: { title?: string; category?: string; description?: string; photoUrl?: string }) => void;
+  onApplyDraft?: (draft: { title?: string; category?: string; description?: string }) => void;
   onInspectTicket?: (ticketId: string) => void;
 }
 
@@ -65,7 +63,6 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
   const [inputVal, setInputVal] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [isLiveCallOpen, setIsLiveCallOpen] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -183,8 +180,8 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
         {/* Drawer Header */}
         <div className="bg-gradient-to-r from-[#0d5c52] via-[#115e59] to-[#042f2e] text-white p-4 sm:p-5 flex items-center justify-between border-b border-teal-700/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs relative overflow-hidden p-1.5">
-              <img src="/logo.png" alt="CivicPulse Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs relative">
+              <Sparkles className="w-5 h-5 animate-pulse" strokeWidth={1.75} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -201,16 +198,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setIsLiveCallOpen(true)}
-              className="px-2.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-extrabold text-[11px] rounded-xl transition flex items-center gap-1 shadow-md cursor-pointer animate-pulse"
-              title="Start Real-Time Voice Call with Gemini AI"
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Live Call</span>
-            </button>
-
+          <div className="flex items-center gap-1">
             <button
               onClick={handleResetChat}
               title="Reset conversation"
@@ -247,7 +235,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
                     </>
                   ) : (
                     <>
-                      <img src="/logo.png" alt="CivicPulse Logo" className="w-3.5 h-3.5 object-contain" />
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
                       <span className="font-bold text-emerald-800">CivicPulse AI Agent</span>
                       <span>•</span>
                       <span>{msg.timestamp}</span>
@@ -354,7 +342,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
 
           {isLoading && (
             <div className="flex items-center gap-2 text-slate-500 text-xs p-3 bg-white rounded-2xl border border-slate-200 w-fit animate-pulse">
-              <img src="/logo.png" alt="CivicPulse Logo" className="w-4 h-4 object-contain animate-spin" />
+              <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
               <span>CivicPulse AI processing live ward context & telemetry...</span>
             </div>
           )}
@@ -415,55 +403,6 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
           </form>
         </div>
       </div>
-
-      <GeminiLiveCallOverlay
-        isOpen={isLiveCallOpen}
-        onClose={() => setIsLiveCallOpen(false)}
-        userRole={userRole}
-        userWard={userWard}
-        onInspectTicket={onInspectTicket}
-        onGrievanceTriggered={(data) => {
-          if (onApplyDraft) {
-            onApplyDraft({
-              title: `Voice Report: ${data.category}`,
-              category: data.category,
-              description: data.description,
-              ...(data.photoUrl ? { photoUrl: data.photoUrl } : {})
-            });
-          }
-        }}
-        onSyncHistory={(summary) => {
-          const mins = Math.floor(summary.durationSeconds / 60);
-          const secs = summary.durationSeconds % 60;
-          const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-
-          let transcriptBody = `📞 **Gemini Live Call Summary (Duration: ${timeStr})**\n\n`;
-
-          if (summary.captions && summary.captions.length > 0) {
-            transcriptBody += `**Live Spoken Transcript:**\n` +
-              summary.captions.map(c => `• **${c.role === 'user' ? 'You' : 'CivicPulse Live Agent'}:** ${c.text}`).join('\n') + '\n\n';
-          } else {
-            transcriptBody += `Voice conversation completed with CivicPulse AI Agent.\n\n`;
-          }
-
-          if (summary.executedTools && summary.executedTools.length > 0) {
-            transcriptBody += `⚡ **Autonomous Actions Triggered:**\n` +
-              summary.executedTools.map(t => `- Executed **\`${t.toolName}\`**${t.ticketId ? ` → Ticket #${t.ticketId}` : ''}`).join('\n');
-          }
-
-          if (summary.photoUrl) {
-            transcriptBody += `\n\n📸 **Hazard Photo Attached:** Photo successfully linked to report.`;
-          }
-
-          const callMsg: GeminiAssistantMessage = {
-            role: 'assistant',
-            content: transcriptBody,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-
-          setMessages(prev => [...prev.slice(-49), callMsg]);
-        }}
-      />
     </div>
   );
 };

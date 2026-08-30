@@ -32,7 +32,6 @@ import { SwachhataAuthScreen } from './components/SwachhataAuthScreen';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './components/SwachhataDriveModal';
 import { EventsView } from './components/EventsView';
 import { ProfileView } from './components/ProfileView';
-import { UserAvatar } from './components/UserAvatar';
 import { executeAutonomousDispatch } from './services/geminiService';
 import { 
   subscribeToScopedComplaints,
@@ -725,24 +724,29 @@ export default function App() {
                     title="User Profile & Settings"
                     className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-xs overflow-hidden"
                   >
-                    <UserAvatar
-                      photoURL={currentUser?.photoURL}
-                      name={currentUser?.name}
-                      size="md"
-                      className="w-full h-full"
-                    />
+                    {currentUser?.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt={currentUser.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <UserCircle className="w-5 h-5 text-slate-600" strokeWidth={1.75} />
+                    )}
                   </button>
 
                   {/* Profile Dropdown Drawer */}
                   {showProfileMenu && currentUser && (
                     <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
                       <div className="pb-3 border-b border-slate-100 flex items-center gap-2.5">
-                        <UserAvatar
-                          photoURL={currentUser?.photoURL}
-                          name={currentUser?.name}
-                          size="md"
-                          className="w-10 h-10 ring-2 ring-slate-100"
-                        />
+                        <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 font-bold overflow-hidden">
+                          {currentUser?.photoURL ? (
+                            <img src={currentUser.photoURL} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <User className="w-5 h-5 text-blue-600" />
+                          )}
+                        </div>
                         <div className="min-w-0 flex-1">
                           <h4 className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</h4>
                           <div className="mt-0.5">

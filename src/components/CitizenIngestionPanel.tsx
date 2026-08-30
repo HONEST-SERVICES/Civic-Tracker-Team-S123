@@ -22,8 +22,6 @@ import { HazardCategory, PriorityLevel, CrisisIncident, ScannerData } from '../t
 import { ZONES } from '../mockData';
 import { reverseGeocodeCoordinates, getCurrentUserLocation } from '../services/locationService';
 import { VoiceGrievanceInput } from './VoiceGrievanceInput';
-import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
-import { compressImage } from '../utils/imageCompressor';
 
 interface CitizenIngestionPanelProps {
   onSubmitIncident: (incidentData: Partial<CrisisIncident>) => void;
@@ -129,28 +127,19 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
     setLng(newLng);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // 1. Instant synchronous FileReader preview URL
       const reader = new FileReader();
       reader.onload = (event) => {
         const url = event.target?.result as string;
-        if (url) setSelectedImageUrl(url);
+        setSelectedImageUrl(url);
         setAnomalyBadgeText('AI Analysis: Verified Civic Hazard - 94% confidence');
         setDepthText('Estimated ~14 cm');
         setAreaText('Approx. 1.2 sq. meters');
         setDetectedAnomalies(['Surface Discontinuity', 'High Friction Loss', 'Public Road Obstruction']);
       };
       reader.readAsDataURL(file);
-
-      // 2. Client-side canvas compression with 5s timeout & 1200px max limit
-      try {
-        const compressed = await compressImage(file, 800, 800, 0.75);
-        setSelectedImageUrl(compressed.compressedBase64);
-      } catch (err) {
-        console.warn('Ingestion image compression fallback:', err);
-      }
     }
   };
 
@@ -327,12 +316,11 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
           </div>
 
           {/* Clean Photo Preview Box */}
-          <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 w-full h-48 sm:h-56 min-h-[180px] shadow-sm group">
+          <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-900 h-44 shadow-sm group">
             <img
-              src={normalizeImageSrc(selectedImageUrl)}
+              src={selectedImageUrl}
               alt="Civic hazard triage"
-              className="w-full h-full min-h-[180px] object-cover bg-slate-900"
-              onError={handleImageError}
+              className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
 
@@ -371,10 +359,9 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
                   }`}
                 >
                   <img
-                    src={normalizeImageSrc(sample.url)}
+                    src={sample.url}
                     alt={sample.title}
                     className="w-8 h-8 rounded object-cover flex-shrink-0"
-                    onError={handleImageError}
                     referrerPolicy="no-referrer"
                   />
                   <div className="overflow-hidden min-w-0">

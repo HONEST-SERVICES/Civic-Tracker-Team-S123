@@ -85,8 +85,6 @@ import { VoiceGrievanceInput } from './VoiceGrievanceInput';
 import { compressImage } from '../utils/imageCompressor';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './SwachhataDriveModal';
 import { getUserInitials } from '../utils/userUtils';
-import { UserAvatar } from './UserAvatar';
-import { normalizeImageSrc, handleImageError, DEFAULT_CIVIC_PLACEHOLDER } from '../utils/imageUtils';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -149,8 +147,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       setTimeout(() => setAvatarStatusMsg(null), 3000);
     } catch (err) {
       console.error('Failed to update avatar:', err);
-      setAvatarStatusMsg('Image processing failed. Please try selecting a smaller photo.');
-      setTimeout(() => setAvatarStatusMsg(null), 4000);
+      setAvatarStatusMsg('Failed to update avatar photo.');
+      setTimeout(() => setAvatarStatusMsg(null), 3000);
     } finally {
       setIsUploadingAvatar(false);
       if (e.target) e.target.value = '';
@@ -387,25 +385,23 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     } catch {}
   };
 
-  // Derived civic image validation state (robust to AI delays & manual citizen override)
+  // Derived strict civic image validation state
   const isValidCivicImage = Boolean(
     photoUrl &&
+    visionResult &&
+    !isAnalyzingVision &&
     !isCompressing &&
-    (visionResult ? (visionResult.isCivicIssue !== false || requiresManualReview || isOverrideMode) : true)
+    visionResult.isCivicIssue === true &&
+    Boolean(visionResult.category)
   );
 
   // Synchronized step navigation with browser history
   const goToStep = (step: 1 | 2 | 3 | 4) => {
     if (step === formStep) return;
-    if (step > 2 && !photoUrl) {
-      setSubmitErrorMessage("Please attach or capture a photo of the civic defect to continue.");
+    if (step > 2 && !isValidCivicImage) {
+      setSubmitErrorMessage("Non-Civic Image Detected: Please upload a clear photo of road damage, garbage dumps, or water leaks to continue.");
       setTimeout(() => setSubmitErrorMessage(null), 4500);
-      return;
-    }
-    if (step > 2 && visionResult?.isCivicIssue === false && !requiresManualReview && !isOverrideMode) {
-      setSubmitErrorMessage("Non-Civic Image Detected: Please confirm your photo or upload a clear photo of road damage, garbage, or water leaks.");
-      setTimeout(() => setSubmitErrorMessage(null), 4500);
-      return;
+      return; // HARD BLOCK: Do NOT allow advancing past Step 2 if non-civic or unverified
     }
     setFormStep(step);
     try {
@@ -668,7 +664,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 setCompressionStats(null);
                 setShowNonCivicWarning(false);
                 setRequiresManualReview(false);
-                setTimeout(() => (formCameraInputRef.current || quickCameraInputRef.current)?.click(), 100);
+                setTimeout(() => cameraInputRef.current?.click(), 100);
               }}
               className="flex-1 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
@@ -749,10 +745,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
     popView();
   };
 
-  const quickCameraInputRef = useRef<HTMLInputElement>(null);
-  const quickGalleryInputRef = useRef<HTMLInputElement>(null);
-  const formCameraInputRef = useRef<HTMLInputElement>(null);
-  const formGalleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Strict citizen scoping for "My Complaints"
   const citizenComplaints = useMemo(() => {
@@ -772,59 +766,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
   // Most recent open or active complaint for the mobile status banner
   const activeComplaint = citizenComplaints.find(i => i.status !== 'RESOLVED') || citizenComplaints[0] || null;
 
-  const handleUseSamplePhoto = async (sampleUrl: string, sampleCategory?: HazardCategory) => {
-    setIsCompressing(true);
-    setSubmitErrorMessage(null);
-    if (sampleCategory) {
-      setSelectedCategory(sampleCategory);
-    }
-    try {
-      setPhotoUrl(sampleUrl);
-      setCompressionStats({ originalKb: 120, compressedKb: 45 });
-      const catId = sampleCategory || selectedCategory;
-      const catObj = SWACHHATA_CATEGORIES.find(c => c.id === catId);
-
-      setVisionResult({
-        isCivicIssue: true,
-        rejectionReason: '',
-        category: catId,
-        hazardName: catObj?.name || 'Road Surface Pothole & Asphalt Degradation',
-        severity: 'URGENT',
-        priority: 'P2_URGENT',
-        riskScore: 78,
-        hazardDescription: catObj?.subtitle || 'Visual inspection identified localized municipal defect requiring field repair.',
-        department: catObj?.department || 'PUBLIC_WORKS',
-        recommendedDepartment: catObj?.department || 'PUBLIC_WORKS',
-        recommendedCrew: 'Unit 01 - Rapid Municipal Crew',
-        estimatedRepairTimeMinutes: 45,
-        safetyDirectives: ['Deploy warning cones', 'Apply repair patch'],
-        anomaliesDetected: ['Pavement Void', 'Civic Defect'],
-        analyzedWithGemini: true,
-        aiReasoning: 'Visual inspection identified localized infrastructure damage requiring departmental intervention.'
-      });
-      setShowNonCivicWarning(false);
-      setRequiresManualReview(false);
-    } finally {
-      setIsCompressing(false);
-    }
-  };
-
   const handleFileUpload = async (file: File) => {
     setIsCompressing(true);
     setSubmitErrorMessage(null);
     setAiAutoRoutedNotice(null);
-
-    // 1. Instant synchronous preview from raw FileReader base64 representation
-    const syncReader = new FileReader();
-    syncReader.onload = (ev) => {
-      if (typeof ev.target?.result === 'string') {
-        setPhotoUrl(ev.target.result);
-      }
-    };
-    syncReader.readAsDataURL(file);
-
     try {
-      // 2. Client-Side Canvas 2D Compression with 1200px max dimension cap & 5s timeout
+      // 1. Client-Side Canvas 2D Compression (Throttles 10MB phone camera to ~60-90KB)
       const compression = await compressImage(file, 800, 800, 0.75);
       setCompressionStats({
         originalKb: compression.originalSizeKb,
@@ -832,12 +779,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
       });
       setPhotoUrl(compression.compressedBase64);
       
-      // 3. Auto-trigger Gemini 3.7 Flash Vision Analysis with 8s timeout
+      // 2. Auto-trigger Gemini 3.7 Flash Vision Analysis with 5s timeout
       setIsAnalyzingVision(true);
       try {
         const visionData = await Promise.race([
           analyzeHazardWithGeminiVision(compression.compressedBase64, compression.mimeType || 'image/jpeg'),
-          new Promise<GeminiVisionResult>((_, reject) => setTimeout(() => reject(new Error('Vision timeout (8s)')), 8000))
+          new Promise<GeminiVisionResult>((_, reject) => setTimeout(() => reject(new Error('Vision timeout (5s)')), 5000))
         ]);
         setVisionResult(visionData);
         
@@ -858,28 +805,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
           setRequiresManualReview(false);
         }
       } catch (err) {
-        console.warn('Vision analysis notice (activating instant civic heuristic fallback):', err);
-        const catObj = SWACHHATA_CATEGORIES.find(c => c.id === selectedCategory);
-        const fallbackVision: GeminiVisionResult = {
-          isCivicIssue: true,
-          rejectionReason: '',
-          category: selectedCategory,
-          hazardName: catObj?.name || 'Civic Infrastructure Defect',
-          severity: 'URGENT',
-          priority: 'P2_URGENT',
-          riskScore: 75,
-          hazardDescription: catObj?.subtitle || 'Municipal infrastructure defect requiring field repair.',
-          department: catObj?.department || 'PUBLIC_WORKS',
-          recommendedDepartment: catObj?.department || 'PUBLIC_WORKS',
-          recommendedCrew: 'Rapid Response Unit',
-          estimatedRepairTimeMinutes: 45,
-          safetyDirectives: ['Conduct on-site safety inspection', 'Deploy warning markers'],
-          anomaliesDetected: ['Civic Defect Identified'],
-          analyzedWithGemini: false,
-          aiReasoning: 'Photo evidence verified for civic grievance reporting. Forwarded for field response.'
-        };
-        setVisionResult(fallbackVision);
-        setShowNonCivicWarning(false);
+        console.warn('Vision analysis notice:', err);
       } finally {
         setIsAnalyzingVision(false);
         setTimeout(() => {
@@ -1463,12 +1389,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                   {photoUrl ? (
                     <div className="space-y-2">
-                      <div className="relative rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden w-full h-48 sm:h-56 min-h-[180px] group shadow-sm">
+                      <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden h-44 group">
                         <img
-                          src={normalizeImageSrc(photoUrl)}
+                          src={photoUrl}
                           alt="Hazard"
-                          className="w-full h-full min-h-[180px] object-cover bg-slate-100"
-                          onError={handleImageError}
+                          className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
                         />
                         {isAnalyzingVision && (
@@ -1488,7 +1413,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => quickCameraInputRef.current?.click()}
+                            onClick={() => cameraInputRef.current?.click()}
                             className="bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200"
                             title="Take new photo with camera"
                           >
@@ -1497,7 +1422,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           </button>
                           <button
                             type="button"
-                            onClick={() => quickGalleryInputRef.current?.click()}
+                            onClick={() => galleryInputRef.current?.click()}
                             className="bg-white text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1 hover:bg-slate-50 transition border border-slate-200"
                             title="Choose another photo from gallery"
                           >
@@ -1536,7 +1461,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         <button
                           type="button"
                           id="quick-modal-camera-btn"
-                          onClick={() => quickCameraInputRef.current?.click()}
+                          onClick={() => cameraInputRef.current?.click()}
                           className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-200 hover:border-orange-500 hover:bg-orange-50/60 active:scale-95 transition shadow-xs group cursor-pointer"
                         >
                           <div className="w-10 h-10 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mb-1.5 group-hover:scale-105 transition-transform">
@@ -1549,7 +1474,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                         <button
                           type="button"
                           id="quick-modal-gallery-btn"
-                          onClick={() => quickGalleryInputRef.current?.click()}
+                          onClick={() => galleryInputRef.current?.click()}
                           className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-100 active:scale-95 transition shadow-xs group cursor-pointer"
                         >
                           <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mb-1.5 group-hover:scale-105 transition-transform">
@@ -1559,32 +1484,6 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <span className="text-[10px] text-slate-500 font-medium">Choose File</span>
                         </button>
                       </div>
-
-                      {/* Quick Sample Presets */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-slate-500 font-semibold">Or use civic sample:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleUseSamplePhoto('https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80', 'DEEP_POTHOLE')}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
-                        >
-                          Pothole
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUseSamplePhoto('https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80', 'GARBAGE_DUMP')}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
-                        >
-                          Garbage Dump
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUseSamplePhoto('https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80', 'WATERLOGGING')}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
-                        >
-                          Water Leak
-                        </button>
-                      </div>
                       <p className="text-[11px] text-slate-500 mt-2">Auto-analyzed with Autonomous Vision & compressed (&lt;100KB)</p>
                     </div>
                   )}
@@ -1592,8 +1491,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     type="file"
                     accept="image/*"
                     capture="environment"
-                    id="quick-camera-capture-input"
-                    ref={quickCameraInputRef}
+                    id="camera-capture-input"
+                    ref={cameraInputRef}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) handleFileUpload(f);
@@ -1604,8 +1503,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   <input
                     type="file"
                     accept="image/*"
-                    id="quick-gallery-upload-input"
-                    ref={quickGalleryInputRef}
+                    id="gallery-upload-input"
+                    ref={galleryInputRef}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) handleFileUpload(f);
@@ -1920,13 +1819,17 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     className="relative flex-shrink-0 cursor-pointer group"
                     title="Tap to change profile picture"
                   >
-                    <UserAvatar
-                      photoURL={currentUser?.photoURL}
-                      name={(currentUser as any)?.displayName || currentUser?.name || 'Avinash Peela'}
-                      size="lg"
-                      showTwoInitials={true}
-                      className="w-12 h-12 rounded-full border-2 border-white shadow-sm ring-1 ring-slate-200"
-                    />
+                    {currentUser?.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt={(currentUser as any)?.displayName || currentUser.name || 'Citizen'}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-200"
+                      />
+                    ) : (
+                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white font-bold flex items-center justify-center w-12 h-12 rounded-full text-base">
+                        {getUserInitials(currentUser?.name || (currentUser as any)?.displayName || 'Avinash Peela')}
+                      </div>
+                    )}
                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 rounded-full text-white flex items-center justify-center shadow-xs border border-white translate-x-1 translate-y-1 group-hover:bg-blue-700 transition-colors">
                       {isUploadingAvatar ? (
                         <Loader2 className="w-2.5 h-2.5 animate-spin" />
@@ -2396,12 +2299,11 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                     {photoUrl ? (
                       <div className="space-y-3">
-                        <div className="relative rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden w-full h-48 sm:h-56 min-h-[180px] group shadow-sm">
+                        <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden group shadow-sm">
                           <img
-                            src={normalizeImageSrc(photoUrl)}
+                            src={photoUrl}
                             alt="Hazard preview"
-                            className="w-full h-full min-h-[180px] object-cover bg-slate-100"
-                            onError={handleImageError}
+                            className="w-full h-52 object-cover"
                             referrerPolicy="no-referrer"
                           />
                           {isAnalyzingVision ? (
@@ -2425,7 +2327,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => formCameraInputRef.current?.click()}
+                              onClick={() => cameraInputRef.current?.click()}
                               className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                               title="Take new photo with camera"
                             >
@@ -2434,7 +2336,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => formGalleryInputRef.current?.click()}
+                              onClick={() => galleryInputRef.current?.click()}
                               className="bg-white/95 hover:bg-white text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                               title="Choose photo from gallery"
                             >
@@ -2468,23 +2370,23 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                               <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                               <div>
                                 <h4 className="text-xs font-bold text-rose-900 uppercase tracking-wide">
-                                  AI Verification Notice
+                                  Non-Civic Image Detected — Upload Blocked
                                 </h4>
                                 <p className="text-xs text-rose-700 mt-1 leading-snug font-medium">
-                                  {visionResult.rejectionReason || "No clear municipal hazard detected in image. Please retake or confirm your photo below."}
+                                  {visionResult.rejectionReason || "No municipal or infrastructure hazard detected. Please upload a clear photo of road damage, garbage dumps, or water leaks."}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex flex-wrap gap-2 pt-1 border-t border-rose-200">
+                            <div className="flex gap-2 pt-1 border-t border-rose-200">
                               <button
                                 type="button"
                                 onClick={() => {
                                   setPhotoUrl(null);
                                   setVisionResult(null);
                                   setCompressionStats(null);
-                                  formCameraInputRef.current?.click();
+                                  cameraInputRef.current?.click();
                                 }}
-                                className="flex-1 min-w-[120px] py-2 px-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="flex-1 py-2 px-3 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                               >
                                 <Camera className="w-4 h-4" />
                                 <span>Retake Photo</span>
@@ -2495,30 +2397,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                                   setPhotoUrl(null);
                                   setVisionResult(null);
                                   setCompressionStats(null);
-                                  formGalleryInputRef.current?.click();
+                                  galleryInputRef.current?.click();
                                 }}
-                                className="flex-1 min-w-[120px] py-2 px-3 bg-white hover:bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="flex-1 py-2 px-3 bg-white hover:bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
                               >
                                 <ImageIcon className="w-4 h-4 text-rose-700" />
-                                <span>Choose Gallery</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRequiresManualReview(true);
-                                  setIsOverrideMode(true);
-                                  if (visionResult) {
-                                    setVisionResult({
-                                      ...visionResult,
-                                      isCivicIssue: true,
-                                      rejectionReason: ''
-                                    });
-                                  }
-                                }}
-                                className="w-full py-2 px-3 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
-                              >
-                                <CheckCircle2 className="w-4 h-4 text-amber-700" />
-                                <span>Citizen Confirmation: Proceed with this photo</span>
+                                <span>Choose Other Image</span>
                               </button>
                             </div>
                           </div>
@@ -2542,7 +2426,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <button
                             type="button"
                             id="full-form-camera-btn"
-                            onClick={() => formCameraInputRef.current?.click()}
+                            onClick={() => cameraInputRef.current?.click()}
                             className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500 hover:bg-orange-50/60 active:scale-95 transition shadow-xs group cursor-pointer"
                           >
                             <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mb-2 group-hover:scale-105 transition-transform">
@@ -2555,7 +2439,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                           <button
                             type="button"
                             id="full-form-gallery-btn"
-                            onClick={() => formGalleryInputRef.current?.click()}
+                            onClick={() => galleryInputRef.current?.click()}
                             className="flex flex-col items-center justify-center p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:bg-slate-100 active:scale-95 transition shadow-xs group cursor-pointer"
                           >
                             <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mb-2 group-hover:scale-105 transition-transform">
@@ -2565,34 +2449,8 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                             <span className="text-xs text-slate-500 font-medium mt-0.5">Browse Files</span>
                           </button>
                         </div>
-
-                        {/* Quick Sample Presets */}
-                        <div className="mt-4 pt-3 border-t border-slate-200 max-w-md mx-auto flex items-center justify-center gap-1.5 flex-wrap">
-                          <span className="text-xs text-slate-500 font-semibold">Or use civic sample:</span>
-                          <button
-                            type="button"
-                            onClick={() => handleUseSamplePhoto('https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80', 'DEEP_POTHOLE')}
-                            className="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
-                          >
-                            Pothole Photo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUseSamplePhoto('https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80', 'GARBAGE_DUMP')}
-                            className="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
-                          >
-                            Garbage Dump Photo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUseSamplePhoto('https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80', 'WATERLOGGING')}
-                            className="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
-                          >
-                            Water Leak Photo
-                          </button>
-                        </div>
                         <p className="text-xs text-slate-500 mt-3 font-medium">
-                          * Photo is automatically optimized for fast upload and analyzed with AI Vision.
+                          * Photo is mandatory for automated AI vision triage and municipal engineer verification.
                         </p>
                       </div>
                     )}
@@ -2602,7 +2460,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       accept="image/*"
                       capture="environment"
                       id="camera-capture-input-form"
-                      ref={formCameraInputRef}
+                      ref={cameraInputRef}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
@@ -2614,7 +2472,7 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       type="file"
                       accept="image/*"
                       id="gallery-upload-input-form"
-                      ref={formGalleryInputRef}
+                      ref={galleryInputRef}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
@@ -2726,10 +2584,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
                     {photoUrl && (
                       <img
-                        src={normalizeImageSrc(photoUrl)}
+                        src={photoUrl}
                         alt="Thumbnail"
                         className="w-16 h-16 rounded-xl object-cover border border-slate-300 shrink-0"
-                        onError={handleImageError}
                       />
                     )}
                     <div className="space-y-1 min-w-0 flex-1">
@@ -2822,18 +2679,18 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                 <button
                   type="button"
                   onClick={() => goToStep(3)}
-                  disabled={!photoUrl || isCompressing || (visionResult?.isCivicIssue === false && !requiresManualReview && !isOverrideMode)}
+                  disabled={!photoUrl || isAnalyzingVision || isCompressing || visionResult?.isCivicIssue === false}
                   className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isCompressing ? (
+                  {isAnalyzingVision || isCompressing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-                      <span>Optimizing Photo...</span>
+                      <span>Analyzing Photo...</span>
                     </>
                   ) : !photoUrl ? (
                     <span>Attach Photo to Continue →</span>
-                  ) : (visionResult?.isCivicIssue === false && !requiresManualReview && !isOverrideMode) ? (
-                    <span>Confirm Photo Above to Continue</span>
+                  ) : visionResult?.isCivicIssue === false ? (
+                    <span>Valid Civic Photo Required</span>
                   ) : (
                     <span>Continue to Location & Ward →</span>
                   )}
@@ -2992,10 +2849,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       {ticket.imageUrl && (
                         <div className="w-full h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                           <img
-                            src={normalizeImageSrc(ticket.imageUrl)}
+                            src={ticket.imageUrl}
                             alt={ticket.title}
                             className="w-full h-full object-cover"
-                            onError={handleImageError}
                             referrerPolicy="no-referrer"
                           />
                         </div>
@@ -3405,10 +3261,9 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     <span>Proof of Fix Uploaded by Ward Inspector</span>
                   </p>
                   <img
-                    src={normalizeImageSrc(trackedIncident.proofOfFixUrl)}
+                    src={trackedIncident.proofOfFixUrl}
                     alt="Proof of fix"
                     className="w-full h-40 object-cover rounded-lg border border-emerald-300"
-                    onError={handleImageError}
                     referrerPolicy="no-referrer"
                   />
                   {trackedIncident.officerNotes && (
