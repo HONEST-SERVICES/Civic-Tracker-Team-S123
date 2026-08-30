@@ -72,12 +72,17 @@ export function getGeminiApiKey(): string {
     return process.env.GEMINI_API_KEY || "";
   }
   
-  const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
   if (envKey && typeof envKey === "string" && envKey.trim().length > 0) {
     return envKey.trim();
   }
 
-  const localKey = localStorage.getItem("GEMINI_API_KEY");
+  const windowKey = (window as any)?.__ENV__?.VITE_GEMINI_API_KEY || (window as any)?.__GEMINI_API_KEY__;
+  if (windowKey && typeof windowKey === "string" && windowKey.trim().length > 0) {
+    return windowKey.trim();
+  }
+
+  const localKey = localStorage.getItem("GEMINI_API_KEY") || localStorage.getItem("VITE_GEMINI_API_KEY");
   if (localKey && localKey.trim().length > 0) {
     return localKey.trim();
   }

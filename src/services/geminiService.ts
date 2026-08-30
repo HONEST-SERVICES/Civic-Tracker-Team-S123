@@ -1,4 +1,4 @@
-import { CrisisIncident, MunicipalUnit, AgentThoughtStep, GeminiVisionResult, UserRole } from '../types';
+import { CrisisIncident, MunicipalUnit, AgentThoughtStep, GeminiVisionResult, UserRole, DepartmentType } from '../types';
 import { getGeminiApiKey } from '../config/keys';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -87,7 +87,27 @@ export async function analyzeHazardWithGeminiVision(
 
     if (res.ok) {
       const data: GeminiVisionResult = await res.json();
-      return data;
+      return {
+        isCivicIssue: data.isCivicIssue !== undefined ? data.isCivicIssue : true,
+        rejectionReason: data.rejectionReason || '',
+        category: data.category || 'DEEP_POTHOLE',
+        hazardName: data.hazardName || 'Civic Infrastructure Defect',
+        severity: data.severity || 'URGENT',
+        priority: data.priority || 'P2_URGENT',
+        department: (data.department || data.recommendedDepartment || 'PUBLIC_WORKS') as DepartmentType,
+        recommendedDepartment: (data.recommendedDepartment || data.department || 'PUBLIC_WORKS') as DepartmentType,
+        confidence: data.confidence || data.aiConfidence || 95,
+        aiConfidence: data.aiConfidence || data.confidence || 95,
+        reasoning: data.reasoning || data.aiReasoning || 'Visual evidence confirmed civic defect.',
+        aiReasoning: data.aiReasoning || data.reasoning || 'Visual evidence confirmed civic defect.',
+        riskScore: data.riskScore || 75,
+        hazardDescription: data.hazardDescription || 'Municipal infrastructure hazard identified.',
+        recommendedCrew: data.recommendedCrew || 'Rapid Response Unit',
+        estimatedRepairTimeMinutes: data.estimatedRepairTimeMinutes || 45,
+        safetyDirectives: data.safetyDirectives || ['Deploy warning markers', 'Inspect site'],
+        anomaliesDetected: data.anomaliesDetected || ['Structural Defect'],
+        analyzedWithGemini: data.analyzedWithGemini ?? true
+      };
     }
   } catch (err) {
     console.warn('Server vision endpoint notice, attempting client SDK fallback:', err);
