@@ -1,4 +1,19 @@
 ======================================================
+29. GEMINI MULTIMODAL LIVE PROTOCOL ALIGNMENT & CODE 1008 FIX:
+======================================================
+- Model Identifier Standardisation (`src/services/geminiLiveService.ts` & `server.ts`):
+  * Aligned live session model endpoint to `models/gemini-2.0-flash-exp` across direct client WebSocket and server relay. Removed unsupported text/flash model aliases.
+- Strict Setup Frame Handshake & Gate (`src/services/geminiLiveService.ts` & `server.ts`):
+  * Structured initial `onopen` JSON setup payload matching `models/gemini-2.0-flash-exp`, `response_modalities: ["AUDIO"]`, `prebuilt_voice_config: { voice_name: "Puck" }`, and `system_instruction.parts`.
+  * Added `isSetupComplete` state guard ensuring no microphone PCM media chunks are transmitted over WebSocket until `setupComplete` / `setup_complete` confirmation is received.
+- Audio Format & Frame Envelope Compliance (`src/services/geminiLiveService.ts`):
+  * Enforced 16,000 Hz Mono 16-bit PCM Little-Endian audio stream encapsulated inside `realtime_input.media_chunks` envelope.
+- Policy Violation (Code 1008) Guard & Clean Teardown (`src/services/geminiLiveService.ts`):
+  * Added specific handler for WebSocket Close Code `1008` (Policy Violation).
+  * Automatically tears down active Web Audio Contexts (`inputAudioCtx`, `outputAudioCtx`), stops microphone stream tracks, clears script processors, and sets state to 'ERROR'.
+  * Displays user feedback: `"Session closed by server policy (Code 1008). Verify API key permissions and model access."` with an interactive retry action.
+
+======================================================
 28. PRODUCTION WEBSOCKET CONNECTION SAFEGUARDS & CLOUDFLARE PAGES DIAGNOSTIC FIX:
 ======================================================
 - Robust Environment Variable Inspection (`src/services/geminiLiveService.ts`):

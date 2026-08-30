@@ -36,6 +36,7 @@ export class GeminiLiveService {
   // Interrupt threshold for natural barge-in
   private bargeInThreshold = 0.08;
   private connectionTimeoutTimer: any = null;
+  private isSetupComplete = false;
 
   constructor(callbacks: LiveSessionCallbacks) {
     this.callbacks = callbacks;
@@ -58,6 +59,7 @@ export class GeminiLiveService {
   public async startSession(customApiKey?: string): Promise<void> {
     if (this.isConnected) return;
 
+    this.isSetupComplete = false;
     this.callbacks.onStateChange?.('CONNECTING');
 
     // 1. Robust Environment Variable Injection & Inspection across targets
@@ -158,7 +160,7 @@ export class GeminiLiveService {
               system_instruction: {
                 parts: [
                   {
-                    text: "You are CivicPulse Live Voice Agent. Speak naturally, empathetically, and concisely in English, Hindi, or Telugu. Always answer user queries directly and execute ticket lookups or escalations when requested."
+                    text: "You are CivicPulse Live Voice Copilot. Speak naturally, concisely, and empathetically."
                   }
                 ]
               },
@@ -209,9 +211,8 @@ export class GeminiLiveService {
           this.ws.send(JSON.stringify(setupMsg));
         }
 
-        // Start 16kHz microphone audio streaming
+        // Initialize 16kHz microphone capture (will buffer/held until setupComplete confirmed)
         await this.startMicrophoneCapture(isDirectGeminiWs);
-        this.callbacks.onStateChange?.('LISTENING');
       };
 
       this.ws.onmessage = async (event) => {
@@ -223,6 +224,14 @@ export class GeminiLiveService {
           if (!dataStr) return;
 
           const data = JSON.parse(dataStr);
+
+          // Check for setup complete confirmation from server
+          if (data.setupComplete !== undefined || data.setup_complete !== undefined || data.type === 'setupComplete') {
+            console.log("[Gemini Live] Setup complete confirmation received from server.");
+            this.isSetupComplete = true;
+            this.callbacks.onStateChange?.('LISTENING');
+            return;
+          }
 
           // Handle server_content / serverContent (Direct Gemini Bidi API)
           const serverContent = data.serverContent || data.server_content;
@@ -347,13 +356,28 @@ export class GeminiLiveService {
         console.log(`[Gemini Live] WebSocket closed (Code ${event.code}, Reason: ${event.reason || 'None'}).`);
         
         let detailedError = "";
-        if (event.code === 1006) {
+        if (event.code === 1008) {
+          detailedError = "Session closed by server policy (Code 1008). Verify API key permissions and model access.";
+        } else if (event.code === 1006) {
           detailedError = "WebSocket connection failed (Code 1006). Cloudflare Pages or network proxy may be blocking WebSocket connections to googleapis.com.";
         } else if (event.code === 4003 || event.code === 403 || (event.reason && event.reason.includes("API_KEY"))) {
           detailedError = "Access forbidden (403/4003). Please verify VITE_GEMINI_API_KEY permissions in Cloudflare Pages settings.";
         } else if (event.code !== 1000 && event.code !== 1001) {
           detailedError = `Live session disconnected (Code ${event.code || '1006'}).`;
         }
+
+        // Cleanly tear down audio contexts and stream tracks on close
+        this.clearAudioContexts();
+        if (this.mediaStream) {
+          this.mediaStream.getTracks().forEach(track => track.stop());
+          this.mediaStream = null;
+        }
+        if (this.scriptProcessor) {
+          try { this.scriptProcessor.disconnect(); } catch {}
+          this.scriptProcessor = null;
+        }
+        this.isConnected = false;
+        this.isSetupComplete = false;
 
         if (detailedError) {
           this.callbacks.onStateChange?.('ERROR');
@@ -393,7 +417,7 @@ export class GeminiLiveService {
     this.scriptProcessor.connect(this.inputAudioCtx.destination);
 
     this.scriptProcessor.onaudioprocess = (e) => {
-      if (!this.isConnected || this.isMuted) return;
+      if (!this.isConnected || !this.isSetupComplete || this.isMuted) return;
 
       const inputBuffer = e.inputBuffer.getChannelData(0);
 

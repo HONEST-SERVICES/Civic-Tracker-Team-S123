@@ -942,7 +942,7 @@ INGESTED LIVE SYSTEM STATE:
 
     try {
       const session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
+        model: "models/gemini-2.0-flash-exp",
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
@@ -1098,6 +1098,10 @@ Always execute the relevant tool when asked, then speak out the results clearly 
           }
         }
       });
+
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({ type: "setupComplete" }));
+      }
 
       clientWs.on("message", (msg) => {
         try {
