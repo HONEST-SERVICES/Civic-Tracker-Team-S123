@@ -1929,26 +1929,26 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 1: File Grievance */}
               <div
                 onClick={() => pushView('CATEGORIES')}
-                className="bg-[#FFF1F2] border-2 border-rose-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#FFF1F2] border-2 border-rose-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-48 cursor-pointer active:scale-[0.98] group select-none"
               >
                 <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-file-grievance.png"
                     alt="File Grievance"
-                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-3 drop-shadow-md transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                       const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                       if (fallback) fallback.style.display = 'block';
                     }}
                   />
-                  <FileText className="w-10 h-10 text-rose-600 hidden filter drop-shadow-md mx-auto" />
+                  <FileText className="w-12 h-12 text-rose-600 hidden filter drop-shadow-md mx-auto mb-3" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-rose-950 leading-snug tracking-tight group-hover:text-rose-700 transition">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug tracking-tight group-hover:text-rose-700 transition">
                     File Grievance
                   </h3>
-                  <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
+                  <p className="text-[11px] text-slate-600 font-normal leading-tight mt-0.5 line-clamp-1">
                     Report road hazard or civic issue
                   </p>
                 </div>
@@ -1957,26 +1957,26 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 2: Track Grievances */}
               <div
                 onClick={() => pushView('COMPLAINTS')}
-                className="bg-[#FEFCE8] border-2 border-amber-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#FEFCE8] border-2 border-amber-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-48 cursor-pointer active:scale-[0.98] group select-none"
               >
                 <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-track-grievances.png"
                     alt="Track Grievances"
-                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-3 drop-shadow-md transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                       const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                       if (fallback) fallback.style.display = 'block';
                     }}
                   />
-                  <Clock3 className="w-10 h-10 text-amber-600 hidden filter drop-shadow-md mx-auto" />
+                  <Clock3 className="w-12 h-12 text-amber-600 hidden filter drop-shadow-md mx-auto mb-3" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-amber-950 leading-snug tracking-tight group-hover:text-amber-700 transition">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug tracking-tight group-hover:text-amber-700 transition">
                     Track Grievances
                   </h3>
-                  <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
+                  <p className="text-[11px] text-slate-600 font-normal leading-tight mt-0.5 line-clamp-1">
                     Live crew & SLA progress
                   </p>
                 </div>
@@ -1985,26 +1985,26 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
               {/* Card 3: Public Facilities */}
               <div
                 onClick={() => pushView('FACILITIES')}
-                className="bg-[#F0FDF4] border-2 border-emerald-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#F0FDF4] border-2 border-emerald-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-48 cursor-pointer active:scale-[0.98] group select-none"
               >
                 <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-public-facilities.png"
                     alt="Public Facilities"
-                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-3 drop-shadow-md transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                       const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                       if (fallback) fallback.style.display = 'block';
                     }}
                   />
-                  <MapPin className="w-10 h-10 text-emerald-600 hidden filter drop-shadow-md mx-auto" />
+                  <MapPin className="w-12 h-12 text-emerald-600 hidden filter drop-shadow-md mx-auto mb-3" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-emerald-950 leading-snug tracking-tight group-hover:text-emerald-700 transition">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug tracking-tight group-hover:text-emerald-700 transition">
                     Public Facilities
                   </h3>
-                  <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
+                  <p className="text-[11px] text-slate-600 font-normal leading-tight mt-0.5 line-clamp-1">
                     Find & rate nearby amenities
                   </p>
                 </div>
@@ -2019,26 +2019,26 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     setShowSurvekshanModal(true);
                   }
                 }}
-                className="bg-[#FAF5FF] border-2 border-violet-300/80 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-44 cursor-pointer active:scale-[0.98] group select-none"
+                className="bg-[#FAF5FF] border-2 border-violet-300 shadow-sm hover:shadow-md transition-all rounded-2xl p-4 flex flex-col justify-between h-48 cursor-pointer active:scale-[0.98] group select-none"
               >
                 <div className="w-full flex items-center justify-center shrink-0 my-auto">
                   <img
                     src="/icon-citizen-survey.png"
                     alt="Citizen Survey"
-                    className="filter drop-shadow-md w-14 h-14 object-contain mx-auto transition-transform group-hover:scale-105"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-3 drop-shadow-md transition-transform group-hover:scale-105"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                       const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                       if (fallback) fallback.style.display = 'block';
                     }}
                   />
-                  <CheckCircle2 className="w-10 h-10 text-violet-600 hidden filter drop-shadow-md mx-auto" />
+                  <CheckCircle2 className="w-12 h-12 text-violet-600 hidden filter drop-shadow-md mx-auto mb-3" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-violet-950 leading-snug tracking-tight group-hover:text-violet-700 transition">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug tracking-tight group-hover:text-violet-700 transition">
                     Citizen Survey
                   </h3>
-                  <p className="text-xs text-slate-500 font-normal leading-tight mt-0.5 line-clamp-2">
+                  <p className="text-[11px] text-slate-600 font-normal leading-tight mt-0.5 line-clamp-1">
                     Ward cleanliness feedback
                   </p>
                 </div>

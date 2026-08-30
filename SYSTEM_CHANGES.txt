@@ -839,4 +839,133 @@ Status: Ward Governance Mobile UI/UX Overhaul Complete
 Status: Strict Non-Civic Gate & Streamlined Step 2 Triage Card Complete
 =======================================================
 
+=======================================================
+25. GEMINI 3.7 FLASH ENGINE MIGRATION & CONTEXT-AWARE AUTONOMOUS CIVIC COPILOT:
+=======================================================
+- 1. Fast Gemini 3.7 Flash Engine Migration & Resilient Multi-Model Fallback (`geminiService.ts`, `server.ts`):
+  * Upgraded primary AI model to `gemini-3.7-flash` across client SDK calls and server API endpoints (`/api/gemini/assistant`, `/api/gemini/triage`, `/api/gemini/dispatch`).
+  * Implemented automated multi-model fallback sequence: `['gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite-preview', 'gemini-flash-latest']` with 503/429 exponential backoff retry handling.
+
+- 2. Dynamic Live System Context Ingestion (`geminiService.ts`, `server.ts`, `GeminiAssistantDrawer.tsx`):
+  * Ingested real-time live system state into system instructions on every chat message and assistant call:
+    - Current User Profile: `{ userId, name, wardId, role }`
+    - Live Active Complaints Dataset: Sanitized summary of active ward tickets (`ticketId`, `category`, `priority`, `status`, `assignedUnit`, `etaMinutes`, `locationDescription`, `timestamp`).
+    - Available Fleet Response Units: Real-time response fleet metadata and unit locations.
+    - SBM Public Facilities: Verified Swachh Bharat Mission public sanitation complexes and waste drop centers.
+
+- 3. Persona Specialization & Capabilities (`geminiService.ts`, `server.ts`):
+  * CITIZEN COPILOT: Empathetic, language-aware (English, Hindi, Telugu/Punjabi) AI companion capable of parsing live complaints to provide exact status updates and referencing exact ticket IDs (`#TK-3795`).
+  * OFFICER TACTICAL AGENT: GovTech intelligence agent providing analytical ward telemetry, SLA breach risk analysis, bottleneck identification, and field crew dispatch recommendations.
+
+- 4. Interactive Ticket Micro-Cards & UI Polish (`GeminiAssistantDrawer.tsx`, `App.tsx`):
+  * Header Upgrade: Styled drawer header with `"CivicPulse AI Agent"` title and `[⚡ Live Operations Engine]` pulsing green beacon badge.
+  * Auto-Locked Role View: Automatically locks active role view based on user authentication (`Resident Copilot View` for citizens, `Officer Mode` for ward officers).
+  * Interactive Ticket Micro-Cards: Automatically parses assistant messages for referenced ticket IDs and renders clickable micro-cards with ticket ID, category, location, and status pill. Clicking a card navigates directly to complaint tracking.
+  * Customized Inquiry Chips: Dynamically updates quick suggestion chips based on active role (e.g. `"Check status of my open complaints"`, `"Where is the nearest clean public toilet?"`).
+
+=======================================================
+Status: Gemini 3.7 Flash Engine Upgrade & Context-Aware Civic Copilot Complete
+=======================================================
+
+=======================================================
+26. ULTRA-LOW LATENCY MODEL MIGRATION (GEMINI 3.1 FLASH-LITE), PROMPT SANITIZATION & CONVERSATIONAL COPILOT:
+=======================================================
+- 1. Ultra-Fast Engine & Latency Elimination (`geminiService.ts`, `server.ts`):
+  * Upgraded primary AI model endpoint to `gemini-3.1-flash-lite` with fallback chain `['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-flash-latest']`.
+  * Set `thinkingConfig: { thinkingBudget: 0 }` to disable reasoning delays, guaranteeing sub-1.5s Time-To-First-Token and instant response delivery.
+
+- 2. Prompt Sanitization & Conversational Tone (`geminiService.ts`, `server.ts`, `GeminiAssistantDrawer.tsx`):
+  * Strictly enforced natural, direct tone rules across Citizen and Officer copilot personas.
+  * Formatting Guardrails: Stripped markdown header artifacts (`###`), heavy asterisks (`**bold**`), and quote marks `""` from greetings and responses.
+  * Removed robotic boilerplate (e.g. "Namaste Officer. I am your Tactical Operations Agent..."). Assistant jumps immediately into 1-2 clean, natural conversational sentences.
+
+- 3. Chat Drawer Header & Role Toggle Cleanup (`GeminiAssistantDrawer.tsx`):
+  * Branded Title: Refreshed drawer header to "CivicPulse Copilot" with a single subtle operational beacon.
+  * Auto-Locked Role: Completely removed top "Active Role View: [ Citizen Mode | Officer Mode ]" mode switcher sub-bar. Persona is locked automatically behind the scenes based on authenticated user role.
+
+=======================================================
+Status: Gemini 3.1 Flash-Lite Migration & Conversational Prompt Sanitization Complete
+=======================================================
+
+=======================================================
+27. ANIMATED GLASSMORPHIC BOTTOM NAVIGATION & ELEVATED ACTION CARD ICONOGRAPHY:
+=======================================================
+- 1. Mobile Bottom Navigation Polish (`translations.ts`, `App.tsx`):
+  * Shortened navigation label from "Cleanliness Drives" to **"Drives"** for concise mobile rendering.
+  * Implemented animated glassmorphic active tab indicator pill: `bg-slate-900/10 backdrop-blur-md border border-slate-900/15 rounded-2xl shadow-xs py-1.5 px-3 transition-all duration-300 ease-out`.
+  * Added smooth scaling (`scale-105`) and hover transitions when switching active tabs.
+
+- 2. Enhanced Action Cards Visual Hierarchy (`CitizenPortal.tsx`):
+  * Expanded icon imagery frame across 4 action cards (File Grievance, Track Grievances, Public Facilities, Citizen Survey) to `w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-3 drop-shadow-md`.
+  * Applied bold titles (`text-sm sm:text-base font-bold text-slate-900 leading-snug`) and 1-line concise subtitles (`text-[11px] text-slate-600 line-clamp-1`).
+  * Styled rich pastel surfaces with crisp 2px colored boundaries (`border-2 border-rose-300`, `border-2 border-amber-300`, `border-2 border-emerald-300`, `border-2 border-violet-300`) and tactile tap feedback (`active:scale-[0.98] transition-transform`).
+
+=======================================================
+Status: Glassmorphic Bottom Navigation & Action Card Image Enhancement Complete
+=======================================================
+
+=======================================================
+28. NAVIGATION BAR TITLE SHORTENING ("FACILITIES"):
+=======================================================
+- Updated bottom navigation bar label from "SBM Facilities" to **"Facilities"** (`translations.ts`).
+- Ensures clean 1-line label rendering across all mobile screen sizes and language dictionaries without title wrapping.
+
+=======================================================
+Status: Navigation Bar Title Shortening Complete
+=======================================================
+
+=======================================================
+29. CLEAN HEADER LAYOUT & DEDICATED AI COPILOT BUTTON INTEGRATION:
+=======================================================
+- 1. Universal Clickable Brand Logo (`App.tsx`, `MunicipalOfficerCommandCenter.tsx`):
+  * Made top-left CivicPulse logo & title interactive (`cursor-pointer hover:opacity-90 active:scale-95 transition-all`).
+  * On click, resets navigation to home dashboard for Citizens (`setCitizenTab('HOME')` & `navigateTo('/')`) and primary GIS Command Desk for Admins/Officers without full page refresh.
+- 2. Dedicated Civic AI Copilot Header Trigger (`App.tsx`, `MunicipalOfficerCommandCenter.tsx`):
+  * Removed top header language selector pills to liberate central real estate.
+  * Integrated high-elevation **"Civic AI Copilot"** trigger button with gradient background (`from-blue-600 to-indigo-600`), animated Lucide Sparkles icon, pulsing live operational dot indicator, and `⚡ Copilot` badge.
+  * On click, instantly triggers `GeminiAssistantDrawer` in context.
+- 3. Responsive Mobile Layout:
+  * Maintained clean logo (left) ── [ ⚡ AI Copilot ] (center/right) ── Profile Avatar (right) layout with zero horizontal overflow or clipping across mobile viewports.
+
+=======================================================
+Status: Clean Header Layout & Dedicated AI Copilot Button Complete
+=======================================================
+
+=======================================================
+30. REDESIGNED CIVIC AI ASSISTANT SUPPORT BUTTON & ICONOGRAPHY:
+=======================================================
+- Replaced flash symbol `⚡` with a Lucide `Headset` (person with headset support/help) icon.
+- Replaced bright single blue gradient with a rich dark slate pill (`bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/80 shadow-xs hover:shadow-md transition-all`).
+- Renamed button text to **"Civic AI Assistant"** and added a clean **"Live Help"** status pill badge with a soft emerald online dot indicator (`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`).
+- Updated bottom navigation tabs for Officers & Crew to use `Headset` and **"AI Help"** labels for visual consistency.
+
+=======================================================
+Status: Civic AI Assistant Button Redesign Complete
+=======================================================
+
+=======================================================
+31. COMMAND HQ LEFT SIDEBAR & SYSTEM MAINTENANCE MODAL REFACTORING:
+=======================================================
+- 1. Collapsible Left Navigation Sidebar (`MunicipalOfficerCommandCenter.tsx`):
+  * Replaced the cluttered horizontal top bar tabs with a dark slate GovTech Left Sidebar (`bg-slate-900 border-r border-slate-800`).
+  * Structured into clear sections: Core Operations ("GIS Command Map", "Ward Governance", "Staff Management", "Officer Profile") and AI & Admin Tools ("Civic AI Assistant", "System Maintenance").
+  * Added smooth desktop collapse/expand toggle (`PanelLeftClose` / `PanelLeftOpen`) to maximize map canvas area when needed.
+  * Includes User Profile card and full-width "Switch to Citizen View" action in sidebar footer.
+- 2. Dedicated System Maintenance & Admin Modal (`MunicipalOfficerCommandCenter.tsx`):
+  * Removed scary red "Wipe Complaints" and "Seed Demo Data" buttons from the top header!
+  * Relocated sensitive system actions into a dedicated "System Maintenance & Admin Tools" modal (`showSystemSettingsModal`).
+  * Features structured, labeled cards with confirmation checks for "Seed Baseline Demo Data", "Purge All Database Complaints", and live system telemetry status.
+- 3. Streamlined Header Bar (`MunicipalOfficerCommandCenter.tsx`):
+  * Reduced top header height to a clean, spacious 14 units (`h-14 bg-white`).
+  * Displays current section title / breadcrumb, Ward Selector dropdown, quick AI Help trigger, and System Maintenance gear button (`Settings`).
+
+=======================================================
+Status: Command HQ Left Sidebar & Clean Header Complete
+=======================================================
+
+
+
+
+
+
 

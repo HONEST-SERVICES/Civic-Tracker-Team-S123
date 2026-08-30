@@ -47,6 +47,8 @@ import {
 import { 
   Building2, 
   Sparkles, 
+  Headphones,
+  Headset,
   RotateCcw, 
   ChevronDown, 
   Home, 
@@ -153,6 +155,10 @@ export default function App() {
       setShowSurveyModal(false);
     } else if (normalized === '/facilities' || normalized === '/sbm' || normalized === '/toilets') {
       setCitizenTab('FACILITIES');
+      setIsOfficerCitizenMode(true);
+      setShowSurveyModal(false);
+    } else if (normalized === '/events' || normalized === '/drives' || normalized === '/campaigns') {
+      setCitizenTab('EVENTS');
       setIsOfficerCitizenMode(true);
       setShowSurveyModal(false);
     } else if (normalized === '/survey') {
@@ -642,21 +648,32 @@ export default function App() {
 
         {/* 1. TOP HEADER (Rendered for Citizen, Crew, Volunteers and Profile views) */}
         {!isOfficerCommandView && (
-          <header className="h-14 px-4 bg-white text-slate-900 flex items-center justify-between border-b border-slate-200/90 shadow-xs relative z-40">
-            {/* Left: CivicPulse Logo & Title */}
+          <header className="h-14 px-3 sm:px-4 bg-white text-slate-900 flex items-center justify-between border-b border-slate-200/90 shadow-xs relative z-40 gap-2">
+            {/* Left: CivicPulse Logo & Title (Universal Home Link) */}
             <div 
-              onClick={() => navigateTo('/')}
-              className="flex items-center gap-2.5 min-w-0 cursor-pointer select-none group"
+              onClick={() => {
+                if (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') {
+                  setCommandCenterTab('COMMAND_DESK');
+                  navigateTo('/command-hq');
+                } else {
+                  setCitizenTab('HOME');
+                  navigateTo('/');
+                }
+              }}
+              className="flex items-center gap-2 sm:gap-2.5 min-w-0 cursor-pointer select-none group transition-all duration-200 hover:opacity-90 active:scale-95"
+              title="Return to Home Dashboard"
             >
               <img 
                 src="/logo.png" 
                 alt="CivicPulse Logo" 
-                className="h-9 sm:h-10 w-auto object-contain flex-shrink-0 group-hover:opacity-90 transition"
+                className="h-8 sm:h-10 w-auto object-contain flex-shrink-0 group-hover:scale-105 transition-transform duration-200"
                 referrerPolicy="no-referrer"
               />
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-bold tracking-tight text-slate-900 text-base sm:text-lg group-hover:text-blue-900 transition">{t('appName')}</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="truncate font-bold tracking-tight text-slate-900 text-sm sm:text-base md:text-lg group-hover:text-blue-900 transition-colors">
+                    {t('appName')}
+                  </span>
                   <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] px-1.5 py-0.5 rounded font-semibold hidden sm:inline">
                     Live Matrix
                   </span>
@@ -667,52 +684,27 @@ export default function App() {
               </div>
             </div>
 
-            {/* Center: Live Municipal Sync & Quick Controls (Desktop & Mobile) */}
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex items-center gap-1.5 bg-slate-50 text-slate-700 border border-slate-200 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
-                <Radio className="w-3 h-3 text-emerald-500 animate-pulse" strokeWidth={1.75} />
-                <span>{t('online')}</span>
-              </div>
-
-              {/* Language Selector Pills */}
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-full border border-slate-200">
-                <button
-                  id="header-lang-en"
-                  onClick={() => setLanguage('en')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-full transition cursor-pointer ${
-                    language === 'en'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  English
-                </button>
-                <button
-                  id="header-lang-hi"
-                  onClick={() => setLanguage('hi')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-full transition cursor-pointer ${
-                    language === 'hi'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  id="header-lang-te"
-                  onClick={() => setLanguage('te')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-full transition cursor-pointer ${
-                    language === 'te'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  తెలుగు
-                </button>
-              </div>
+            {/* Center / Freed Header Real Estate: Prominent High-Elevation "Civic Support & AI Assistant" Trigger Button */}
+            <div className="flex items-center justify-center min-w-0">
+              <button
+                id="header-copilot-trigger-btn"
+                onClick={() => setShowGeminiAssistant(true)}
+                className="bg-slate-900 hover:bg-slate-800 text-white px-3 sm:px-3.5 py-1.5 rounded-full shadow-xs hover:shadow-md border border-slate-700/80 transition-all duration-200 flex items-center gap-2 text-xs font-semibold active:scale-95 cursor-pointer shrink-0 group"
+              >
+                <div className="relative flex items-center justify-center text-teal-300 group-hover:text-teal-200 transition-colors">
+                  <Headset className="w-4 h-4" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full" />
+                </div>
+                <span className="hidden xs:inline sm:inline whitespace-nowrap text-slate-100 font-bold">Civic AI Assistant</span>
+                <span className="bg-slate-800/90 text-teal-300 border border-teal-500/30 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse hidden sm:inline-block" />
+                  Live Help
+                </span>
+              </button>
             </div>
 
-            {/* Right: Clean Profile Avatar / Sign In Action (hidden on Profile tab to prevent redundant click loop) */}
+            {/* Right: Clean Profile Avatar / Sign In Action */}
             <div className="flex items-center gap-2.5 flex-shrink-0">
               {!authLoading && !currentUser ? (
                 <button
@@ -900,6 +892,7 @@ export default function App() {
                 currentUser={currentUser}
                 onOpenStaffManagement={() => setShowStaffManagementModal(true)}
                 onOpenProfile={() => navigateTo('/profile')}
+                onOpenGeminiCopilot={() => setShowGeminiAssistant(true)}
                 initialTab={commandCenterTab}
                 onTabChange={(tab) => {
                   setCommandCenterTab(tab);
@@ -943,48 +936,17 @@ export default function App() {
             {(userRole === 'CITIZEN' || isOfficerCitizenMode) && (
               <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
                 {citizenTab === 'EVENTS' ? (
-                  <div className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto space-y-4">
-                    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#115e59]">
-                          <Calendar className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-900">Ward 4 Cleanliness Drives & SBM Events</h3>
-                          <p className="text-xs text-slate-500">Community participation initiatives in Central Zone</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2.5 pt-2">
-                        <div 
-                          onClick={() => {
-                            setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[0]);
-                            setShowDriveModal(true);
-                          }}
-                          className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-50 flex items-center justify-between transition cursor-pointer group"
-                        >
-                          <div>
-                            <p className="font-bold text-xs text-teal-900 group-hover:text-[#115e59]">Sunday Mega Plastic-Free Market Drive</p>
-                            <p className="text-[11px] text-teal-700">Verad Gate Market • Sunday 07:00 AM • 48 Registered</p>
-                          </div>
-                          <span className="text-xs font-bold text-white bg-[#115e59] group-hover:bg-[#0f4f4b] px-2.5 py-1 rounded-lg transition shadow-xs">Join Drive</span>
-                        </div>
-
-                        <div 
-                          onClick={() => {
-                            setSelectedDriveCampaign(SAMPLE_CAMPAIGNS[1]);
-                            setShowDriveModal(true);
-                          }}
-                          className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition cursor-pointer group"
-                        >
-                          <div>
-                            <p className="font-bold text-xs text-slate-800 group-hover:text-slate-900">Ward 4 Stormwater Drain Awareness Campaign</p>
-                            <p className="text-[11px] text-slate-500">Community Hall, Sector 3 • Friday 05:00 PM • 32 Registered</p>
-                          </div>
-                          <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">View Campaign</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex-1 overflow-y-auto">
+                    <EventsView
+                      onSelectCampaign={(campaign) => {
+                        setSelectedDriveCampaign(campaign);
+                        setShowDriveModal(true);
+                      }}
+                      onOpenCampaignModal={(campaign) => {
+                        setSelectedDriveCampaign(campaign);
+                        setShowDriveModal(true);
+                      }}
+                    />
                   </div>
                 ) : (
                   <CitizenPortal
@@ -1051,31 +1013,39 @@ export default function App() {
                 setCitizenTab('HOME');
                 navigateTo('/');
               }}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'HOME' && !showSurveyModal ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <Home className="w-5 h-5" />
-              <span>{t('home')}</span>
+              <div
+                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out ${
+                  citizenTab === 'HOME' && !showSurveyModal
+                    ? 'bg-slate-900/10 backdrop-blur-md border border-slate-900/15 shadow-xs text-slate-900 font-bold scale-105'
+                    : 'text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102'
+                }`}
+              >
+                <Home className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">{t('home')}</span>
+              </div>
             </button>
 
-            {/* Tab 2: Complaints */}
+            {/* Tab 2: Drives */}
             <button
-              id="mobile-nav-complaints"
+              id="mobile-nav-drives"
               onClick={() => {
-                if (!currentUser) {
-                  setShowAuthModal(true);
-                } else {
-                  setCitizenTab('COMPLAINTS');
-                  navigateTo('/track');
-                }
+                setCitizenTab('EVENTS');
+                navigateTo('/events');
               }}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'COMPLAINTS' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <ClipboardList className="w-5 h-5" />
-              <span>Complaints</span>
+              <div
+                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out ${
+                  citizenTab === 'EVENTS'
+                    ? 'bg-slate-900/10 backdrop-blur-md border border-slate-900/15 shadow-xs text-slate-900 font-bold scale-105'
+                    : 'text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102'
+                }`}
+              >
+                <Calendar className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">Drives</span>
+              </div>
             </button>
 
             {/* Center Elevated Floating (+) Button -> Post */}
@@ -1108,12 +1078,18 @@ export default function App() {
                 setCitizenTab('FACILITIES');
                 navigateTo('/facilities');
               }}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'FACILITIES' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <MapPin className="w-5 h-5" />
-              <span>Facilities</span>
+              <div
+                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out ${
+                  citizenTab === 'FACILITIES'
+                    ? 'bg-slate-900/10 backdrop-blur-md border border-slate-900/15 shadow-xs text-slate-900 font-bold scale-105'
+                    : 'text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102'
+                }`}
+              >
+                <MapPin className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">{t('facilities')}</span>
+              </div>
             </button>
 
             {/* Tab 5: Profile */}
@@ -1123,12 +1099,18 @@ export default function App() {
                 setCitizenTab('PROFILE');
                 navigateTo('/profile');
               }}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <User className="w-5 h-5" />
-              <span>Profile</span>
+              <div
+                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out ${
+                  citizenTab === 'PROFILE'
+                    ? 'bg-slate-900/10 backdrop-blur-md border border-slate-900/15 shadow-xs text-slate-900 font-bold scale-105'
+                    : 'text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102'
+                }`}
+              >
+                <User className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">{t('profile')}</span>
+              </div>
             </button>
           </>
         ) : (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN') ? (
@@ -1137,44 +1119,60 @@ export default function App() {
             <button
               id="mobile-officer-nav-desk"
               onClick={() => navigateTo('/command-hq')}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab !== 'PROFILE' && !isOfficerCitizenMode ? 'text-[#115e59] font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <Building2 className="w-5 h-5" />
-              <span>GIS Desk</span>
+              <div
+                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out ${
+                  citizenTab !== 'PROFILE' && !isOfficerCitizenMode
+                    ? 'bg-slate-900/10 backdrop-blur-md border border-slate-900/15 shadow-xs text-[#115e59] font-bold scale-105'
+                    : 'text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102'
+                }`}
+              >
+                <Building2 className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">GIS Desk</span>
+              </div>
             </button>
 
             {/* Officer Tab 2: Manage Staff */}
             <button
               id="mobile-officer-nav-staff"
               onClick={() => setShowStaffManagementModal(true)}
-              className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-slate-500 hover:text-slate-700 font-medium"
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <Users className="w-5 h-5" />
-              <span>Staff</span>
+              <div className="flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102">
+                <Users className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">Staff</span>
+              </div>
             </button>
 
-            {/* Officer Tab 3: Gemini Copilot */}
+            {/* Officer Tab 3: Gemini Support Assistant */}
             <button
               id="mobile-officer-nav-copilot"
               onClick={() => setShowGeminiAssistant(true)}
-              className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-blue-600 hover:text-blue-700 font-medium"
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <Sparkles className="w-5 h-5" />
-              <span>AI Copilot</span>
+              <div className="flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out text-slate-700 hover:text-slate-900 font-medium scale-100 hover:scale-102">
+                <Headset className="w-5 h-5 text-teal-600" />
+                <span className="text-[11px] leading-tight">AI Help</span>
+              </div>
             </button>
 
             {/* Officer Tab 4: Profile */}
             <button
               id="mobile-officer-nav-profile"
               onClick={() => navigateTo('/profile')}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer ${
-                citizenTab === 'PROFILE' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700 font-medium'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-xs cursor-pointer group"
             >
-              <User className="w-5 h-5" />
-              <span>Profile</span>
+              <div
+                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-out ${
+                  citizenTab === 'PROFILE'
+                    ? 'bg-slate-900/10 backdrop-blur-md border border-slate-900/15 shadow-xs text-slate-900 font-bold scale-105'
+                    : 'text-slate-500 hover:text-slate-700 font-medium scale-100 hover:scale-102'
+                }`}
+              >
+                <User className="w-5 h-5" />
+                <span className="text-[11px] leading-tight">{t('profile')}</span>
+              </div>
             </button>
           </>
         ) : (userRole === 'FIELD_CREW' || userRole === 'FIELD_CONTRACTOR') ? (
@@ -1197,8 +1195,8 @@ export default function App() {
               onClick={() => setShowGeminiAssistant(true)}
               className="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-xs transition-colors cursor-pointer text-slate-500 hover:text-slate-700 font-medium"
             >
-              <Sparkles className="w-5 h-5 text-blue-600" />
-              <span>Copilot</span>
+              <Headset className="w-5 h-5 text-teal-600" />
+              <span>AI Help</span>
             </button>
 
             {/* Crew Tab 3: Profile */}
@@ -1314,12 +1312,19 @@ export default function App() {
         isOpen={showGeminiAssistant}
         onClose={() => setShowGeminiAssistant(false)}
         userRole={userRole}
+        currentUser={currentUser}
         userWard={currentUser?.assignedWard || 'Ward 4 - Central Zone'}
         incidents={incidents}
         availableUnits={units}
         onApplyDraft={(draft) => {
           if (userRole === 'CITIZEN') {
             setCitizenTab('FORM');
+          }
+        }}
+        onInspectTicket={(ticketId) => {
+          setShowGeminiAssistant(false);
+          if (userRole === 'CITIZEN') {
+            setCitizenTab('TRACK');
           }
         }}
       />

@@ -17,19 +17,24 @@ import {
   Compass, 
   ArrowUpRight,
   Zap,
-  Flame
+  Flame,
+  ExternalLink,
+  Ticket
 } from 'lucide-react';
 import { UserRole, CrisisIncident, MunicipalUnit } from '../types';
 import { queryGeminiAssistant, GeminiAssistantMessage } from '../services/geminiService';
+import { INITIAL_PUBLIC_FACILITIES } from '../mockData';
 
 interface GeminiAssistantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   userRole: UserRole;
   userWard?: string;
+  currentUser?: any;
   incidents: CrisisIncident[];
   availableUnits?: MunicipalUnit[];
   onApplyDraft?: (draft: { title?: string; category?: string; description?: string }) => void;
+  onInspectTicket?: (ticketId: string) => void;
 }
 
 export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
@@ -37,19 +42,21 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
   onClose,
   userRole,
   userWard = 'Ward 4 - Central Zone',
+  currentUser,
   incidents,
   availableUnits = [],
-  onApplyDraft
+  onApplyDraft,
+  onInspectTicket
 }) => {
   const isOfficerPersona = userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN' || userRole === 'SWACHH_SURVEKSHAN_AUDITOR';
-  const [selectedPersona, setSelectedPersona] = useState<'CITIZEN' | 'OFFICER'>(isOfficerPersona ? 'OFFICER' : 'CITIZEN');
+  const selectedPersona: 'CITIZEN' | 'OFFICER' = isOfficerPersona ? 'OFFICER' : 'CITIZEN';
   
   const [messages, setMessages] = useState<GeminiAssistantMessage[]>([
     {
       role: 'assistant',
       content: isOfficerPersona 
-        ? `**Namaste Officer.** I am your Swachhata-MoHUA Municipal Operations Assistant. I can synthesize real-time incident reports across ${userWard}, compute optimal crew dispatch routes, and flag high-risk bottleneck areas.`
-        : `**Namaste Citizen.** I am your Swachhata-MoHUA Civic Support Assistant. Need help drafting an official grievance, finding the right category, or checking statutory SLAs? Ask me anything!`,
+        ? `Active telemetry for ${userWard} is loaded. Ask me to summarize P1 critical hazards, unassigned tickets, or crew dispatch options.`
+        : `Hi ${currentUser?.fullName?.split(' ')[0] || 'there'}! I can help you track open complaints, find nearby SBM toilets, or check resolution times. How can I help you today?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -68,19 +75,19 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
   if (!isOpen) return null;
 
   const citizenChips = [
-    "Draft description for deep pothole",
+    "Check status of my open complaints",
+    "Where is the nearest clean public toilet?",
+    "How quickly are P1 potholes resolved in Ward 4?",
     "Report uncollected garbage dump",
-    "Check Ward 4 resolution SLA status",
-    "Find nearest open SBM public toilet",
-    "How to report broken streetlights"
+    "Find nearest waste drop center"
   ];
 
   const officerChips = [
-    "Summarize Ward 4 active grievances",
-    "Suggest optimal crew dispatch routing",
-    "Flag high-risk bottleneck hazard areas",
-    "Swachh Survekshan compliance overview",
-    "Audit Ward 4 SLA adherence rates"
+    "Summarize active P1 Critical hazards",
+    "Identify unassigned tickets with SLA < 1hr",
+    "Recommend crew dispatch for open road defects",
+    "Audit Ward 4 SLA adherence rates",
+    "Generate operational shift briefing"
   ];
 
   const activeChips = selectedPersona === 'CITIZEN' ? citizenChips : officerChips;
@@ -104,7 +111,9 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
         ward: userWard,
         incidentsCount: incidents.length,
         activeIncidents: incidents,
-        availableUnits
+        availableUnits,
+        currentUser,
+        facilities: INITIAL_PUBLIC_FACILITIES
       });
 
       const assistantMsg: GeminiAssistantMessage = {
@@ -139,12 +148,26 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
     setMessages([
       {
         role: 'assistant',
-        content: selectedPersona === 'OFFICER'
-          ? `**Assistant Ready.** Ready to analyze ward operations and routing in ${userWard}.`
-          : `**Assistant Ready.** How can I assist you with your municipal grievance today?`,
+        content: isOfficerPersona
+          ? `Ready to analyze ward operations and crew dispatch for ${userWard}.`
+          : `Ready to assist with your municipal queries or ticket status updates.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
+  };
+
+  // Helper to extract matching tickets mentioned in assistant message
+  const findReferencedTickets = (content: string): CrisisIncident[] => {
+    if (!content || !incidents || incidents.length === 0) return [];
+    
+    // Find incidents whose ID or `#${ID}` is in the content
+    const matched = incidents.filter(inc => {
+      const ticketId = inc.id;
+      const cleanId = ticketId.replace(/^#/, '');
+      return content.includes(ticketId) || content.includes(`#${cleanId}`) || content.includes(cleanId);
+    });
+
+    return matched;
   };
 
   return (
@@ -157,17 +180,21 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
         {/* Drawer Header */}
         <div className="bg-gradient-to-r from-[#0d5c52] via-[#115e59] to-[#042f2e] text-white p-4 sm:p-5 flex items-center justify-between border-b border-teal-700/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs relative">
               <Sparkles className="w-5 h-5 animate-pulse" strokeWidth={1.75} />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-base text-white tracking-tight">Municipal Operations Assistant</h3>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md">
-                  Active
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base text-white tracking-tight">CivicPulse Copilot</h3>
+                {/* Single Subtle Operational Beacon */}
+                <span className="relative flex h-2.5 w-2.5" title="Live Engine Connected">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
                 </span>
               </div>
-              <p className="text-xs text-teal-100/90 font-normal">Swachhata-MoHUA Intelligent Redressal System</p>
+              <p className="text-xs text-teal-100/90 font-normal">
+                {isOfficerPersona ? `Tactical Ward Intelligence • ${userWard}` : `Municipal AI Assistant • ${userWard}`}
+              </p>
             </div>
           </div>
 
@@ -189,120 +216,134 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
           </div>
         </div>
 
-        {/* Persona Mode Switcher */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-            <Bot className="w-3.5 h-3.5 text-[#0d5c52]" strokeWidth={1.75} />
-            Assistant Mode:
-          </span>
-          <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1">
-            <button
-              type="button"
-              onClick={() => setSelectedPersona('CITIZEN')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                selectedPersona === 'CITIZEN'
-                  ? 'bg-white text-[#0d5c52] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Citizen Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPersona('OFFICER')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                selectedPersona === 'OFFICER'
-                  ? 'bg-white text-[#0d5c52] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Officer & Auditor Mode
-            </button>
-          </div>
-        </div>
-
         {/* Messages Stream */}
         <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs bg-slate-50/50">
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} space-y-1`}
-            >
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-1">
-                {msg.role === 'user' ? (
-                  <>
-                    <span>You</span>
-                    <span>•</span>
-                    <span>{msg.timestamp}</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span className="font-bold text-emerald-800">Municipal Assistant</span>
-                    <span>•</span>
-                    <span>{msg.timestamp}</span>
-                  </>
-                )}
-              </div>
+          {messages.map((msg, idx) => {
+            const referencedTickets = msg.role === 'assistant' ? findReferencedTickets(msg.content) : [];
 
+            return (
               <div
-                className={`p-3.5 rounded-2xl max-w-[88%] leading-relaxed shadow-xs ${
-                  msg.role === 'user'
-                    ? 'bg-[#2d7a70] text-white rounded-tr-xs font-medium'
-                    : 'bg-white text-slate-800 border border-slate-200/90 rounded-tl-xs space-y-2'
-                }`}
+                key={idx}
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} space-y-1`}
               >
-                {/* Format markdown-like text */}
-                <div className="whitespace-pre-wrap font-sans text-xs space-y-1">
-                  {msg.content}
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-1">
+                  {msg.role === 'user' ? (
+                    <>
+                      <span>You</span>
+                      <span>•</span>
+                      <span>{msg.timestamp}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <span className="font-bold text-emerald-800">CivicPulse AI Agent</span>
+                      <span>•</span>
+                      <span>{msg.timestamp}</span>
+                    </>
+                  )}
                 </div>
 
-                {/* Assistant Message Actions */}
-                {msg.role === 'assistant' && (
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(msg.content, idx)}
-                      className="text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer font-semibold"
-                    >
-                      {copiedIndex === idx ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          <span className="text-emerald-700">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copy Response</span>
-                        </>
-                      )}
-                    </button>
+                <div
+                  className={`p-3.5 rounded-2xl max-w-[88%] leading-relaxed shadow-xs ${
+                    msg.role === 'user'
+                      ? 'bg-[#2d7a70] text-white rounded-tr-xs font-medium'
+                      : 'bg-white text-slate-800 border border-slate-200/90 rounded-tl-xs space-y-2'
+                  }`}
+                >
+                  {/* Format markdown-like text */}
+                  <div className="whitespace-pre-wrap font-sans text-xs space-y-1">
+                    {msg.content}
+                  </div>
 
-                    {onApplyDraft && selectedPersona === 'CITIZEN' && (
+                  {/* Render Interactive Ticket Micro-Cards if tickets referenced */}
+                  {msg.role === 'assistant' && referencedTickets.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                        <Ticket className="w-3 h-3 text-blue-600" />
+                        <span>Referenced Ticket Cards:</span>
+                      </div>
+                      {referencedTickets.map((ticket) => (
+                        <div
+                          key={ticket.id}
+                          className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl flex items-center justify-between transition cursor-pointer shadow-xs group"
+                          onClick={() => {
+                            if (onInspectTicket) {
+                              onInspectTicket(ticket.id);
+                            }
+                          }}
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-slate-900 group-hover:text-blue-700 transition">
+                                #{ticket.id} • {ticket.category.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 line-clamp-1">
+                              {ticket.location?.address || (ticket.location as any)?.landmark || ticket.location?.zone || 'Ward 4'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              ticket.status === 'RESOLVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              ticket.status === 'IN_PROGRESS' || ticket.status === 'DISPATCHED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {ticket.status}
+                            </span>
+                            <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-blue-600 transition" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Assistant Message Actions */}
+                  {msg.role === 'assistant' && (
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
                       <button
                         type="button"
-                        onClick={() => {
-                          onApplyDraft({
-                            description: msg.content
-                          });
-                          onClose();
-                        }}
-                        className="text-[#2d7a70] hover:text-[#23635b] font-bold flex items-center gap-1 cursor-pointer"
+                        onClick={() => handleCopy(msg.content, idx)}
+                        className="text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer font-semibold"
                       >
-                        <ArrowUpRight className="w-3 h-3" />
-                        <span>Use in Grievance Form</span>
+                        {copiedIndex === idx ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span className="text-emerald-700">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy Response</span>
+                          </>
+                        )}
                       </button>
-                    )}
-                  </div>
-                )}
+
+                      {onApplyDraft && selectedPersona === 'CITIZEN' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onApplyDraft({
+                              description: msg.content
+                            });
+                            onClose();
+                          }}
+                          className="text-[#2d7a70] hover:text-[#23635b] font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <ArrowUpRight className="w-3 h-3" />
+                          <span>Use in Grievance Form</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {isLoading && (
             <div className="flex items-center gap-2 text-slate-500 text-xs p-3 bg-white rounded-2xl border border-slate-200 w-fit animate-pulse">
               <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
-              <span>Analyzing municipal data & ward regulations...</span>
+              <span>CivicPulse AI processing live ward context & telemetry...</span>
             </div>
           )}
 
@@ -343,7 +384,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
               type="text"
               placeholder={
                 selectedPersona === 'CITIZEN'
-                  ? "Ask about SLAs, draft a grievance, find toilets..."
+                  ? "Check ticket status, find public toilets, ask SLAs..."
                   : "Query Ward 4 bottlenecks, triage crews, compute routes..."
               }
               value={inputVal}
@@ -365,3 +406,4 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
     </div>
   );
 };
+

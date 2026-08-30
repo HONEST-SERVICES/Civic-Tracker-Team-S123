@@ -31,7 +31,10 @@ import {
   ShieldCheck,
   Activity,
   Flame,
-  AlertCircle
+  AlertCircle,
+  Headset,
+  Settings,
+  Menu
 } from 'lucide-react';
 import { CrisisIncident, MunicipalUnit, UnitStatus, DepartmentType, PriorityLevel, UserProfile } from '../types';
 import { ZONES } from '../mockData';
@@ -58,6 +61,7 @@ interface MunicipalOfficerCommandCenterProps {
   currentUser?: UserProfile | null;
   onOpenStaffManagement?: () => void;
   onOpenProfile?: () => void;
+  onOpenGeminiCopilot?: () => void;
   initialTab?: 'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE';
   onTabChange?: (tab: 'COMMAND_DESK' | 'WARD_CONFIG' | 'PROFILE') => void;
 }
@@ -77,6 +81,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   currentUser,
   onOpenStaffManagement,
   onOpenProfile,
+  onOpenGeminiCopilot,
   initialTab = 'COMMAND_DESK',
   onTabChange
 }) => {
@@ -97,6 +102,8 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   };
 
   // Workspace Layout & Collapse States
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [showSystemSettingsModal, setShowSystemSettingsModal] = useState<boolean>(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState<boolean>(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState<boolean>(false);
   const [splitMode, setSplitMode] = useState<'SPLIT' | 'EXPANDED_MAP' | 'EXPANDED_TABLE'>('SPLIT');
@@ -207,156 +214,283 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
   const userRoleLabel = isSuperAdmin ? 'Super Admin' : (currentUser?.designation || 'Ward Officer');
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#EEF2F6] overflow-hidden font-sans select-none">
+    <div className="flex h-full w-full bg-[#EEF2F6] overflow-hidden font-sans select-none">
       
-      {/* 1. TOP GOVTECH HEADER */}
-      <header className="bg-white border-b border-slate-300 shadow-xs h-16 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-30">
-        {/* Left: CivicPulse Brand, Title & User Pill */}
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="flex items-center gap-2.5">
+      {/* =======================================================
+          1. LEFT NAVIGATION SIDEBAR (GovTech Admin / Officer HQ Navigation)
+         ======================================================= */}
+      <aside 
+        className={`${
+          isSidebarCollapsed ? 'w-16' : 'w-64'
+        } bg-slate-900 text-white flex flex-col justify-between border-r border-slate-800 shadow-xl z-40 transition-all duration-300 relative flex-shrink-0 hidden md:flex`}
+      >
+        {/* Sidebar Header: Brand + Collapse Button */}
+        <div className="h-14 px-4 flex items-center justify-between border-b border-slate-800/90 shrink-0">
+          {!isSidebarCollapsed && (
+            <div 
+              onClick={() => handleSwitchTab('COMMAND_DESK')}
+              className="flex items-center gap-2.5 cursor-pointer select-none group"
+              title="Return to GIS Command Desk"
+            >
+              <img 
+                src="/logo.png" 
+                alt="CivicPulse" 
+                className="h-8 w-auto object-contain flex-shrink-0 group-hover:scale-105 transition-transform"
+                referrerPolicy="no-referrer"
+              />
+              <div className="min-w-0">
+                <h1 className="font-bold text-sm text-white tracking-tight leading-none truncate group-hover:text-teal-300 transition-colors">
+                  CivicPulse HQ
+                </h1>
+                <span className="text-[10px] text-teal-400 font-semibold tracking-wide">Command Center</span>
+              </div>
+            </div>
+          )}
+          {isSidebarCollapsed && (
             <img 
               src="/logo.png" 
               alt="CivicPulse" 
-              className="h-9 sm:h-10 w-auto object-contain flex-shrink-0"
-              referrerPolicy="no-referrer"
+              className="h-8 w-auto mx-auto object-contain cursor-pointer" 
+              onClick={() => handleSwitchTab('COMMAND_DESK')}
             />
-            <div className="min-w-0">
-              <h1 className="font-bold text-sm sm:text-base text-slate-900 tracking-tight leading-tight truncate">
-                CivicPulse Command HQ
-              </h1>
-              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-                <Radio className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
-                <span>GovTech Operations Matrix</span>
+          )}
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {/* Navigation Sections */}
+        <div className="flex-1 py-4 px-2 space-y-6 overflow-y-auto custom-scrollbar">
+          {/* Navigation Group 1: Core Operations */}
+          <div>
+            {!isSidebarCollapsed && (
+              <div className="px-3 mb-2 text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">
+                Operational Matrix
               </div>
+            )}
+            <div className="space-y-1">
+              <button
+                onClick={() => handleSwitchTab('COMMAND_DESK')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'COMMAND_DESK'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                title="GIS Command Map & Ticket Operations"
+              >
+                <MapIcon className="w-4 h-4 text-teal-400 shrink-0" />
+                {!isSidebarCollapsed && (
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="truncate">GIS Command Map</span>
+                    {incidents.length > 0 && (
+                      <span className="bg-slate-800 text-teal-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {incidents.length}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </button>
+
+              {hasWardManagePerm && (
+                <button
+                  onClick={() => handleSwitchTab('WARD_CONFIG')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'WARD_CONFIG'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                  title="Ward Governance & Service Metrics"
+                >
+                  <Layers className="w-4 h-4 text-blue-400 shrink-0" />
+                  {!isSidebarCollapsed && <span className="truncate">Ward Governance</span>}
+                </button>
+              )}
+
+              {onOpenStaffManagement && (
+                <button
+                  onClick={onOpenStaffManagement}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800 ${
+                    isSidebarCollapsed ? 'justify-center px-0' : ''
+                  }`}
+                  title="Manage Ward Staff & RBAC Delegations"
+                >
+                  <Users className="w-4 h-4 text-indigo-400 shrink-0" />
+                  {!isSidebarCollapsed && <span className="truncate">Staff Management</span>}
+                </button>
+              )}
+
+              <button
+                onClick={() => onOpenProfile ? onOpenProfile() : handleSwitchTab('PROFILE')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'PROFILE'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                title="Officer Profile & Preferences"
+              >
+                <User className="w-4 h-4 text-amber-400 shrink-0" />
+                {!isSidebarCollapsed && <span className="truncate">Officer Profile</span>}
+              </button>
             </div>
           </div>
 
-          {/* User Info Pill */}
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
-            <span className="text-slate-900 font-bold">{userDisplayName}</span>
-            <span className="text-slate-400">•</span>
-            <span className="text-teal-700">{userRoleLabel}</span>
-          </div>
-        </div>
+          {/* Navigation Group 2: AI & System Maintenance */}
+          <div>
+            {!isSidebarCollapsed && (
+              <div className="px-3 mb-2 text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">
+                AI & Admin Tools
+              </div>
+            )}
+            <div className="space-y-1">
+              {onOpenGeminiCopilot && (
+                <button
+                  onClick={onOpenGeminiCopilot}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-slate-800/80 hover:bg-slate-800 text-teal-300 border border-teal-500/20 ${
+                    isSidebarCollapsed ? 'justify-center px-0' : ''
+                  }`}
+                  title="Open Civic AI Assistant"
+                >
+                  <Headset className="w-4 h-4 text-teal-400 shrink-0" />
+                  {!isSidebarCollapsed && (
+                    <div className="flex items-center justify-between flex-1 min-w-0">
+                      <span className="truncate text-white font-semibold">Civic AI Assistant</span>
+                      <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                        Live
+                      </span>
+                    </div>
+                  )}
+                </button>
+              )}
 
-        {/* Center: View Toggle Buttons */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <button
-            onClick={() => handleSwitchTab('COMMAND_DESK')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'COMMAND_DESK'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <MapIcon className="w-3.5 h-3.5 text-teal-600" />
-            <span>GIS Command Map</span>
-          </button>
-
-          {hasWardManagePerm && (
-            <button
-              onClick={() => handleSwitchTab('WARD_CONFIG')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'WARD_CONFIG'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span>Ward Governance</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => onOpenProfile ? onOpenProfile() : handleSwitchTab('PROFILE')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'PROFILE'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <User className="w-3.5 h-3.5 text-slate-600" />
-            <span>Profile</span>
-          </button>
-        </div>
-
-        {/* Right: Ward Selector, Database Maintenance & Switch to Citizen */}
-        <div className="flex items-center gap-2 text-xs">
-          {/* Ward Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700">
-            <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-            {isSuperAdmin ? (
-              <select
-                value={selectedWard}
-                onChange={(e) => setSelectedWard(e.target.value)}
-                className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer text-xs pr-1"
+              <button
+                onClick={() => setShowSystemSettingsModal(true)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800 ${
+                  isSidebarCollapsed ? 'justify-center px-0' : ''
+                }`}
+                title="System Settings, Data Seeding & Maintenance"
               >
-                {ZONES.map((z) => (
-                  <option key={z.name} value={z.name} className="bg-white text-slate-900">
-                    {z.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="font-bold text-slate-900">{selectedWard}</span>
-            )}
+                <Settings className="w-4 h-4 text-slate-400 shrink-0" />
+                {!isSidebarCollapsed && <span className="truncate">System Maintenance</span>}
+              </button>
+            </div>
           </div>
+        </div>
 
-          {/* Action 1: Wipe All Complaints */}
-          <button
-            onClick={() => setShowWipeModal(true)}
-            disabled={isWipingDb || isSeedingDb}
-            className="h-9 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
-            title="Wipe All Complaints (Leave Database Empty)"
-          >
-            {isWipingDb ? (
-              <RefreshCw className="w-3.5 h-3.5 text-rose-600 animate-spin" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-            )}
-            <span className="hidden xl:inline">Wipe Complaints</span>
-          </button>
-
-          {/* Action 2: Seed Demo Baseline Data */}
-          <button
-            onClick={handleSeedDemoData}
-            disabled={isWipingDb || isSeedingDb}
-            className="h-9 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
-            title="Load Baseline Demo Incidents"
-          >
-            {isSeedingDb ? (
-              <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            )}
-            <span className="hidden xl:inline">Seed Demo Data</span>
-          </button>
-
-          {/* Manage Staff Trigger */}
-          {onOpenStaffManagement && (
-            <button
-              onClick={onOpenStaffManagement}
-              className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
-              title="Manage Ward Staff & RBAC Delegations"
-            >
-              <Users className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden lg:inline">Manage Staff</span>
-            </button>
-          )}
-
-          {/* Switch back to Citizen View */}
+        {/* Sidebar Footer: Citizen Switch & User Profile */}
+        <div className="p-3 border-t border-slate-800 space-y-2 shrink-0">
           {(onSwitchToCitizen || onLogout) && (
             <button
               onClick={onSwitchToCitizen || onLogout}
-              className="h-9 px-3 sm:px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition"
-              title="View App as a Citizen without logging out"
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition cursor-pointer ${
+                isSidebarCollapsed ? 'justify-center px-0' : ''
+              }`}
+              title="View app as a Citizen"
             >
-              <Eye className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Switch to Citizen</span>
+              <Eye className="w-4 h-4 text-amber-400 shrink-0" />
+              {!isSidebarCollapsed && <span>Switch to Citizen View</span>}
             </button>
           )}
+
+          {!isSidebarCollapsed && (
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs">
+              <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-xs">
+                {userDisplayName.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-white text-xs truncate">{userDisplayName}</div>
+                <div className="text-[10px] text-teal-400 font-medium truncate">{userRoleLabel}</div>
+              </div>
+            </div>
+          )}
         </div>
-      </header>
+      </aside>
+
+      {/* =======================================================
+          2. MAIN VIEW AREA (Header + Tab Content)
+         ======================================================= */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        
+        {/* Streamlined Clean Top Header */}
+        <header className="bg-white border-b border-slate-300 shadow-xs h-14 px-4 sm:px-6 flex items-center justify-between flex-shrink-0 z-30 gap-4">
+          {/* Left: Mobile Sidebar Toggle / Active Breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              title="Toggle Sidebar Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <img src="/logo.png" alt="CivicPulse" className="h-7 w-auto md:hidden" />
+              <span className="font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
+                {activeTab === 'COMMAND_DESK' && 'GIS Command Map & Incident Matrix'}
+                {activeTab === 'WARD_CONFIG' && 'Ward Governance & Operations'}
+                {activeTab === 'PROFILE' && 'Officer Profile'}
+              </span>
+              <span className="bg-teal-50 text-teal-700 border border-teal-200 text-[10px] px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
+                Live Operations
+              </span>
+            </div>
+          </div>
+
+          {/* Right Header Actions: Ward Selector, AI Help, Settings Gear & User Info */}
+          <div className="flex items-center gap-2.5 text-xs shrink-0">
+            {/* Ward Selector Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700">
+              <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+              {isSuperAdmin ? (
+                <select
+                  value={selectedWard}
+                  onChange={(e) => setSelectedWard(e.target.value)}
+                  className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer text-xs pr-1"
+                >
+                  {ZONES.map((z) => (
+                    <option key={z.name} value={z.name} className="bg-white text-slate-900">
+                      {z.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-bold text-slate-900">{selectedWard}</span>
+              )}
+            </div>
+
+            {/* AI Assistant Quick Trigger */}
+            {onOpenGeminiCopilot && (
+              <button
+                onClick={onOpenGeminiCopilot}
+                className="h-9 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition text-xs border border-slate-700"
+                title="Open Civic AI Assistant"
+              >
+                <Headset className="w-3.5 h-3.5 text-teal-300" />
+                <span className="hidden sm:inline">AI Help</span>
+              </button>
+            )}
+
+            {/* System Settings Quick Gear Button */}
+            <button
+              onClick={() => setShowSystemSettingsModal(true)}
+              className="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition border border-slate-200"
+              title="System Maintenance & Database Actions"
+            >
+              <Settings className="w-4 h-4 text-slate-700" />
+            </button>
+
+            {/* User Badge */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+              <div className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold text-[10px] flex items-center justify-center">
+                {userDisplayName.charAt(0)}
+              </div>
+              <span className="text-slate-900 font-bold">{userDisplayName}</span>
+            </div>
+          </div>
+        </header>
 
       {/* RENDER TAB 1: MUNICIPAL GOVERNANCE & WARD CONFIG */}
       {activeTab === 'WARD_CONFIG' && (
@@ -1503,6 +1637,7 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
           </div>
         </div>
       )}
+      </div>
 
       {/* HIGH-RESOLUTION PHOTO LIGHTBOX MODAL */}
       {lightboxImage && (
@@ -1597,6 +1732,125 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                 Confirm & Archive Ticket
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* System Admin & Operations Maintenance Modal */}
+      {showSystemSettingsModal && (
+        <div className="fixed inset-0 z-[9990] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative z-[9999] bg-white rounded-2xl p-6 shadow-2xl max-w-lg w-full border border-slate-200 space-y-5 animate-in zoom-in-95 font-sans">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800">
+                  <Settings className="w-5 h-5 text-slate-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">System Maintenance & Admin Tools</h3>
+                  <p className="text-xs text-slate-500">Configure database datasets, demo seeding, and system status</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSystemSettingsModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              {/* Tool 1: Demo Data Seeding */}
+              <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span>Baseline Demo Data Generator</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Safe Action</span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Generates baseline demo incident complaints (potholes, garbage, streetlights) across municipal wards for live presentation & testing.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowSystemSettingsModal(false);
+                    handleSeedDemoData();
+                  }}
+                  disabled={isWipingDb || isSeedingDb}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSeedingDb ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  <span>{isSeedingDb ? 'Seeding Demo Data...' : 'Seed Baseline Demo Data'}</span>
+                </button>
+              </div>
+
+              {/* Tool 2: Sensitive Data Purge (Wipe) */}
+              <div className="p-4 rounded-xl bg-rose-50/70 border border-rose-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-xs text-rose-900">
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                    <span>Purge All Database Complaints</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">Destructive</span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Permanently deletes all grievance tickets from Firestore, leaving an empty database state for clean initialization.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowSystemSettingsModal(false);
+                    setShowWipeModal(true);
+                  }}
+                  disabled={isWipingDb || isSeedingDb}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  <span>Wipe Complaints Database</span>
+                </button>
+              </div>
+
+              {/* System Telemetry Overview */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-teal-600" />
+                  <span>Operational System Telemetry</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-200/70">
+                  <div>
+                    <span className="text-slate-500">Database:</span>{' '}
+                    <strong className="text-slate-900">Firestore (Live)</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Active Incidents:</span>{' '}
+                    <strong className="text-slate-900">{incidents.length} Tickets</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Active Ward:</span>{' '}
+                    <strong className="text-slate-900">{selectedWard}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">User Role:</span>{' '}
+                    <strong className="text-teal-700">{userRoleLabel}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowSystemSettingsModal(false)}
+                className="px-4 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-xs cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+
           </div>
         </div>
       )}

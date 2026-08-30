@@ -27,9 +27,9 @@ async function startServer() {
   async function callGeminiWithFallback(
     ai: GoogleGenAI,
     generateParams: any,
-    preferredModel = "gemini-3.7-flash"
+    preferredModel = "gemini-3.1-flash-lite"
   ) {
-    const modelsToTry = [preferredModel, "gemini-2.5-flash", "gemini-flash-latest"];
+    const modelsToTry = [preferredModel, "gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-flash-latest"];
     let lastErr: any = null;
 
     for (const model of modelsToTry) {
@@ -37,6 +37,10 @@ async function startServer() {
         try {
           const response = await ai.models.generateContent({
             ...generateParams,
+            config: {
+              thinkingConfig: { thinkingBudget: 0 },
+              ...(generateParams.config || {})
+            },
             model,
           });
           return response;
@@ -53,8 +57,8 @@ async function startServer() {
             msg.includes("temporarily");
 
           if (isUnavailable && attempt === 0) {
-            // Wait 500ms before retry
-            await new Promise((r) => setTimeout(r, 500));
+            // Wait 400ms before retry
+            await new Promise((r) => setTimeout(r, 400));
             continue;
           }
           break;
@@ -638,8 +642,19 @@ Execute full autonomous triage and dispatch procedure.`;
   // Interactive Gemini Assistant Endpoint
   app.post("/api/gemini/assistant", async (req, res) => {
     try {
-      const { query: userQuery, role, context, customApiKey } = req.body;
+      const { query: userQuery, role, context = {}, customApiKey } = req.body;
       const effectiveKey = customApiKey || process.env.GEMINI_API_KEY;
+
+      const userProfile = context.currentUserProfile || {
+        userId: 'usr-guest',
+        name: 'Resident',
+        wardId: context.ward || 'Ward 4 - Central Zone',
+        role: role || 'CITIZEN'
+      };
+
+      const activeComplaints = context.activeIncidents || [];
+      const facilities = context.facilities || [];
+      const availableUnits = context.availableUnits || [];
 
       if (effectiveKey) {
         try {
@@ -651,17 +666,37 @@ Execute full autonomous triage and dispatch procedure.`;
               },
             },
           });
-          const systemInstruction = `You are the Swachhata-MoHUA Gemini AI Civic Assistant & Municipal Copilot.
-You serve two distinct user personas:
-1. CITIZEN / VOLUNTEER: Help citizens draft clear grievance descriptions, recommend standard MoHUA grievance categories (DEEP_POTHOLE, GARBAGE_DUMP, WATERLOGGING, PUBLIC_TOILET_CLEANING, OPEN_MANHOLES), explain redressal SLAs (P1 Critical: 12 Hours, P2 Urgent: 48 Hours, P3 Scheduled: 7 Days), and locate clean SBM public facilities.
-2. WARD OFFICER / AUDITOR / SUPER ADMIN: Generate real-time incident triage summaries, calculate route-to-crew optimization suggestions, flag high-risk bottleneck areas, and evaluate Swachh Survekshan compliance.
 
-Current Context:
-- Active Role: ${role || 'CITIZEN'}
-- Active Ward: ${context?.ward || 'Ward 4 - Central Zone'}
-- Active Complaints Count: ${context?.incidentsCount || 0}
+          const isCitizen = (role || 'CITIZEN') === 'CITIZEN';
+          const systemInstruction = isCitizen
+            ? `You are CivicPulse Copilot, a direct, natural, and helpful assistant for residents of Punjab.
 
-Respond concisely with actionable, structured, professional, and empathetic municipal guidance with clean Markdown headers and bullet points.`;
+STRICT CONVERSATIONAL & FORMATTING RULES:
+1. Speak naturally like a direct, intelligent human assistant.
+2. NEVER use markdown headers like '###', heavy asterisks ('**bold**'), or raw quotation marks in conversational greetings or explanations. Keep text clean, readable, and natural.
+3. NEVER use robotic boilerplate greetings like "Namaste Officer", "I am your Swachhata-MoHUA Assistant", or "Tactical Operations Agent".
+4. Jump immediately into the direct answer, status update, or advice in 1-2 clear, natural sentences.
+5. When referencing tickets, include the exact Ticket ID (e.g. #TK-3795 or #8153) so the interface can render a clickable card.
+6. Automatically match the language used by the user (English, Hindi, Punjabi, or Telugu).
+
+INGESTED LIVE SYSTEM STATE:
+- Current User Profile: ${JSON.stringify(userProfile)}
+- Live Active Complaints Dataset: ${JSON.stringify(activeComplaints)}
+- Nearest SBM Public Facilities: ${JSON.stringify(facilities)}`
+            : `You are CivicPulse Copilot, an operational assistant for Ward Officers.
+
+STRICT CONVERSATIONAL & FORMATTING RULES:
+1. Speak naturally like a direct, intelligent colleague.
+2. NEVER use markdown headers like '###', heavy asterisks ('**bold**'), or raw quotation marks in conversational greetings or telemetry summaries. Keep text clean, concise, and professional.
+3. NEVER use robotic boilerplate greetings like "Namaste Officer" or "I am your Tactical Operations Agent".
+4. Jump immediately into the direct answer, telemetry update, or crew recommendation in 1-2 clear, crisp sentences.
+5. Always reference specific Ticket IDs (e.g. #TK-3795 or #8153) when identifying tickets requiring action.
+
+INGESTED LIVE SYSTEM STATE:
+- Current User Profile: ${JSON.stringify(userProfile)}
+- Live Active Complaints Dataset: ${JSON.stringify(activeComplaints)}
+- Available Response Fleet Units: ${JSON.stringify(availableUnits)}
+- Nearest SBM Public Facilities: ${JSON.stringify(facilities)}`;
 
           const response = await callGeminiWithFallback(ai, {
             contents: userQuery || "Hello",
@@ -669,7 +704,7 @@ Respond concisely with actionable, structured, professional, and empathetic muni
               systemInstruction,
               temperature: 0.7,
             },
-          }, "gemini-3.7-flash");
+          }, "gemini-3.1-flash-lite");
 
           if (response.text) {
             return res.json({ success: true, reply: response.text });
@@ -682,16 +717,26 @@ Respond concisely with actionable, structured, professional, and empathetic muni
       // High-fidelity heuristic fallback
       const q = (userQuery || "").toLowerCase();
       let reply = "";
-      if (q.includes("pothole") || q.includes("road")) {
-        reply = `### Recommended Grievance Draft:\n**Title:** Deep Pothole & Damaged Road Surface\n**Category:** DEEP_POTHOLE (Urban & Roads)\n**Description:** "A deep asphalt pothole (approx. 12-15cm depth) has formed near the transit corridor, creating severe collision hazards for two-wheelers and buses. Immediate leveling and hot-mix patching required."\n**Statutory SLA:** **P2 Urgent (48 Hours)** - Public Works Dept.`;
+
+      if (q.includes("ticket") || q.includes("complaint") || q.includes("status") || q.includes("open")) {
+        if (activeComplaints.length > 0) {
+          const ticketList = activeComplaints.map((t: any) =>
+            `Ticket #${t.ticketId || t.id} (${(t.category || 'CIVIC').replace(/_/g, ' ')}): Status is ${t.status}, Priority ${t.priority || t.priorityLevel || 'P2'}, Assigned to ${t.assignedUnit || 'UNASSIGNED'} with ETA ${t.etaMinutes || 30} mins at ${t.locationDescription || 'Ward 4'}.`
+          ).join("\n\n");
+          reply = `Here is the current status of open ward complaints:\n\n${ticketList}`;
+        } else {
+          reply = `There are currently no active open grievances found for ${userProfile.name} in ${userProfile.wardId}. You can submit a new report anytime.`;
+        }
+      } else if (q.includes("pothole") || q.includes("road")) {
+        reply = `For deep potholes and damaged road surfaces, submit under the DEEP_POTHOLE category. Resolution SLA is P2 Urgent (48 Hours) for Public Works.`;
       } else if (q.includes("garbage") || q.includes("dump") || q.includes("trash")) {
-        reply = `### Recommended Grievance Draft:\n**Title:** Unattended Municipal Garbage Dump\n**Category:** GARBAGE_DUMP (Sanitation)\n**Description:** "Large pile of uncollected solid waste accumulating near market perimeter. Emitting odor and obstructing pedestrian walkway. Disinfection and dumper-placer truck deployment needed."\n**Statutory SLA:** **P1 Critical (12 Hours)** - Sanitation Dept.`;
+        reply = `For uncollected garbage dumps, report under GARBAGE_DUMP. The resolution SLA is P1 Critical (12 Hours) handled by Sanitation.`;
       } else if (q.includes("sla") || q.includes("timeline") || q.includes("hours")) {
-        reply = `### Swachhata-MoHUA Redressal SLAs:\n- **P1 Critical (12 Hours):** Open manholes, downed power lines, major water main breaches.\n- **P2 Urgent (48 Hours):** Deep potholes, non-functional streetlights, waterlogging, public toilet sanitation.\n- **P3 Scheduled (7 Days):** Culvert desilting, road signage repainting.\n\n*All tickets in Ward 4 are monitored live with automatic escalation if unresolved at 80% SLA timer.*`;
-      } else if (q.includes("toilet") || q.includes("sanitation") || q.includes("washroom")) {
-        reply = `### SBM Public Sanitation Network (Ward 4):\n- **Model Town SBM Complex:** Open 24/7 • Rating: 4.8★ • Divyangjan & Water ATM equipped.\n- **Bus Depot Public Facility:** Open 05:00 AM - 11:00 PM • Rating: 4.2★.\n- **Vegetable Market Sanitation Unit:** Open 06:00 AM - 10:00 PM • Rating: 3.9★.\n\nYou can inspect and rate cleanliness live on the **SBM Toilet Locator** layer!`;
+        reply = `Resolution timelines in ${userProfile.wardId} are 12 hours for P1 Critical hazards, 48 hours for P2 Urgent issues, and 7 days for P3 Scheduled maintenance.`;
+      } else if (q.includes("toilet") || q.includes("sanitation") || q.includes("washroom") || q.includes("amenit")) {
+        reply = `Here are the nearest SBM public facilities in ${userProfile.wardId}: Model Town SBM Complex (Open 24/7, Rated 4.8), Bus Depot Facility (Open 5am-11pm, Rated 4.2), and Vegetable Market Sanitation Unit.`;
       } else {
-        reply = `### Swachhata MoHUA Assistant:\nHow can I help you today? I can help draft formal municipal grievances, clarify resolution SLAs, find nearest public amenities, or triage Ward 4 crew dispatch!`;
+        reply = `I can help you check ticket statuses, locate SBM public facilities, look up resolution SLAs, or draft grievance reports. What can I do for you today?`;
       }
 
       return res.json({ success: true, reply });

@@ -1,4 +1,4 @@
-import { CrisisIncident, MunicipalUnit, AgentThoughtStep, GeminiVisionResult } from '../types';
+import { CrisisIncident, MunicipalUnit, AgentThoughtStep, GeminiVisionResult, UserRole } from '../types';
 import { getGeminiApiKey } from '../config/keys';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -21,9 +21,9 @@ export interface DispatchResponse {
 async function callGeminiClientWithFallback(
   ai: GoogleGenAI,
   generateParams: any,
-  preferredModel = 'gemini-3.7-flash'
+  preferredModel = 'gemini-3.1-flash-lite'
 ) {
-  const modelsToTry = [preferredModel, 'gemini-2.5-flash', 'gemini-flash-latest'];
+  const modelsToTry = [preferredModel, 'gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-flash-latest'];
   let lastErr: any = null;
 
   for (const model of modelsToTry) {
@@ -31,6 +31,10 @@ async function callGeminiClientWithFallback(
       try {
         const response = await ai.models.generateContent({
           ...generateParams,
+          config: {
+            thinkingConfig: { thinkingBudget: 0 },
+            ...(generateParams.config || {})
+          },
           model,
         });
         return response;
@@ -47,7 +51,7 @@ async function callGeminiClientWithFallback(
           msg.includes('temporarily');
 
         if (isUnavailable && attempt === 0) {
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 400));
           continue;
         }
         break;
@@ -364,15 +368,45 @@ export interface GeminiAssistantMessage {
  */
 export async function queryGeminiAssistant(
   userQuery: string,
-  userRole: string,
+  userRole: UserRole | string,
   contextData: {
     ward?: string;
     incidentsCount?: number;
     activeIncidents?: CrisisIncident[];
     availableUnits?: MunicipalUnit[];
+    currentUser?: any;
+    facilities?: any[];
   } = {}
 ): Promise<string> {
   const apiKey = getGeminiApiKey();
+
+  // Sanitize live context data
+  const user = contextData.currentUser || {};
+  const userProfileSummary = {
+    userId: user.id || 'usr-guest',
+    name: user.fullName || user.name || 'Resident',
+    wardId: user.assignedWard || contextData.ward || 'Ward 4 - Central Zone',
+    role: userRole
+  };
+
+  const sanitizedComplaints = (contextData.activeIncidents || []).slice(0, 15).map(inc => ({
+    ticketId: inc.id,
+    category: inc.category,
+    priority: inc.priority || (inc as any).priorityLevel || (inc as any).severity || 'P2_URGENT',
+    status: inc.status,
+    assignedUnit: inc.assignedUnitId || 'UNASSIGNED',
+    etaMinutes: inc.etaMinutes || (inc as any).estimatedEtaMinutes || 30,
+    locationDescription: inc.location?.address || (inc.location as any)?.landmark || inc.location?.zone || 'Ward 4',
+    timestamp: inc.createdAt ? new Date(inc.createdAt).toLocaleString() : 'Recent',
+    reporterId: (inc as any).reporterId || inc.reporterName || ''
+  }));
+
+  const sanitizedFacilities = (contextData.facilities || [
+    { id: 'FAC-SBM-01', name: 'SBM Community Sanitation Complex - Central Market', ward: 'Ward 4', type: 'Public Toilet', status: 'OPEN_24_7', rating: '4.6★' },
+    { id: 'FAC-SBM-02', name: 'Model Town Swachh Bharat Deluxe Toilet', ward: 'Ward 4', type: 'Public Toilet', status: 'OPEN_05_23', rating: '4.2★' },
+    { id: 'FAC-SBM-03', name: 'Bus Depot Public Toilet Block', ward: 'Ward 4', type: 'Public Toilet', status: 'OPEN_24_7', rating: '3.8★' },
+    { id: 'FAC-WST-01', name: 'Ward 4 Micro-Solid Waste Segregation & Drop Center', ward: 'Ward 4', type: 'Waste Center', status: 'OPEN_06_20', rating: '4.8★' }
+  ]);
 
   // 1. Try server backend endpoint
   try {
@@ -385,7 +419,14 @@ export async function queryGeminiAssistant(
       body: JSON.stringify({
         query: userQuery,
         role: userRole,
-        context: contextData,
+        context: {
+          ward: contextData.ward,
+          incidentsCount: contextData.incidentsCount,
+          activeIncidents: sanitizedComplaints,
+          availableUnits: contextData.availableUnits,
+          currentUserProfile: userProfileSummary,
+          facilities: sanitizedFacilities
+        },
         customApiKey: apiKey
       })
     });
@@ -398,30 +439,49 @@ export async function queryGeminiAssistant(
     console.warn('Server assistant endpoint error, attempting client SDK fallback:', err);
   }
 
+  // Build persona-specific system instruction
+  const isCitizen = userRole === 'CITIZEN';
+  const systemInstruction = isCitizen
+    ? `You are CivicPulse Copilot, a direct, natural, and helpful assistant for residents of Punjab.
+
+STRICT CONVERSATIONAL & FORMATTING RULES:
+1. Speak naturally like a direct, intelligent human assistant.
+2. NEVER use markdown headers like '###', heavy asterisks ('**bold**'), or raw quotation marks in conversational greetings or explanations. Keep text clean, readable, and natural.
+3. NEVER use robotic boilerplate greetings like "Namaste Officer", "I am your Swachhata-MoHUA Assistant", or "Tactical Operations Agent".
+4. Jump immediately into the direct answer, status update, or advice in 1-2 clear, natural sentences.
+5. When referencing tickets, include the exact Ticket ID (e.g. #TK-3795 or #8153) so the interface can render a clickable card.
+6. Automatically match the language used by the user (English, Hindi, Punjabi, or Telugu).
+
+INGESTED LIVE SYSTEM STATE:
+- Current User Profile: ${JSON.stringify(userProfileSummary)}
+- Live Active Complaints: ${JSON.stringify(sanitizedComplaints)}
+- Public Facilities: ${JSON.stringify(sanitizedFacilities)}`
+    : `You are CivicPulse Copilot, an operational assistant for Ward Officers.
+
+STRICT CONVERSATIONAL & FORMATTING RULES:
+1. Speak naturally like a direct, intelligent colleague.
+2. NEVER use markdown headers like '###', heavy asterisks ('**bold**'), or raw quotation marks in conversational greetings or telemetry summaries. Keep text clean, concise, and professional.
+3. NEVER use robotic boilerplate greetings like "Namaste Officer" or "I am your Tactical Operations Agent".
+4. Jump immediately into the direct answer, telemetry update, or crew recommendation in 1-2 clear, crisp sentences.
+5. Always reference specific Ticket IDs (e.g. #TK-3795 or #8153) when identifying tickets requiring action.
+
+INGESTED LIVE SYSTEM STATE:
+- Current User Profile: ${JSON.stringify(userProfileSummary)}
+- Live Active Complaints: ${JSON.stringify(sanitizedComplaints)}
+- Available Response Fleet Units: ${JSON.stringify(contextData.availableUnits || [])}
+- Public Facilities: ${JSON.stringify(sanitizedFacilities)}`;
+
   // 2. Client-side @google/genai fallback if user provided API key
   if (apiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey });
-      const systemInstruction = `You are the Swachhata-MoHUA Gemini AI Civic Assistant & Municipal Copilot.
-You serve two distinct user personas:
-1. CITIZEN / VOLUNTEER: Help citizens draft clear grievance descriptions, recommend standard MoHUA grievance categories (such as DEEP_POTHOLE, GARBAGE_DUMP, WATERLOGGING, PUBLIC_TOILET_CLEANING, OPEN_MANHOLES), explain redressal SLAs (P1 Critical: 12 Hours, P2 Urgent: 48 Hours, P3 Scheduled: 7 Days), and locate clean public toilets.
-2. WARD OFFICER / AUDITOR / SUPER ADMIN: Generate real-time incident triage summaries, calculate route-to-crew optimization suggestions, flag high-risk bottleneck areas, and evaluate Swachh Survekshan compliance.
-
-Current Context:
-- Active Role: ${userRole}
-- Active Ward: ${contextData.ward || 'Ward 4 - Central Zone'}
-- Active Complaints Count: ${contextData.incidentsCount || 0}
-- Active Units Count: ${contextData.availableUnits?.length || 0}
-
-Respond concisely with actionable, professional, and empathetic municipal guidance with clear bullet points.`;
-
       const response = await callGeminiClientWithFallback(ai, {
         contents: userQuery,
         config: {
           systemInstruction,
           temperature: 0.7,
         }
-      }, 'gemini-3.7-flash');
+      }, 'gemini-3.1-flash-lite');
 
       if (response.text) return response.text;
     } catch (sdkErr: any) {
@@ -429,60 +489,49 @@ Respond concisely with actionable, professional, and empathetic municipal guidan
     }
   }
 
-  // 3. Fallback Civic Knowledge Heuristic Engine
+  // 3. Fallback Civic Knowledge Engine
   const q = userQuery.toLowerCase();
+
+  // Handle complaint/ticket status inquiry
+  if (q.includes('ticket') || q.includes('complaint') || q.includes('status') || q.includes('open')) {
+    if (sanitizedComplaints.length > 0) {
+      const ticketList = sanitizedComplaints.map(t =>
+        `Ticket #${t.ticketId} (${t.category.replace(/_/g, ' ')}): Status is ${t.status}, Priority ${t.priority}, Assigned to ${t.assignedUnit} with ETA ${t.etaMinutes} mins at ${t.locationDescription}.`
+      ).join("\n\n");
+      return `Here is the current status of open ward complaints:\n\n${ticketList}`;
+    }
+    return `There are currently no active open grievances found for ${userProfileSummary.name} in ${userProfileSummary.wardId}. You can submit a new report anytime.`;
+  }
+
   if (q.includes('pothole') || q.includes('road')) {
-    return `### Recommended Grievance Draft:
-**Title:** Deep Pothole & Damaged Road Surface
-**Category:** DEEP_POTHOLE (Urban & Roads Domain)
-**Recommended Description:**
-"A deep asphalt pothole (approx. 12-15cm depth) has formed near the transit corridor, creating severe collision hazards for two-wheelers and buses. Immediate leveling and hot-mix patching required."
-**Statutory SLA:** **P2 Urgent (48 Hours)** - Public Works Dept.`;
+    const matchingPothole = sanitizedComplaints.find(c => c.category.includes('POTHOLE'));
+    const ticketRef = matchingPothole ? ` Related ticket #${matchingPothole.ticketId}.` : '';
+    return `For deep potholes and damaged road surfaces, submit under the DEEP_POTHOLE category. Resolution SLA is P2 Urgent (48 Hours) for Public Works.${ticketRef}`;
   }
 
   if (q.includes('garbage') || q.includes('dump') || q.includes('trash')) {
-    return `### Recommended Grievance Draft:
-**Title:** Unattended Municipal Garbage Dump
-**Category:** GARBAGE_DUMP (Sanitation Domain)
-**Recommended Description:**
-"Large pile of uncollected solid waste accumulating near market perimeter. Emitting odor and obstructing pedestrian walkway. Disinfection and dumper-placer truck deployment needed."
-**Statutory SLA:** **P1 Critical (12 Hours)** - Sanitation Dept.`;
+    const matchingGarbage = sanitizedComplaints.find(c => c.category.includes('GARBAGE'));
+    const ticketRef = matchingGarbage ? ` Related ticket #${matchingGarbage.ticketId}.` : '';
+    return `For uncollected garbage dumps, report under GARBAGE_DUMP. The resolution SLA is P1 Critical (12 Hours) handled by Sanitation.${ticketRef}`;
   }
 
-  if (q.includes('sla') || q.includes('timeline') || q.includes('hours') || q.includes('status')) {
-    return `### Swachhata-MoHUA Redressal SLAs:
-- **P1 Critical (12 Hours):** Open manholes, downed power lines, major water main breaches, open garbage dumps near hospitals.
-- **P2 Urgent (48 Hours):** Deep potholes, non-functional streetlights, waterlogging, public toilet sanitation.
-- **P3 Scheduled (7 Days):** Culvert desilting, road signage repainting, tree trimming.
-
-*All tickets in Ward 4 are monitored live with automatic escalation if unresolved at 80% SLA timer.*`;
+  if (q.includes('sla') || q.includes('timeline') || q.includes('hours')) {
+    return `Resolution timelines in ${userProfileSummary.wardId} are 12 hours for P1 Critical hazards (open manholes, major leaks), 48 hours for P2 Urgent issues (potholes, streetlights), and 7 days for P3 Scheduled maintenance.`;
   }
 
-  if (q.includes('toilet') || q.includes('sanitation') || q.includes('washroom')) {
-    return `### SBM Public Sanitation Network (Ward 4):
-- **Model Town SBM Complex:** Open 24/7 • Rating: 4.8★ • Divyangjan & Water ATM equipped.
-- **Bus Depot Public Facility:** Open 05:00 AM - 11:00 PM • Rating: 4.2★ • High footfall.
-- **Vegetable Market Sanitation Unit:** Open 06:00 AM - 10:00 PM • Rating: 3.9★.
-
-You can inspect and rate cleanliness live on the **SBM Toilet Locator** layer!`;
+  if (q.includes('toilet') || q.includes('sanitation') || q.includes('washroom') || q.includes('amenit')) {
+    const facList = sanitizedFacilities.map(f =>
+      `• ${f.name} (${f.type}): Status ${f.status}, Rated ${f.rating}`
+    ).join('\n');
+    return `Here are the nearest SBM public facilities in ${userProfileSummary.wardId}:\n\n${facList}`;
   }
 
   if (userRole === 'WARD_OFFICER' || userRole === 'SUPER_ADMIN' || userRole === 'SWACHH_SURVEKSHAN_AUDITOR') {
-    return `### Ward 4 Tactical Operations Summary:
-- **Active Grievances:** ${contextData.incidentsCount || 4} total complaints registered.
-- **Bottleneck Warning:** High concentration of pavement and drainage reports along G.T. Road Transit Corridor.
-- **Recommended Fleet Optimization:** Dispatch **Unit 01 (Rapid Asphalt Patcher)** to Sector 4 and **Unit 02 (Hydro-Vac Drainage)** to Old Bus Depot to prevent traffic delays.
-- **SLA Adherence:** 92.4% on-track. 1 ticket approaching statutory 48h limit.`;
+    const p1Count = sanitizedComplaints.filter(c => c.priority.includes('P1') || c.priority.includes('CRITICAL')).length;
+    return `Ward telemetry for ${userProfileSummary.wardId}: ${sanitizedComplaints.length} active tickets (${p1Count} P1 critical). Fleet adherence is at 94.2% on-track. Unit 01 and Unit 02 are available for dispatch.`;
   }
 
-  return `### Swachhata MoHUA Assistant:
-I can assist you with:
-1. **Grievance Drafting:** Describe the issue in simple words, and I'll format a standard MoHUA complaint with the right category.
-2. **SLA Tracking:** Learn resolution deadlines (12h for P1, 48h for P2).
-3. **Public Facilities:** Find nearest verified SBM public toilets and waste centers.
-4. **Officer Triage:** Analyze fleet distribution, bottlenecks, and route optimization.
-
-How can I help your municipal area today?`;
+  return `I can help you check ticket statuses, locate SBM public facilities, look up resolution SLAs, or draft grievance reports. What can I do for you today?`;
 }
 
 
