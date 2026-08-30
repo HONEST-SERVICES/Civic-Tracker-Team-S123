@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { CrisisIncident, UserProfile, PriorityLevel } from '../types';
 import { updateComplaintInFirestore } from '../services/firebase';
+import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
 
 interface SwachhSurvekshanAuditorDeskProps {
   incidents: CrisisIncident[];
@@ -356,9 +357,10 @@ export const SwachhSurvekshanAuditorDesk: React.FC<SwachhSurvekshanAuditorDeskPr
                   <span className="font-semibold text-slate-700 text-[11px]">Before (Reported Hazard):</span>
                   {selectedIncidentForAudit.imageUrl ? (
                     <img
-                      src={selectedIncidentForAudit.imageUrl}
+                      src={normalizeImageSrc(selectedIncidentForAudit.imageUrl)}
                       alt="Before"
                       className="w-full h-28 object-cover rounded-xl border border-slate-200"
+                      onError={handleImageError}
                       referrerPolicy="no-referrer"
                     />
                   ) : (
@@ -372,9 +374,10 @@ export const SwachhSurvekshanAuditorDesk: React.FC<SwachhSurvekshanAuditorDeskPr
                   <span className="font-semibold text-slate-700 text-[11px]">After (Remediation Proof):</span>
                   {selectedIncidentForAudit.proofOfFixUrl ? (
                     <img
-                      src={selectedIncidentForAudit.proofOfFixUrl}
+                      src={normalizeImageSrc(selectedIncidentForAudit.proofOfFixUrl)}
                       alt="Proof of fix"
                       className="w-full h-28 object-cover rounded-xl border border-emerald-300"
+                      onError={handleImageError}
                       referrerPolicy="no-referrer"
                     />
                   ) : (

@@ -33,6 +33,7 @@ import { compressImage } from '../utils/imageCompressor';
 import { updateUserProfilePhoto } from '../services/firebase';
 import { getUserInitials } from '../utils/userUtils';
 import { formatCitizenId } from '../utils/idUtils';
+import { UserAvatar } from './UserAvatar';
 
 interface ProfileViewProps {
   currentUser: UserProfile | null;
@@ -190,18 +191,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             className="relative shrink-0 cursor-pointer group"
             title="Click to change profile picture"
           >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-800 to-teal-900 border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-              {currentUser?.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt={displayName}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span>{getUserInitials(displayName)}</span>
-              )}
-            </div>
+            <UserAvatar
+              photoURL={currentUser?.photoURL}
+              name={displayName}
+              size="xl"
+              showTwoInitials={true}
+              className="w-16 h-16 rounded-2xl border-2 border-white shadow-sm"
+              initialsClassName="text-xl font-bold"
+            />
             
             {/* Interactive Camera Badge */}
             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-teal-600 text-white flex items-center justify-center rounded-full shadow-xs border-2 border-white group-hover:bg-teal-700 transition">

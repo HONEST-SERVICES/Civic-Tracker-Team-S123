@@ -85,6 +85,8 @@ import { VoiceGrievanceInput } from './VoiceGrievanceInput';
 import { compressImage } from '../utils/imageCompressor';
 import { SwachhataDriveModal, SAMPLE_CAMPAIGNS, CleanlinessCampaign } from './SwachhataDriveModal';
 import { getUserInitials } from '../utils/userUtils';
+import { UserAvatar } from './UserAvatar';
+import { normalizeImageSrc, handleImageError, DEFAULT_CIVIC_PLACEHOLDER } from '../utils/imageUtils';
 
 interface CitizenPortalProps {
   incidents: CrisisIncident[];
@@ -1451,11 +1453,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                   {photoUrl ? (
                     <div className="space-y-2">
-                      <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden h-44 group">
+                      <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden w-full h-48 sm:h-56 group shadow-sm">
                         <img
-                          src={photoUrl}
+                          src={normalizeImageSrc(photoUrl)}
                           alt="Hazard"
                           className="w-full h-full object-cover"
+                          onError={handleImageError}
                           referrerPolicy="no-referrer"
                         />
                         {isAnalyzingVision && (
@@ -1907,17 +1910,13 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     className="relative flex-shrink-0 cursor-pointer group"
                     title="Tap to change profile picture"
                   >
-                    {currentUser?.photoURL ? (
-                      <img
-                        src={currentUser.photoURL}
-                        alt={(currentUser as any)?.displayName || currentUser.name || 'Citizen'}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-200"
-                      />
-                    ) : (
-                      <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white font-bold flex items-center justify-center w-12 h-12 rounded-full text-base">
-                        {getUserInitials(currentUser?.name || (currentUser as any)?.displayName || 'Avinash Peela')}
-                      </div>
-                    )}
+                    <UserAvatar
+                      photoURL={currentUser?.photoURL}
+                      name={(currentUser as any)?.displayName || currentUser?.name || 'Avinash Peela'}
+                      size="lg"
+                      showTwoInitials={true}
+                      className="w-12 h-12 rounded-full border-2 border-white shadow-sm ring-1 ring-slate-200"
+                    />
                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 rounded-full text-white flex items-center justify-center shadow-xs border border-white translate-x-1 translate-y-1 group-hover:bg-blue-700 transition-colors">
                       {isUploadingAvatar ? (
                         <Loader2 className="w-2.5 h-2.5 animate-spin" />
@@ -2387,11 +2386,12 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
 
                     {photoUrl ? (
                       <div className="space-y-3">
-                        <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden group shadow-sm">
+                        <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden w-full h-48 sm:h-56 group shadow-sm">
                           <img
-                            src={photoUrl}
+                            src={normalizeImageSrc(photoUrl)}
                             alt="Hazard preview"
-                            className="w-full h-52 object-cover"
+                            className="w-full h-full object-cover"
+                            onError={handleImageError}
                             referrerPolicy="no-referrer"
                           />
                           {isAnalyzingVision ? (
@@ -2716,9 +2716,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                   <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
                     {photoUrl && (
                       <img
-                        src={photoUrl}
+                        src={normalizeImageSrc(photoUrl)}
                         alt="Thumbnail"
                         className="w-16 h-16 rounded-xl object-cover border border-slate-300 shrink-0"
+                        onError={handleImageError}
                       />
                     )}
                     <div className="space-y-1 min-w-0 flex-1">
@@ -2981,9 +2982,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                       {ticket.imageUrl && (
                         <div className="w-full h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                           <img
-                            src={ticket.imageUrl}
+                            src={normalizeImageSrc(ticket.imageUrl)}
                             alt={ticket.title}
                             className="w-full h-full object-cover"
+                            onError={handleImageError}
                             referrerPolicy="no-referrer"
                           />
                         </div>
@@ -3393,9 +3395,10 @@ export const CitizenPortal: React.FC<CitizenPortalProps> = ({
                     <span>Proof of Fix Uploaded by Ward Inspector</span>
                   </p>
                   <img
-                    src={trackedIncident.proofOfFixUrl}
+                    src={normalizeImageSrc(trackedIncident.proofOfFixUrl)}
                     alt="Proof of fix"
                     className="w-full h-40 object-cover rounded-lg border border-emerald-300"
+                    onError={handleImageError}
                     referrerPolicy="no-referrer"
                   />
                   {trackedIncident.officerNotes && (

@@ -22,6 +22,7 @@ import { HazardCategory, PriorityLevel, CrisisIncident, ScannerData } from '../t
 import { ZONES } from '../mockData';
 import { reverseGeocodeCoordinates, getCurrentUserLocation } from '../services/locationService';
 import { VoiceGrievanceInput } from './VoiceGrievanceInput';
+import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
 
 interface CitizenIngestionPanelProps {
   onSubmitIncident: (incidentData: Partial<CrisisIncident>) => void;
@@ -316,11 +317,12 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
           </div>
 
           {/* Clean Photo Preview Box */}
-          <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-900 h-44 shadow-sm group">
+          <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 w-full h-48 sm:h-56 shadow-sm group">
             <img
-              src={selectedImageUrl}
+              src={normalizeImageSrc(selectedImageUrl)}
               alt="Civic hazard triage"
               className="w-full h-full object-cover"
+              onError={handleImageError}
               referrerPolicy="no-referrer"
             />
 
@@ -359,9 +361,10 @@ export const CitizenIngestionPanel: React.FC<CitizenIngestionPanelProps> = ({
                   }`}
                 >
                   <img
-                    src={sample.url}
+                    src={normalizeImageSrc(sample.url)}
                     alt={sample.title}
                     className="w-8 h-8 rounded object-cover flex-shrink-0"
+                    onError={handleImageError}
                     referrerPolicy="no-referrer"
                   />
                   <div className="overflow-hidden min-w-0">

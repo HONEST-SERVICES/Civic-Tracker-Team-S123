@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { GeminiLiveService, LiveSessionCallbacks } from '../services/geminiLiveService';
+import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
 
 interface GeminiLiveCallOverlayProps {
   isOpen: boolean;
@@ -440,7 +441,13 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
         {attachedPhotoUrl && (
           <div className="w-full bg-emerald-950/60 border border-emerald-500/40 rounded-2xl p-2.5 flex items-center justify-between animate-fadeIn backdrop-blur-md shadow-lg">
             <div className="flex items-center gap-2.5">
-              <img src={attachedPhotoUrl} alt="Attached hazard" className="w-9 h-9 object-cover rounded-xl border border-emerald-400/40" />
+              <img
+                src={normalizeImageSrc(attachedPhotoUrl)}
+                alt="Attached hazard"
+                className="w-9 h-9 object-cover rounded-xl border border-emerald-400/40"
+                onError={handleImageError}
+                referrerPolicy="no-referrer"
+              />
               <div className="text-left">
                 <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1">
                   <span>Photo Linked to Ticket</span>

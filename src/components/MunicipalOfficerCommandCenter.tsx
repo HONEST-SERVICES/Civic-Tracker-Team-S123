@@ -44,6 +44,7 @@ import { LiveIncidentQueue } from './LiveIncidentQueue';
 import { MunicipalGovernanceView } from './MunicipalGovernanceView';
 import { ProfileView } from './ProfileView';
 import { WardStaffManagementView } from './WardStaffManagementView';
+import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
 
 interface MunicipalOfficerCommandCenterProps {
   incidents: CrisisIncident[];
@@ -834,9 +835,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                             className="h-44 rounded-xl overflow-hidden border border-slate-200 relative bg-slate-900 shadow-xs cursor-pointer group"
                           >
                             <img
-                              src={activeTicket.imageUrl}
+                              src={normalizeImageSrc(activeTicket.imageUrl)}
                               alt="Hazard"
                               className="max-h-48 w-full object-cover transition-transform group-hover:scale-105"
+                              onError={handleImageError}
                               referrerPolicy="no-referrer"
                             />
                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -1501,9 +1503,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
                               className="h-36 rounded-xl overflow-hidden border border-slate-200 relative bg-slate-900 shadow-xs cursor-pointer group"
                             >
                               <img
-                                src={activeTicket.imageUrl}
+                                src={normalizeImageSrc(activeTicket.imageUrl)}
                                 alt="Hazard"
                                 className="max-h-48 w-full object-cover transition-transform group-hover:scale-105"
+                                onError={handleImageError}
                                 referrerPolicy="no-referrer"
                               />
                               <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -1683,9 +1686,10 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
               </button>
             </div>
             <img
-              src={lightboxImage}
+              src={normalizeImageSrc(lightboxImage)}
               alt="Hazard High-Resolution Inspection"
               className="max-h-[82vh] w-auto max-w-full object-contain rounded-2xl"
+              onError={handleImageError}
               referrerPolicy="no-referrer"
             />
           </div>
@@ -1717,7 +1721,13 @@ export const MunicipalOfficerCommandCenter: React.FC<MunicipalOfficerCommandCent
 
               {proofPhotoUrl && (
                 <div className="h-32 rounded-xl overflow-hidden border border-slate-200">
-                  <img src={proofPhotoUrl} alt="Proof preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img
+                    src={normalizeImageSrc(proofPhotoUrl)}
+                    alt="Proof preview"
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
               )}
 

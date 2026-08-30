@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { subscribeToAllUsers, updateUserRoleAndWard } from '../services/firebase';
+import { UserAvatar } from './UserAvatar';
 
 interface WardStaffManagementViewProps {
   currentUser: UserProfile | null;
@@ -299,18 +300,12 @@ export const WardStaffManagementView: React.FC<WardStaffManagementViewProps> = (
                 {!isEditing ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 uppercase shrink-0">
-                        {user.photoURL ? (
-                          <img
-                            src={user.photoURL}
-                            alt={user.name}
-                            className="w-full h-full object-cover rounded-full"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          user.name.charAt(0)
-                        )}
-                      </div>
+                      <UserAvatar
+                        photoURL={user.photoURL}
+                        name={user.name}
+                        size="md"
+                        className="w-11 h-11 ring-1 ring-slate-200 shrink-0"
+                      />
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-sm font-bold text-slate-900">{user.name}</h4>

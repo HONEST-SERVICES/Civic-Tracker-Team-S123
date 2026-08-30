@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { CrisisIncident, UserProfile, IncidentStatus } from '../types';
 import { compressImage } from '../utils/imageCompressor';
+import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
 
 interface FieldCrewWorkOrdersProps {
   incidents: CrisisIncident[];
@@ -265,9 +266,10 @@ export const FieldCrewWorkOrders: React.FC<FieldCrewWorkOrdersProps> = ({
                   {ticket.imageUrl && (
                     <div className="relative rounded-xl overflow-hidden bg-slate-900 h-36 border border-slate-200">
                       <img 
-                        src={ticket.imageUrl} 
+                        src={normalizeImageSrc(ticket.imageUrl)} 
                         alt={ticket.title}
                         className="w-full h-full object-cover"
+                        onError={handleImageError}
                         referrerPolicy="no-referrer"
                       />
                       <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded">
@@ -384,11 +386,12 @@ export const FieldCrewWorkOrders: React.FC<FieldCrewWorkOrdersProps> = ({
                   Proof of Resolution Photo (After Remediation)
                 </label>
                 
-                <div className="relative rounded-xl border border-slate-200 bg-slate-900 overflow-hidden group">
+                <div className="relative rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden w-full h-48 sm:h-56 group">
                   <img
-                    src={proofUrl}
+                    src={normalizeImageSrc(proofUrl)}
                     alt="Proof of Fix"
-                    className="w-full h-44 object-cover"
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs flex items-center gap-1">

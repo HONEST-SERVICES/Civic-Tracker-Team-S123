@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { fetchAllUsers, subscribeToAllUsers, updateUserRoleAndWard } from '../services/firebase';
+import { UserAvatar } from './UserAvatar';
 
 interface WardStaffManagementModalProps {
   isOpen: boolean;
@@ -316,18 +317,12 @@ export const WardStaffManagementModal: React.FC<WardStaffManagementModalProps> =
                 {!isEditing ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 uppercase shrink-0">
-                        {user.photoURL ? (
-                          <img
-                            src={user.photoURL}
-                            alt={user.name}
-                            className="w-full h-full object-cover rounded-full"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          user.name.charAt(0)
-                        )}
-                      </div>
+                      <UserAvatar
+                        photoURL={user.photoURL}
+                        name={user.name}
+                        size="md"
+                        className="w-10 h-10 ring-1 ring-slate-200 shrink-0"
+                      />
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-slate-900">{user.name}</h4>

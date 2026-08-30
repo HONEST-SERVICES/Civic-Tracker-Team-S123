@@ -17,6 +17,7 @@ import { CrisisIncident, MunicipalUnit, PublicFacility } from '../types';
 import { INITIAL_PUBLIC_FACILITIES } from '../mockData';
 import { loadGoogleMapsApi } from '../services/googleMapsLoader';
 import { subscribeToPublicFacilities, ratePublicFacility } from '../services/firebase';
+import { normalizeImageSrc, handleImageError } from '../utils/imageUtils';
 
 interface GoogleTacticalMapProps {
   incidents: CrisisIncident[];
@@ -774,9 +775,10 @@ export const GoogleTacticalMap: React.FC<GoogleTacticalMapProps> = ({
             <div className="flex gap-3">
               {selectedIncident.imageUrl && (
                 <img
-                  src={selectedIncident.imageUrl}
+                  src={normalizeImageSrc(selectedIncident.imageUrl)}
                   alt={selectedIncident.title}
                   className="w-16 h-16 rounded-xl object-cover border border-slate-200 flex-shrink-0"
+                  onError={handleImageError}
                   referrerPolicy="no-referrer"
                 />
               )}
