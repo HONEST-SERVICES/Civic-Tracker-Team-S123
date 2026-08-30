@@ -7,15 +7,12 @@ import {
   Radio, 
   Zap, 
   Ticket, 
-  AlertTriangle, 
-  ShieldCheck, 
   Camera, 
-  Volume2, 
   Maximize2, 
   Minimize2, 
   Bot, 
-  CheckCircle2, 
-  ChevronDown 
+  X,
+  Activity
 } from 'lucide-react';
 import { GeminiLiveService, LiveSessionCallbacks } from '../services/geminiLiveService';
 
@@ -54,8 +51,10 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
   const [sessionState, setSessionState] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'LISTENING' | 'SPEAKING' | 'ERROR'>('DISCONNECTED');
   const [isMuted, setIsMuted] = useState(false);
   const [volumes, setVolumes] = useState({ userVolume: 0, agentVolume: 0 });
+  const [liveCaptionText, setLiveCaptionText] = useState<string>('Initializing CivicPulse Live Agent connection...');
   const [captions, setCaptions] = useState<CaptionItem[]>([]);
   const [executedTools, setExecutedTools] = useState<ExecutedToolItem[]>([]);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [callSeconds, setCallSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -64,10 +63,10 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
   const captionsEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<any>(null);
 
-  // Auto-scroll captions
+  // Auto-scroll captions stream
   useEffect(() => {
     captionsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [captions, executedTools]);
+  }, [captions, executedTools, liveCaptionText]);
 
   // Call duration timer
   useEffect(() => {
@@ -101,22 +100,32 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
       }
       setSessionState('DISCONNECTED');
       setCallSeconds(0);
+      setLiveCaptionText('CivicPulse Live Voice Agent Ready');
       setCaptions([]);
       setExecutedTools([]);
       setErrorMessage(null);
+      setActiveAction(null);
       return;
     }
 
     const callbacks: LiveSessionCallbacks = {
       onStateChange: (state) => {
         setSessionState(state);
+        if (state === 'LISTENING') {
+          setLiveCaptionText(prev => prev.includes('Initializing') ? 'Listening to your voice...' : prev);
+        } else if (state === 'SPEAKING') {
+          setActiveAction(null);
+        }
       },
       onVolumeChange: (v) => {
         setVolumes(v);
       },
+      onLiveCaptionText: (text) => {
+        setLiveCaptionText(text);
+      },
       onCaption: (cap) => {
         setCaptions(prev => [
-          ...prev.slice(-20),
+          ...prev.slice(-15),
           {
             id: Math.random().toString(36).substring(7),
             role: cap.role,
@@ -126,6 +135,10 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
         ]);
       },
       onToolExecuted: (tool) => {
+        setActiveAction(`Executed: ${tool.toolName}`);
+        if (tool.result?.message) {
+          setLiveCaptionText(tool.result.message);
+        }
         setExecutedTools(prev => [
           ...prev,
           {
@@ -184,37 +197,34 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
 
   // Dynamic visualizer orb sizing based on audio volume
   const maxVolume = Math.max(volumes.userVolume, volumes.agentVolume);
-  const orbScale = 1 + Math.min(maxVolume * 2.5, 0.45);
-  const orbPulseColor = sessionState === 'SPEAKING'
-    ? 'from-teal-400 via-emerald-400 to-cyan-500 shadow-teal-500/50'
-    : 'from-[#0d5c52] via-emerald-600 to-teal-800 shadow-emerald-500/30';
+  const orbScale = 1 + Math.min(maxVolume * 2.2, 0.4);
 
   if (isMinimized) {
     return (
-      <div className="fixed bottom-6 right-6 z-[9999] bg-slate-900/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl border border-teal-500/40 shadow-2xl flex items-center gap-3 animate-bounce">
+      <div className="fixed bottom-6 right-6 z-[9999] bg-slate-900/95 backdrop-blur-xl text-white px-5 py-3 rounded-2xl border border-teal-500/40 shadow-2xl flex items-center gap-4 animate-bounce">
         <div className="relative flex h-3 w-3">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
         </div>
         <div>
           <p className="text-xs font-bold text-white flex items-center gap-1.5">
-            <span>Gemini Multimodal Live</span>
+            <span>CivicPulse Live Agent</span>
             <span className="font-mono text-emerald-400">{formatTimer(callSeconds)}</span>
           </p>
           <p className="text-[10px] text-slate-300">
-            {sessionState === 'SPEAKING' ? 'Gemini speaking...' : 'Listening...'}
+            {sessionState === 'SPEAKING' ? 'Speaking...' : 'Listening...'}
           </p>
         </div>
         <button
           onClick={() => setIsMinimized(false)}
-          className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition cursor-pointer"
+          className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition cursor-pointer"
           title="Expand Call Window"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
         <button
           onClick={handleEndCall}
-          className="p-1.5 bg-rose-600 hover:bg-rose-700 rounded-lg text-white transition cursor-pointer"
+          className="p-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-white transition cursor-pointer"
           title="End Call"
         >
           <PhoneOff className="w-4 h-4" />
@@ -224,227 +234,159 @@ export const GeminiLiveCallOverlay: React.FC<GeminiLiveCallOverlayProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 font-sans animate-in fade-in duration-250">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-teal-500/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[90vh] max-h-[720px] text-white">
-        
-        {/* Top Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 border-b border-teal-800/40 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-300 shadow-xs">
-              <Sparkles className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm sm:text-base text-white tracking-tight">
-                  Gemini Live Voice Officer
-                </h3>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-bold">
-                  {formatTimer(callSeconds)}
-                </span>
-              </div>
-              <p className="text-[11px] text-teal-200/80 font-medium">
-                Real-Time Audio Stream • {userWard}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setIsMinimized(true)}
-              className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
-              title="Minimize window"
-            >
-              <Minimize2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleEndCall}
-              className="p-2 text-slate-300 hover:text-white hover:bg-rose-500/20 rounded-xl transition cursor-pointer"
-              title="Close overlay"
-            >
-              <ChevronDown className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Center Siri-Style Animated Orb Visualizer */}
-        <div className="py-8 sm:py-10 bg-radial from-teal-950/60 via-slate-900 to-slate-950 flex flex-col items-center justify-center shrink-0 border-b border-slate-800/60 relative overflow-hidden">
-          
-          {/* Animated Background Pulse Rings */}
-          <div 
-            className="absolute w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-teal-500/10 blur-2xl animate-ping opacity-30"
-            style={{ transform: `scale(${orbScale * 1.2})` }}
-          />
-
-          <div 
-            className="absolute w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-emerald-500/20 blur-xl transition-transform duration-100"
-            style={{ transform: `scale(${orbScale})` }}
-          />
-
-          {/* Main Siri-Style Glowing Orb */}
-          <div 
-            className={`relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr ${orbPulseColor} p-1 shadow-2xl transition-all duration-150 flex items-center justify-center`}
-            style={{ transform: `scale(${orbScale})` }}
-          >
-            <div className="w-full h-full rounded-full bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-2 text-center">
-              {sessionState === 'SPEAKING' ? (
-                <Radio className="w-8 h-8 text-emerald-300 animate-pulse" />
-              ) : sessionState === 'LISTENING' ? (
-                <Mic className={`w-8 h-8 ${isMuted ? 'text-rose-400' : 'text-teal-300 animate-bounce'}`} />
-              ) : sessionState === 'CONNECTING' ? (
-                <Sparkles className="w-8 h-8 text-amber-300 animate-spin" />
-              ) : (
-                <Bot className="w-8 h-8 text-teal-400" />
-              )}
-            </div>
-          </div>
-
-          {/* State Text Badge */}
-          <div className="mt-4 text-center space-y-1 z-10">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-              sessionState === 'SPEAKING' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
-              sessionState === 'LISTENING' ? 'bg-teal-500/20 text-teal-200 border-teal-500/40' :
-              sessionState === 'CONNECTING' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
-              'bg-slate-800 text-slate-300 border-slate-700'
-            }`}>
-              <span className="w-2 h-2 rounded-full bg-current animate-ping" />
-              <span>
-                {sessionState === 'SPEAKING' ? 'Gemini AI Speaking...' :
-                 sessionState === 'LISTENING' ? (isMuted ? 'Microphone Muted' : 'Listening to your voice...') :
-                 sessionState === 'CONNECTING' ? 'Establishing WebSocket Audio Stream...' :
-                 'Live Voice Agent Ready'}
-              </span>
+    <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl flex flex-col justify-between p-6 sm:p-8 text-white animate-fadeIn font-sans overflow-hidden">
+      
+      {/* Header */}
+      <div className="w-full max-w-4xl mx-auto flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold text-xs flex items-center gap-2 shadow-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
+            <span>⚡ Live Voice Call</span>
+          </div>
 
-            {errorMessage && (
-              <p className="text-xs text-rose-400 font-medium max-w-xs mx-auto">
-                {errorMessage}
-              </p>
-            )}
+          <div>
+            <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+              CivicPulse Live Agent
+            </h2>
+            <p className="text-xs text-slate-400 font-medium hidden sm:block">
+              {userWard} • AI Officer Active
+            </p>
           </div>
         </div>
 
-        {/* Live Conversation Captions & Tool Execution Stream */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-3 font-sans text-xs bg-slate-950/80">
-          
-          {/* Welcome Prompt */}
-          <div className="p-3 bg-teal-950/40 border border-teal-800/40 rounded-2xl text-teal-200 space-y-1">
-            <p className="font-bold text-xs text-teal-100 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Live Multimodal Assistant Active</span>
-            </p>
-            <p className="text-[11px] text-teal-300/80 leading-relaxed">
-              Speak naturally in English or Hindi to check ticket status, report a voice grievance, or request high-priority commissioner escalation.
-            </p>
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1 rounded-xl bg-white/10 border border-white/10 font-mono text-sm font-bold text-emerald-400">
+            {formatTimer(callSeconds)}
           </div>
 
-          {/* Real-time Executed Tools Chips */}
-          {executedTools.map((t) => (
-            <div
-              key={t.id}
-              className="p-3.5 bg-emerald-950/80 border-2 border-emerald-500/60 rounded-2xl text-emerald-100 space-y-2 shadow-lg animate-in slide-in-from-bottom duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-mono font-bold text-xs text-emerald-300">
-                  <Zap className="w-4 h-4 text-amber-400 animate-bounce" />
-                  <span>⚡ Tool Executed: {t.toolName}</span>
-                </div>
-                <span className="text-[10px] text-emerald-400 font-mono">{t.timestamp}</span>
-              </div>
-
-              <div className="text-xs text-emerald-200/90 font-medium">
-                {t.result?.message || JSON.stringify(t.result)}
-              </div>
-
-              {/* Action Buttons for Tool Result */}
-              {t.toolName === 'submitVoiceGrievance' && (
-                <div className="pt-1.5 flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (onGrievanceTriggered) {
-                        onGrievanceTriggered({
-                          category: t.result?.category || 'ROADS_POTHOLE',
-                          landmark: t.result?.landmark || 'Ward 4',
-                          description: t.result?.description || 'Voice Grievance',
-                          ticketId: t.result?.ticketId
-                        });
-                      }
-                      onClose();
-                    }}
-                    className="py-1.5 px-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-md"
-                  >
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>📸 Open Photo Upload Step Now</span>
-                  </button>
-                </div>
-              )}
-
-              {t.ticketId && onInspectTicket && (
-                <button
-                  onClick={() => onInspectTicket(t.ticketId!)}
-                  className="text-xs font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1 underline cursor-pointer"
-                >
-                  <Ticket className="w-3.5 h-3.5" />
-                  <span>Inspect Ticket #{t.ticketId}</span>
-                </button>
-              )}
-            </div>
-          ))}
-
-          {/* Live Captions Stream */}
-          {captions.map((cap) => (
-            <div
-              key={cap.id}
-              className={`p-3 rounded-2xl max-w-[88%] leading-relaxed ${
-                cap.role === 'user'
-                  ? 'bg-teal-800/60 text-teal-100 ml-auto rounded-tr-xs border border-teal-600/40'
-                  : 'bg-slate-800/80 text-slate-200 mr-auto rounded-tl-xs border border-slate-700/80'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1">
-                <span className="font-bold uppercase tracking-wider">{cap.role === 'user' ? 'You' : 'Gemini AI'}</span>
-                <span>•</span>
-                <span>{cap.timestamp}</span>
-              </div>
-              <p className="text-xs font-medium whitespace-pre-wrap">{cap.text}</p>
-            </div>
-          ))}
-
-          <div ref={captionsEndRef} />
-        </div>
-
-        {/* Bottom Call Controls */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-center gap-4 shrink-0">
           <button
-            onClick={toggleMute}
-            className={`py-3 px-5 rounded-2xl font-bold text-xs transition flex items-center gap-2 cursor-pointer shadow-lg ${
-              isMuted 
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950' 
-                : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-            }`}
+            onClick={() => setIsMinimized(true)}
+            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition cursor-pointer"
+            title="Minimize"
           >
-            {isMuted ? (
-              <>
-                <MicOff className="w-4 h-4" />
-                <span>Unmute Mic</span>
-              </>
-            ) : (
-              <>
-                <Mic className="w-4 h-4 text-emerald-400" />
-                <span>Mute Mic</span>
-              </>
-            )}
+            <Minimize2 className="w-5 h-5" />
           </button>
 
           <button
             onClick={handleEndCall}
-            className="py-3 px-6 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-2xl transition flex items-center gap-2 cursor-pointer shadow-lg shadow-rose-900/40"
+            className="p-2.5 rounded-xl bg-white/10 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 transition cursor-pointer"
+            title="Close"
           >
-            <PhoneOff className="w-4 h-4" />
-            <span>End Voice Call</span>
+            <X className="w-5 h-5" />
           </button>
         </div>
-
       </div>
+
+      {/* Center Stage: Animated Siri/Gemini Amplitude Orb */}
+      <div className="my-auto flex flex-col items-center justify-center text-center space-y-6 relative py-4">
+        
+        {/* Glow Ring Behind Orb */}
+        <div 
+          className="absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-teal-500/20 blur-3xl animate-ping opacity-30 pointer-events-none"
+          style={{ transform: `scale(${orbScale * 1.25})` }}
+        />
+
+        {/* Central Orb */}
+        <div 
+          className="w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-gradient-to-tr from-teal-500 via-emerald-400 to-cyan-500 animate-pulse shadow-[0_0_80px_rgba(20,184,166,0.5)] flex items-center justify-center transition-transform duration-100 relative z-10 cursor-pointer"
+          style={{ transform: `scale(${orbScale})` }}
+        >
+          <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-slate-950/80 backdrop-blur-md flex items-center justify-center border border-white/20">
+            {sessionState === 'SPEAKING' ? (
+              <Radio className="w-12 h-12 text-emerald-300 animate-pulse" />
+            ) : sessionState === 'LISTENING' ? (
+              <Mic className={`w-12 h-12 ${isMuted ? 'text-rose-400' : 'text-teal-300 animate-bounce'}`} />
+            ) : (
+              <img src="/logo.png" alt="CivicPulse Logo" className="w-12 h-12 object-contain animate-pulse" />
+            )}
+          </div>
+        </div>
+
+        {/* Status Pill below Orb */}
+        <div className="z-10">
+          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border tracking-wide uppercase shadow-lg ${
+            activeAction ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse' :
+            sessionState === 'SPEAKING' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+            sessionState === 'LISTENING' ? (isMuted ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-teal-500/20 text-teal-200 border-teal-500/40') :
+            'bg-slate-800 text-slate-300 border-slate-700'
+          }`}>
+            <span className="w-2 h-2 rounded-full bg-current animate-ping" />
+            <span>
+              {activeAction ? activeAction :
+               sessionState === 'SPEAKING' ? 'Speaking...' :
+               sessionState === 'LISTENING' ? (isMuted ? 'Microphone Muted' : 'Listening...') :
+               'Connecting...'}
+            </span>
+          </span>
+
+          {errorMessage && (
+            <p className="mt-2 text-xs text-rose-400 font-medium max-w-sm mx-auto">
+              {errorMessage}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Live Subtitles & Activity Card */}
+      <div className="w-full max-w-lg mx-auto space-y-3 shrink-0 mb-4">
+        
+        {/* Glassmorphic Subtitle Container */}
+        <div className="w-full bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/10 text-center min-h-[90px] max-h-[140px] overflow-y-auto flex items-center justify-center shadow-xl">
+          <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed italic">
+            "{liveCaptionText}"
+          </p>
+        </div>
+
+        {/* Tool Executed Action Chips */}
+        {executedTools.length > 0 && (
+          <div className="flex items-center justify-center gap-2 overflow-x-auto py-1">
+            {executedTools.slice(-2).map((t) => (
+              <div 
+                key={t.id}
+                className="px-3 py-1.5 rounded-xl bg-emerald-900/60 border border-emerald-500/50 text-emerald-200 text-xs font-medium flex items-center gap-2 shrink-0 animate-fadeIn"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Executed: {t.toolName}</span>
+                {t.ticketId && (
+                  <button
+                    onClick={() => onInspectTicket?.(t.ticketId!)}
+                    className="underline text-amber-300 font-bold ml-1 hover:text-white"
+                  >
+                    #{t.ticketId}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Action Bar */}
+      <div className="w-full max-w-md mx-auto flex items-center justify-center gap-6 shrink-0 pb-2">
+        <button
+          onClick={toggleMute}
+          className={`p-4 rounded-full border border-white/20 transition-all cursor-pointer shadow-lg ${
+            isMuted 
+              ? 'bg-amber-500 text-slate-950 border-amber-400' 
+              : 'bg-white/10 hover:bg-white/20 text-white'
+          }`}
+          title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+        >
+          {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6 text-emerald-400" />}
+        </button>
+
+        <button
+          onClick={handleEndCall}
+          className="px-8 py-4 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-lg shadow-rose-900/40 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+        >
+          <PhoneOff className="w-5 h-5" />
+          <span>End Call</span>
+        </button>
+      </div>
+
     </div>
   );
 };

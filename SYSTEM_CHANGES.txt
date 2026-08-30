@@ -1,3 +1,29 @@
+======================================================
+23. AI CHATBOT BRANDING UPDATE: REPLACED SPARKLE ICON WITH LOGO.PNG:
+======================================================
+- Updated AI Chatbot Copilot (`src/components/GeminiAssistantDrawer.tsx`):
+  * Replaced generic sparkle icon in drawer header badge with `/logo.png`.
+  * Replaced message role badge icon and loading indicator with `/logo.png`.
+- Updated Live Call Overlay (`src/components/GeminiLiveCallOverlay.tsx`):
+  * Replaced connecting state icon inside central Siri/Gemini orb with `/logo.png`.
+
+======================================================
+22. WEBSOCKET 16KHZ PCM AUDIO PIPELINE & FULL-SCREEN CALL UI OVERHAUL:
+======================================================
+- Direct & Relay WebSocket Audio Engine (`src/services/geminiLiveService.ts` / `src/services/liveVoice.ts`):
+  * Configured dual-mode WebSocket client supporting direct Gemini Live Bidi WS (`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=...`) and server relay fallback (`/ws/live`).
+  * Implemented instant connection setup frame (`setup` payload with `gemini-2.0-flash-exp`, audio voice config `Puck`, system instructions, and tool definitions).
+  * 16kHz PCM 16-bit mono microphone streaming via `AudioContext` and `realtime_input` media chunk frames.
+  * Real-time `server_content` parsing: gapless 24kHz PCM audio buffer queue playback, text transcript streaming into `liveCaptionText`, and instant barge-in playback termination on `interrupted: true` or user speech above threshold.
+- Immersive Full-Screen Calling Overlay (`src/components/GeminiLiveCallOverlay.tsx` / `LiveVoiceCallModal.tsx`):
+  * Full-viewport backdrop (`fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-xl flex flex-col justify-between p-6 sm:p-8 text-white animate-fadeIn`).
+  * Header: "CivicPulse Live Agent" with pulsing indicator (`[ ⚡ Live Voice Call ]`), `00:14` format duration timer, and minimize/close controls.
+  * Center Stage: Glowing animated Siri/Gemini Amplitude Orb (`w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-gradient-to-tr from-teal-500 via-emerald-400 to-cyan-500 animate-pulse shadow-[0_0_80px_rgba(20,184,166,0.5)] flex items-center justify-center`) with dynamic status pill (`Listening...`, `Speaking...`, `Executing Action...`).
+  * Live Subtitles Card: Auto-scrolling glassmorphic subtitle container (`w-full max-w-lg mx-auto bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center min-h-[90px] flex items-center justify-center`) with smooth italic caption text.
+  * Bottom Docked Controls: Rounded `[ 🎙️ Mute / Unmute ]` button and high-contrast `[ 🔴 End Call ]` button.
+- Verification:
+  * Passed strict type checks (`tsc --noEmit`) and production applet compilation (`compile_applet`).
+
 =======================================================
 21. REAL-TIME GEMINI MULTIMODAL LIVE AUDIO AGENT (WEBSOCKETS + FUNCTION CALLING):
 =======================================================

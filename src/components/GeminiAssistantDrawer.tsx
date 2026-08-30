@@ -183,8 +183,8 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
         {/* Drawer Header */}
         <div className="bg-gradient-to-r from-[#0d5c52] via-[#115e59] to-[#042f2e] text-white p-4 sm:p-5 flex items-center justify-between border-b border-teal-700/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs relative">
-              <Sparkles className="w-5 h-5 animate-pulse" strokeWidth={1.75} />
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-amber-300 shadow-xs relative overflow-hidden p-1.5">
+              <img src="/logo.png" alt="CivicPulse Logo" className="w-full h-full object-contain filter drop-shadow-sm" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -247,7 +247,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <img src="/logo.png" alt="CivicPulse Logo" className="w-3.5 h-3.5 object-contain" />
                       <span className="font-bold text-emerald-800">CivicPulse AI Agent</span>
                       <span>•</span>
                       <span>{msg.timestamp}</span>
@@ -354,7 +354,7 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
 
           {isLoading && (
             <div className="flex items-center gap-2 text-slate-500 text-xs p-3 bg-white rounded-2xl border border-slate-200 w-fit animate-pulse">
-              <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
+              <img src="/logo.png" alt="CivicPulse Logo" className="w-4 h-4 object-contain animate-spin" />
               <span>CivicPulse AI processing live ward context & telemetry...</span>
             </div>
           )}
