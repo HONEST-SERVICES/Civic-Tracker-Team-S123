@@ -67,16 +67,17 @@ export class GeminiLiveService {
       (import.meta as any).env?.VITE_GEMINI_API_KEY ||
       (import.meta as any).env?.GEMINI_API_KEY ||
       (typeof process !== 'undefined' ? (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY) : undefined) ||
+      (window as any).__ENV__?.VITE_GEMINI_API_KEY ||
       (window as any).__GEMINI_API_KEY__;
 
     const isLocalHost = typeof window !== 'undefined' && 
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    // If API key is missing or undefined and not running on local dev server with WS relay:
-    if ((!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 5) && !isLocalHost) {
+    // Hard Gate: If API key is missing, undefined, or length < 10 in production build:
+    if ((!apiKey || apiKey === 'undefined' || typeof apiKey !== 'string' || apiKey.trim().length < 10) && !isLocalHost) {
       console.error("[Gemini Live] Aborting session: Gemini API Key missing in production environment.");
       this.callbacks.onStateChange?.('ERROR');
-      this.callbacks.onError?.("API Key not detected in production environment. Please configure VITE_GEMINI_API_KEY in Cloudflare Pages settings.");
+      this.callbacks.onError?.("API Key is missing in production build. Please set VITE_GEMINI_API_KEY in Cloudflare Pages Environment Variables.");
       return;
     }
 
@@ -95,7 +96,7 @@ export class GeminiLiveService {
       let wsUrl = '';
       let isDirectGeminiWs = false;
 
-      if (apiKey && apiKey.trim().length > 5) {
+      if (apiKey && typeof apiKey === 'string' && apiKey.trim().length >= 10) {
         wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey.trim()}`;
         isDirectGeminiWs = true;
       } else {
@@ -148,16 +149,18 @@ export class GeminiLiveService {
         if (isDirectGeminiWs && this.ws) {
           const setupMsg = {
             setup: {
-              model: "models/gemini-2.0-flash-exp",
-              generation_config: {
-                response_modalities: ["AUDIO"],
-                speech_config: {
-                  voice_config: {
-                    prebuilt_voice_config: { voice_name: "Puck" }
+              model: "models/gemini-2.0-flash-live-001",
+              generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: {
+                      voiceName: "Puck"
+                    }
                   }
                 }
               },
-              system_instruction: {
+              systemInstruction: {
                 parts: [
                   {
                     text: "You are CivicPulse Live Voice Copilot. Speak naturally, concisely, and empathetically."
@@ -166,7 +169,7 @@ export class GeminiLiveService {
               },
               tools: [
                 {
-                  function_declarations: [
+                  functionDeclarations: [
                     {
                       name: "lookupTicketStatus",
                       description: "Look up grievance ticket status, category, priority, and ETA in live Firestore records.",

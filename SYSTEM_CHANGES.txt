@@ -1,4 +1,16 @@
 ======================================================
+30. LIVE WEBSOCKET MODEL MIGRATION (MODELS/GEMINI-2.0-FLASH-LIVE-001) & CLOUDFLARE KEY RESOLUTION:
+======================================================
+- Model Identifier Migration (`src/services/geminiLiveService.ts` & `server.ts`):
+  * Upgraded Live WebSocket setup endpoint to official `models/gemini-2.0-flash-live-001` across client Bidi WebSocket and backend relay.
+  * Standardized initial handshake frame using camelCase schema (`generationConfig`, `responseModalities`, `speechConfig`, `voiceConfig`, `prebuiltVoiceConfig`, `voiceName`, `systemInstruction`, `functionDeclarations`).
+- Client-Side API Key Resolution & Hard Gate (`src/services/geminiLiveService.ts`):
+  * Resolved API key across multiple runtime targets including `import.meta.env.VITE_GEMINI_API_KEY`, `(window as any).__ENV__?.VITE_GEMINI_API_KEY`, and fallbacks.
+  * Hard-gated session startup: when key is missing or length < 10 in production builds, halts socket instantiation and displays: `"API Key is missing in production build. Please set VITE_GEMINI_API_KEY in Cloudflare Pages Environment Variables."`
+- Cloudflare Headers & Content Security Policy (`/public/_headers`):
+  * Configured CSP `default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; connect-src 'self' https://*.googleapis.com wss://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firestore.googleapis.com https://*.firebase.com; media-src 'self' blob: mediastream:;` to ensure full WebSocket connectivity on edge deployments.
+
+======================================================
 29. GEMINI MULTIMODAL LIVE PROTOCOL ALIGNMENT & CODE 1008 FIX:
 ======================================================
 - Model Identifier Standardisation (`src/services/geminiLiveService.ts` & `server.ts`):
