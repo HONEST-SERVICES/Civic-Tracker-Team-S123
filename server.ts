@@ -129,11 +129,11 @@ async function startServer() {
         properties: {
           isCivicIssue: {
             type: Type.BOOLEAN,
-            description: "Set to TRUE if image depicts a valid municipal civic issue or hazard (pothole, garbage dump, overflow, manhole, waterlogging, outage, downed line, broken pipe). Set to FALSE if photo is a selfie, person portrait, human hand/foot, pet, animal, food, receipt, document, indoor furniture, vehicle interior, or non-civic object."
+            description: "MUST BE FALSE if photo is a selfie, human portrait, human hand/foot, pet, animal, food, receipt, document, text screenshot, indoor room, furniture, or non-civic object. MUST BE TRUE ONLY IF photo clearly shows a genuine municipal or infrastructure hazard."
           },
           rejectionReason: {
             type: Type.STRING,
-            description: "If isCivicIssue is FALSE, state concise reason (e.g., 'Image appears to be a person/selfie, not a civic hazard')"
+            description: "Required when isCivicIssue is FALSE. State concise reason (e.g., 'Image appears to be a person/selfie, not a civic hazard')"
           },
           detectedHazard: {
             type: Type.STRING,
@@ -225,10 +225,10 @@ async function startServer() {
         ]
       };
 
-      const systemPrompt = `You are an expert municipal triage AI for Indian cities.
+      const systemPrompt = `You are a zero-tolerance municipal triage AI for Indian public works.
 Analyze the provided image strictly for authentic civic infrastructure hazards:
-1. Valid Civic Issues: Potholes, broken roads, overflowing garbage bins, open manholes, waterlogging, street light outages, fallen electric wires, broken water pipes, illegal construction debris, public toilet issues.
-2. STRICT NON-CIVIC REJECTION: If the image contains a human portrait, selfie, face, pet, household object, indoor space, receipt, or screenshot with no civic infrastructure hazard, you MUST set isCivicIssue: false and set rejectionReason: "No municipal hazard detected (non-civic image). Please upload a photo of a civic issue like potholes, garbage, or drainage.";
+1. Valid Civic Issues: Potholes, road cavern collapse, overflowing garbage dumps, open manholes, street waterlogging, streetlight outages, fallen electric wires, broken water pipes, public toilet issues.
+2. STRICT ZERO-TOLERANCE NON-CIVIC REJECTION: If the image contains a selfie, human portrait, face, body part, pet, animal, food, indoor room, receipt, document, screenshot, or any non-civic object, YOU MUST SET "isCivicIssue": false and set "rejectionReason": "No municipal hazard detected (non-civic image). Please upload a clear photo of road damage, garbage, or drainage."
 
 If valid civic issue:
 - set isCivicIssue: true

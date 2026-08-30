@@ -1,4 +1,18 @@
 =======================================================
+20. CRITICAL HARD-GATE FIX: STRICTLY BLOCK WIZARD PROGRESSION FOR NON-CIVIC IMAGES:
+=======================================================
+- Strict Validation Gate in Grievance Submission Flow (`CitizenPortal.tsx`):
+  * Added derived `isValidCivicImage` state verifying that `photoUrl` is present, vision analysis is complete (`!isAnalyzingVision` && `!isCompressing`), `isCivicIssue === true`, and a valid civic `category` is present.
+  * Hard-disabled the "Continue to Location & Ward" button (`disabled={!isValidCivicImage || isAnalyzingVision || isCompressing}`) when the attached image is non-civic or unverified.
+  * Enforced step navigation hard lock in `goToStep(step)` preventing progression past Step 2 when `isValidCivicImage` is false, displaying a high-contrast notification toast if attempted.
+  * High-Contrast Rejection Card: When non-civic media (selfie, food, pet, indoor scene, document) is detected, displays a `bg-rose-50 border-2 border-rose-300` alert with `AlertOctagon` icon, rejection reason text, and direct "Retake Photo" / "Choose Other Image" actions.
+- Gemini Vision Triage Prompt Hardening (`geminiService.ts` & `server.ts`):
+  * Updated system prompt and JSON schema in both client fallback and server endpoint (`/api/gemini/analyze-vision`).
+  * Enforced zero-tolerance rule: Photos containing selfies, portraits, faces, animals, indoor scenes, receipts, or non-infrastructure items MUST evaluate to `isCivicIssue: false` with explicit `rejectionReason`.
+- Verification & Clean Build:
+  * Passed full TypeScript validation (`tsc --noEmit`) and production applet compilation with zero errors.
+
+=======================================================
 19. ELIMINATE DOUBLE SCROLLBARS & LOCK SINGLE-VIEWPORT SCROLL HIERARCHY:
 =======================================================
 - Single-Viewport Hierarchy & Redundant Scroll Container Removal (`CitizenPortal.tsx`):
