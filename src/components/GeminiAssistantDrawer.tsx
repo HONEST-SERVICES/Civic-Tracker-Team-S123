@@ -35,7 +35,7 @@ interface GeminiAssistantDrawerProps {
   currentUser?: any;
   incidents: CrisisIncident[];
   availableUnits?: MunicipalUnit[];
-  onApplyDraft?: (draft: { title?: string; category?: string; description?: string }) => void;
+  onApplyDraft?: (draft: { title?: string; category?: string; description?: string; photoUrl?: string }) => void;
   onInspectTicket?: (ticketId: string) => void;
 }
 
@@ -427,9 +427,41 @@ export const GeminiAssistantDrawer: React.FC<GeminiAssistantDrawerProps> = ({
             onApplyDraft({
               title: `Voice Report: ${data.category}`,
               category: data.category,
-              description: data.description
+              description: data.description,
+              ...(data.photoUrl ? { photoUrl: data.photoUrl } : {})
             });
           }
+        }}
+        onSyncHistory={(summary) => {
+          const mins = Math.floor(summary.durationSeconds / 60);
+          const secs = summary.durationSeconds % 60;
+          const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+          let transcriptBody = `📞 **Gemini Live Call Summary (Duration: ${timeStr})**\n\n`;
+
+          if (summary.captions && summary.captions.length > 0) {
+            transcriptBody += `**Live Spoken Transcript:**\n` +
+              summary.captions.map(c => `• **${c.role === 'user' ? 'You' : 'CivicPulse Live Agent'}:** ${c.text}`).join('\n') + '\n\n';
+          } else {
+            transcriptBody += `Voice conversation completed with CivicPulse AI Agent.\n\n`;
+          }
+
+          if (summary.executedTools && summary.executedTools.length > 0) {
+            transcriptBody += `⚡ **Autonomous Actions Triggered:**\n` +
+              summary.executedTools.map(t => `- Executed **\`${t.toolName}\`**${t.ticketId ? ` → Ticket #${t.ticketId}` : ''}`).join('\n');
+          }
+
+          if (summary.photoUrl) {
+            transcriptBody += `\n\n📸 **Hazard Photo Attached:** Photo successfully linked to report.`;
+          }
+
+          const callMsg: GeminiAssistantMessage = {
+            role: 'assistant',
+            content: transcriptBody,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+
+          setMessages(prev => [...prev.slice(-49), callMsg]);
         }}
       />
     </div>

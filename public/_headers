@@ -1,0 +1,4 @@
+/*
+  Permissions-Policy: camera=*, microphone=*, geolocation=*
+  Content-Security-Policy: connect-src 'self' https://*.googleapis.com wss://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firestore.googleapis.com https://*.firebase.com;
+  Access-Control-Allow-Origin: *

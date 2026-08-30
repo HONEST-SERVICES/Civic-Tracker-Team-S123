@@ -1,4 +1,48 @@
 ======================================================
+28. PRODUCTION WEBSOCKET CONNECTION SAFEGUARDS & CLOUDFLARE PAGES DIAGNOSTIC FIX:
+======================================================
+- Robust Environment Variable Inspection (`src/services/geminiLiveService.ts`):
+  * Inspects Gemini API Key across all runtime configurations (`customApiKey`, `import.meta.env.VITE_GEMINI_API_KEY`, `import.meta.env.GEMINI_API_KEY`, `process.env.VITE_GEMINI_API_KEY`, `process.env.GEMINI_API_KEY`, and `(window as any).__GEMINI_API_KEY__`).
+  * If API key is missing/undefined in production environments (non-localhost), immediately halts WebSocket handshake before initiation and transitions state to 'ERROR'.
+  * Displays diagnostic message: `"API Key not detected in production environment. Please configure VITE_GEMINI_API_KEY in Cloudflare Pages settings."` to eliminate tight auto-retry loops on static hosting targets.
+- 7-Second Handshake Timeout & Detailed Close Code Diagnostics (`src/services/geminiLiveService.ts`):
+  * Implemented explicit 7-second connection timer on `WebSocket` creation.
+  * If socket does not transition to `OPEN` within 7s, closes hanging socket, clears Web Audio Contexts, and transitions session state to 'ERROR' with clear feedback.
+  * Captures close codes (`1006` abnormal closure, `403/4003` forbidden key, etc.) and provides descriptive troubleshooting guidance.
+- Interactive Retry Boundary (`src/components/GeminiLiveCallOverlay.tsx`):
+  * Added `handleRetrySession` action and styled `[ 🔄 Retry Connection ]` button in the UI overlay when session state transitions to 'ERROR', eliminating endless spinner states.
+- Cloudflare Pages Headers Configuration (`/public/_headers`):
+  * Configured `Permissions-Policy` for `camera=*`, `microphone=*`, `geolocation=*`.
+  * Configured `Content-Security-Policy` `connect-src` to explicitly authorize WebSocket traffic to `wss://*.googleapis.com`, `https://*.googleapis.com`, and `wss://*.firebaseio.com`.
+
+======================================================
+27. ARCHITECTURAL UI/UX OVERHAUL — REDESIGN LIVE VOICE CALL INTERFACE:
+======================================================
+- Structural Hierarchy & Zero-Clipping Layout (`src/components/GeminiLiveCallOverlay.tsx`):
+  * Re-architected voice call overlay into a true 100dvh edge-to-edge container (`h-[100dvh] max-h-[100dvh]`) with safe-area padding (`env(safe-area-inset-top)` / `env(safe-area-inset-bottom)`) to prevent notch and home indicator clipping.
+  * Established strict 3-tier vertical layout:
+    1. Top Tier: Minimal balanced navigation header featuring clean `[ ⚡ CivicPulse Live ]` pill, live call duration timer (`00:14`), minimize button, and dismissal control. Removed bulky multi-line headers.
+    2. Center Stage: Uncluttered acoustic focus zone housing the multi-layered ambient orb and floating status pill with sufficient vertical clearance to avoid bounding box collisions.
+    3. Bottom Tier: Translucent glassmorphic live transcription card positioned above a balanced 3-button action dock (`[ 🎙️ Mute ]`, `[ 📷 Photo ]`, `[ 🔴 End Call ]`).
+- Acoustic Visualization & Ambient Multi-Layered Orb:
+  * Replaced flat borders with a fluid multi-layered ambient orb with dynamic outer diffuse glow scaling on audio frequency levels.
+  * Rendered frosted glass sphere with smooth color gradients shifting between listening (deep indigo/blue), speaking (vibrant teal/cyan), and muted/idle states.
+  * Embedded 5 internal responsive waveform bars that dynamically scale height with speech volume.
+- Real-time Transcription & Action Dock:
+  * Translucent glass card featuring subtle border highlights and hidden scrollbar tracks (`[scrollbar-width:none] [&::-webkit-scrollbar]:hidden`).
+  * Mute/Unmute toggle button with distinct active/inactive toggle states, photo attachment camera control, and primary End Call button with subtle press shadow gestures (`active:scale-95`).
+
+======================================================
+26. LIVE CALL PHOTO ATTACHMENT & VOICE CHAT HISTORY SYNCHRONIZATION:
+======================================================
+- Live Call Image Upload & Camera Integration (`src/components/GeminiLiveCallOverlay.tsx`):
+  * Added camera button `[ 📷 ]` in bottom control bar allowing citizens to capture or attach photos during active Gemini Live voice calls.
+  * Added active photo attachment banner with image preview and `"Attach Photo"` action button on voice grievance ticket execution chips.
+  * Auto-links uploaded hazard photos directly to the created draft grievance ticket.
+- Full Voice Conversation Chat Sync (`src/components/GeminiAssistantDrawer.tsx`):
+  * Added `onSyncHistory` callback that automatically saves the entire live voice transcript, call duration, executed tool history, and attached photo links directly into the AI Assistant Chat drawer history upon call conclusion.
+
+======================================================
 25. GEMINI LIVE SESSION TOOL RESPONSE STRUCT FIX:
 ======================================================
 - Resolved Function Response Proto Parsing Error (`server.ts` & `src/services/geminiLiveService.ts`):

@@ -35,9 +35,21 @@ export class GeminiLiveService {
 
   // Interrupt threshold for natural barge-in
   private bargeInThreshold = 0.08;
+  private connectionTimeoutTimer: any = null;
 
   constructor(callbacks: LiveSessionCallbacks) {
     this.callbacks = callbacks;
+  }
+
+  private clearAudioContexts(): void {
+    if (this.inputAudioCtx) {
+      try { this.inputAudioCtx.close(); } catch {}
+      this.inputAudioCtx = null;
+    }
+    if (this.outputAudioCtx) {
+      try { this.outputAudioCtx.close(); } catch {}
+      this.outputAudioCtx = null;
+    }
   }
 
   /**
@@ -47,6 +59,24 @@ export class GeminiLiveService {
     if (this.isConnected) return;
 
     this.callbacks.onStateChange?.('CONNECTING');
+
+    // 1. Robust Environment Variable Injection & Inspection across targets
+    const apiKey = customApiKey ||
+      (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+      (import.meta as any).env?.GEMINI_API_KEY ||
+      (typeof process !== 'undefined' ? (process.env?.VITE_GEMINI_API_KEY || process.env?.GEMINI_API_KEY) : undefined) ||
+      (window as any).__GEMINI_API_KEY__;
+
+    const isLocalHost = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    // If API key is missing or undefined and not running on local dev server with WS relay:
+    if ((!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 5) && !isLocalHost) {
+      console.error("[Gemini Live] Aborting session: Gemini API Key missing in production environment.");
+      this.callbacks.onStateChange?.('ERROR');
+      this.callbacks.onError?.("API Key not detected in production environment. Please configure VITE_GEMINI_API_KEY in Cloudflare Pages settings.");
+      return;
+    }
 
     try {
       // Setup Web Audio Contexts
@@ -59,13 +89,12 @@ export class GeminiLiveService {
         await this.outputAudioCtx.resume();
       }
 
-      // Determine WebSocket URL: Use direct Gemini Live Bidi WS if key is present, else use server relay /ws/live
-      const apiKey = customApiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).__GEMINI_API_KEY__;
+      // Determine WebSocket URL
       let wsUrl = '';
       let isDirectGeminiWs = false;
 
-      if (apiKey && apiKey.length > 5) {
-        wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+      if (apiKey && apiKey.trim().length > 5) {
+        wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey.trim()}`;
         isDirectGeminiWs = true;
       } else {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -73,9 +102,42 @@ export class GeminiLiveService {
       }
 
       console.log(`[Gemini Live] Connecting (${isDirectGeminiWs ? 'Direct Gemini Bidi' : 'Server Relay'}):`, wsUrl);
+      
+      // Clear existing connection timer
+      if (this.connectionTimeoutTimer) {
+        clearTimeout(this.connectionTimeoutTimer);
+        this.connectionTimeoutTimer = null;
+      }
+
+      // 2. 7-Second Handshake Timeout Safeguard
+      const HANDSHAKE_TIMEOUT_MS = 7000;
+      this.connectionTimeoutTimer = setTimeout(() => {
+        if (!this.isConnected || (this.ws && this.ws.readyState !== WebSocket.OPEN)) {
+          console.warn("[Gemini Live] Handshake timeout (7s expired). Terminating socket.");
+          if (this.ws) {
+            try {
+              this.ws.onopen = null;
+              this.ws.onmessage = null;
+              this.ws.onerror = null;
+              this.ws.onclose = null;
+              this.ws.close();
+            } catch {}
+            this.ws = null;
+          }
+          this.clearAudioContexts();
+          this.isConnected = false;
+          this.callbacks.onStateChange?.('ERROR');
+          this.callbacks.onError?.("Live connection timed out (7s). Cloudflare Pages proxy or network block detected. Please retry.");
+        }
+      }, HANDSHAKE_TIMEOUT_MS);
+
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = async () => {
+        if (this.connectionTimeoutTimer) {
+          clearTimeout(this.connectionTimeoutTimer);
+          this.connectionTimeoutTimer = null;
+        }
         console.log("[Gemini Live] WebSocket connection established.");
         this.isConnected = true;
         this.callbacks.onStateChange?.('CONNECTED');
@@ -268,14 +330,37 @@ export class GeminiLiveService {
       };
 
       this.ws.onerror = (err) => {
-        console.warn("[Gemini Live] WebSocket error:", err);
+        if (this.connectionTimeoutTimer) {
+          clearTimeout(this.connectionTimeoutTimer);
+          this.connectionTimeoutTimer = null;
+        }
+        console.warn("[Gemini Live] WebSocket connection error:", err);
         this.callbacks.onStateChange?.('ERROR');
-        this.callbacks.onError?.("WebSocket connection error");
+        this.callbacks.onError?.("WebSocket connection error. Check VITE_GEMINI_API_KEY or network connection.");
       };
 
-      this.ws.onclose = () => {
-        console.log("[Gemini Live] WebSocket closed.");
-        this.stopSession();
+      this.ws.onclose = (event: CloseEvent) => {
+        if (this.connectionTimeoutTimer) {
+          clearTimeout(this.connectionTimeoutTimer);
+          this.connectionTimeoutTimer = null;
+        }
+        console.log(`[Gemini Live] WebSocket closed (Code ${event.code}, Reason: ${event.reason || 'None'}).`);
+        
+        let detailedError = "";
+        if (event.code === 1006) {
+          detailedError = "WebSocket connection failed (Code 1006). Cloudflare Pages or network proxy may be blocking WebSocket connections to googleapis.com.";
+        } else if (event.code === 4003 || event.code === 403 || (event.reason && event.reason.includes("API_KEY"))) {
+          detailedError = "Access forbidden (403/4003). Please verify VITE_GEMINI_API_KEY permissions in Cloudflare Pages settings.";
+        } else if (event.code !== 1000 && event.code !== 1001) {
+          detailedError = `Live session disconnected (Code ${event.code || '1006'}).`;
+        }
+
+        if (detailedError) {
+          this.callbacks.onStateChange?.('ERROR');
+          this.callbacks.onError?.(detailedError);
+        } else {
+          this.stopSession();
+        }
       };
 
     } catch (err: any) {
@@ -488,6 +573,10 @@ export class GeminiLiveService {
   }
 
   public stopSession(): void {
+    if (this.connectionTimeoutTimer) {
+      clearTimeout(this.connectionTimeoutTimer);
+      this.connectionTimeoutTimer = null;
+    }
     this.stopAgentPlayback();
 
     if (this.scriptProcessor) {
