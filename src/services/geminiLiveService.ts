@@ -202,13 +202,27 @@ export class GeminiLiveService {
 
               const res = await this.executeClientTool(name, args);
               
+              const cleanResponse: Record<string, string | number | boolean> = {
+                output: typeof res === 'string' ? res : (res?.message || JSON.stringify(res))
+              };
+              if (res && typeof res === 'object') {
+                for (const [k, v] of Object.entries(res)) {
+                  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+                    cleanResponse[k] = v;
+                  } else if (v !== null && v !== undefined) {
+                    cleanResponse[k] = JSON.stringify(v);
+                  }
+                }
+              }
+
               if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 this.ws.send(JSON.stringify({
                   tool_response: {
                     function_responses: [
                       {
-                        response: { output: res },
-                        id: callId
+                        name: name,
+                        id: callId,
+                        response: cleanResponse
                       }
                     ]
                   }

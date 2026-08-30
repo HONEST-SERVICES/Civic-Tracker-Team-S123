@@ -1055,13 +1055,28 @@ Always execute the relevant tool when asked, then speak out the results clearly 
                   result = { success: false, error: "Unknown function call" };
                 }
 
+                // Format flat response object for Gemini Live proto parser
+                const cleanResponse: Record<string, string | number | boolean> = {
+                  output: typeof result === 'string' ? result : (result?.message || JSON.stringify(result))
+                };
+                if (result && typeof result === 'object') {
+                  for (const [k, v] of Object.entries(result)) {
+                    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+                      cleanResponse[k] = v;
+                    } else if (v !== null && v !== undefined) {
+                      cleanResponse[k] = JSON.stringify(v);
+                    }
+                  }
+                }
+
                 // Send tool response back to Gemini session
                 try {
                   session.sendToolResponse({
                     functionResponses: [
                       {
-                        response: { output: result },
-                        id: callId
+                        name: toolName,
+                        id: callId,
+                        response: cleanResponse
                       }
                     ]
                   });

@@ -1,4 +1,21 @@
 ======================================================
+25. GEMINI LIVE SESSION TOOL RESPONSE STRUCT FIX:
+======================================================
+- Resolved Function Response Proto Parsing Error (`server.ts` & `src/services/geminiLiveService.ts`):
+  * Root Cause: Gemini Bidi Live API requires `name`, `id`, and a flat key-value `response` object (`google.protobuf.Struct`). Passing nested objects inside `{ output: result }` resulted in `Could not parse function response, type 'object'`.
+  * Fix: Formatted tool output into a clean, flat key-value dictionary where top-level primitive fields (`output`, `message`, `ticketId`, `status`, `category`, `ward`) are passed directly and complex properties are stringified. Included required `name` and `id` in each function response payload.
+
+======================================================
+24. PERMISSION DENIED BUG RESOLUTION & FIRESTORE RULES DEPLOYMENT:
+======================================================
+- Fixed Frame Permissions (`metadata.json`):
+  * Added `"camera"`, `"microphone"`, and `"geolocation"` to `requestFramePermissions` array to grant iframe container access.
+- Hardened Audio & Media Stream Exception Handling (`src/services/geminiLiveService.ts`):
+  * Wrapped `startMicrophoneCapture` in `try/catch` block to handle browser `NotAllowedError` and `PermissionDeniedError` gracefully without uncaught promise rejections.
+- Firestore Security Rules Deployment:
+  * Successfully deployed updated `firestore.rules` to user's database (`civictracker` on `omnisync-pothole`).
+
+======================================================
 23. AI CHATBOT BRANDING UPDATE: REPLACED SPARKLE ICON WITH LOGO.PNG:
 ======================================================
 - Updated AI Chatbot Copilot (`src/components/GeminiAssistantDrawer.tsx`):

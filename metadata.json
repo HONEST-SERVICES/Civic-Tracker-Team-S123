@@ -1,6 +1,6 @@
 {
   "name": "CivicPulse",
   "description": "Civic Grievance Redressal & Autonomous Field Dispatch Matrix with Real-Time Multi-Role Management and Firestore Persistence",
-  "requestFramePermissions": ["geolocation"],
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
